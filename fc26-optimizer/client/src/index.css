@@ -1,0 +1,261 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Orbitron', sans-serif;
+  --font-heading: 'Rajdhani', sans-serif;
+}
+
+:root {
+  --radius: 0.5rem;
+  /* Dark football/gaming palette */
+  --background: oklch(0.08 0.01 240);
+  --foreground: oklch(0.95 0.01 240);
+  --card: oklch(0.11 0.015 240);
+  --card-foreground: oklch(0.95 0.01 240);
+  --popover: oklch(0.11 0.015 240);
+  --popover-foreground: oklch(0.95 0.01 240);
+  /* Neon green accent */
+  --primary: oklch(0.75 0.22 142);
+  --primary-foreground: oklch(0.08 0.01 240);
+  --secondary: oklch(0.15 0.02 240);
+  --secondary-foreground: oklch(0.85 0.01 240);
+  --muted: oklch(0.14 0.015 240);
+  --muted-foreground: oklch(0.55 0.01 240);
+  /* Gold accent */
+  --accent: oklch(0.78 0.18 85);
+  --accent-foreground: oklch(0.08 0.01 240);
+  --destructive: oklch(0.65 0.22 25);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.20 0.02 240);
+  --input: oklch(0.14 0.015 240);
+  --ring: oklch(0.75 0.22 142);
+  --chart-1: oklch(0.75 0.22 142);
+  --chart-2: oklch(0.65 0.20 230);
+  --chart-3: oklch(0.78 0.18 85);
+  --chart-4: oklch(0.65 0.22 25);
+  --chart-5: oklch(0.70 0.15 300);
+  --sidebar: oklch(0.11 0.015 240);
+  --sidebar-foreground: oklch(0.95 0.01 240);
+  --sidebar-primary: oklch(0.75 0.22 142);
+  --sidebar-primary-foreground: oklch(0.08 0.01 240);
+  --sidebar-accent: oklch(0.15 0.02 240);
+  --sidebar-accent-foreground: oklch(0.85 0.01 240);
+  --sidebar-border: oklch(0.20 0.02 240);
+  --sidebar-ring: oklch(0.75 0.22 142);
+}
+
+/* Dark theme is default — no .dark override needed */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, oklch(0.75 0.22 142 / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, oklch(0.65 0.20 230 / 0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+/* ── Gaming UI components ─────────────────────────────────────────────────── */
+@layer components {
+  .btn-neon {
+    @apply relative overflow-hidden font-bold tracking-widest uppercase;
+    @apply bg-primary text-primary-foreground;
+    @apply border border-primary/50;
+    @apply transition-all duration-200;
+    font-family: 'Rajdhani', sans-serif;
+    box-shadow: 0 0 20px oklch(0.75 0.22 142 / 0.3), inset 0 1px 0 oklch(1 0 0 / 0.1);
+  }
+  .btn-neon:hover:not(:disabled) {
+    box-shadow: 0 0 35px oklch(0.75 0.22 142 / 0.6), 0 0 70px oklch(0.75 0.22 142 / 0.2), inset 0 1px 0 oklch(1 0 0 / 0.2);
+    transform: scale(1.02);
+  }
+  .btn-neon:active:not(:disabled) { transform: scale(0.98); }
+  .btn-neon:disabled { @apply opacity-50 cursor-not-allowed; box-shadow: none; }
+
+  .glass-card {
+    @apply rounded-xl border border-border/50;
+    background: oklch(0.11 0.015 240 / 0.8);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px oklch(0 0 0 / 0.4), inset 0 1px 0 oklch(1 0 0 / 0.05);
+  }
+
+  .neon-card {
+    @apply rounded-xl border;
+    border-color: oklch(0.75 0.22 142 / 0.3);
+    background: oklch(0.11 0.015 240 / 0.9);
+    box-shadow: 0 0 20px oklch(0.75 0.22 142 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.05);
+  }
+
+  .section-label {
+    @apply text-xs font-bold tracking-widest uppercase;
+    font-family: 'Rajdhani', sans-serif;
+    color: oklch(0.75 0.22 142);
+  }
+
+  .input-gaming {
+    @apply w-full rounded-lg px-4 py-3 text-foreground;
+    @apply border border-border bg-input;
+    @apply transition-all duration-200;
+    font-family: 'Inter', sans-serif;
+  }
+  .input-gaming:focus {
+    outline: none;
+    border-color: oklch(0.75 0.22 142 / 0.5);
+    box-shadow: 0 0 0 2px oklch(0.75 0.22 142 / 0.2);
+  }
+  .input-gaming::placeholder { color: oklch(0.45 0.01 240); }
+
+  .playstyle-chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border;
+    background: oklch(0.75 0.22 142 / 0.1);
+    border-color: oklch(0.75 0.22 142 / 0.3);
+    color: oklch(0.85 0.12 142);
+  }
+  .playstyle-plus-chip {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border;
+    background: oklch(0.78 0.18 85 / 0.15);
+    border-color: oklch(0.78 0.18 85 / 0.5);
+    color: oklch(0.88 0.15 85);
+  }
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px oklch(0.75 0.22 142 / 0.3); }
+  50% { box-shadow: 0 0 40px oklch(0.75 0.22 142 / 0.6), 0 0 80px oklch(0.75 0.22 142 / 0.2); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-fade-up { animation: fade-up 0.4s ease-out forwards; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 0%, oklch(1 0 0 / 0.05) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+.stagger-children > * { animation: fade-up 0.4s ease-out forwards; opacity: 0; }
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+.stagger-children > *:nth-child(7) { animation-delay: 0.35s; }
+.stagger-children > *:nth-child(8) { animation-delay: 0.40s; }
+.stagger-children > *:nth-child(9) { animation-delay: 0.45s; }
+.stagger-children > *:nth-child(10) { animation-delay: 0.50s; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: oklch(0.08 0.01 240); }
+::-webkit-scrollbar-thumb { background: oklch(0.25 0.02 240); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(0.75 0.22 142 / 0.5); }
+
+@layer components {
+  /**
+   * Custom container utility that centers content and adds responsive padding.
+   *
+   * This overrides Tailwind's default container behavior to:
+   * - Auto-center content (mx-auto)
+   * - Add responsive horizontal padding
+   * - Set max-width for large screens
+   *
+   * Usage: <div className="container">...</div>
+   *
+   * For custom widths, use max-w-* utilities directly:
+   * <div className="max-w-6xl mx-auto px-4">...</div>
+   */
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem; /* 16px - mobile padding */
+    padding-right: 1rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 640px) {
+    .container {
+      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-right: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 2rem; /* 32px - desktop padding */
+      padding-right: 2rem;
+      max-width: 1280px; /* Standard content width */
+    }
+  }
+}
