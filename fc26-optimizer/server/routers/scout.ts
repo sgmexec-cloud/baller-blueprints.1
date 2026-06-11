@@ -40,13 +40,27 @@ export const scoutRouter = router({
   generateReport: publicProcedure
     .input(z.object({ playerIdentity: z.string().min(1).max(500) }))
     .mutation(async ({ input }) => {
-      // Validate blueprint after LLM response
       const context = getScoutingContext();
 
       const systemPrompt = `You are an elite FC 26 scout and attribute specialist. Your job is to analyse a player description and produce a precise, data-driven scouting blueprint using ONLY the data provided.
 
 You have access to the following FC 26 game data:
 ${context}
+
+TACTICAL FRAMEWORK (THE FOUR PRO CLUBS PILLARS):
+When evaluating players and distributing attributes, you must think about builds through these four distinct foundational pillars:
+
+1. The Engine (Athleticism & Movement): Defines the physical chassis, navigation of the pitch, and handling of physical contact.
+   - Attributes: Acceleration, SprintSpeed, Agility, Balance, Jumping, Stamina, Strength
+
+2. The Ball (Technical Mastery): Pure technique and physical manipulation of the ball at the pro's feet.
+   - Attributes: BallControl, Dribbling, Skill Moves, ShortPassing, LongPassing, Crossing, Curve, FKAccuracy
+
+3. The Brain (Tactical Intelligence): Spatial awareness, composure under pressure, and reading loose balls.
+   - Attributes: AttackPositioning, DefAwareness, Vision, Interceptions, Reactions, Composure, Weak foot
+
+4. The Output (Combat & Execution): The final end-product for scoring goals or winning the ball back.
+   - Attributes: Finishing, ShotPower, LongShots, Volleys, Penalties, Heading Accuracy, StandingTackle, SlidingTackle, Aggression
 
 RULES:
 1. Extract the player's POSITION from the player description (e.g., CB, LW, ST, CDM, etc.). This is REQUIRED.
@@ -56,10 +70,7 @@ RULES:
 5. Select exactly 9 standard Playstyles from the playstyleReqs list. Look up their exact minimum stat requirements and include them. 
    CRITICAL: A standard Playstyle MUST NOT duplicate any Playstyle+ already equipped by the player (either from the base archetype list or the specialisation). The lists must be entirely mutually exclusive.
 6. Optionally pick ONE Specialisation from the specialisations list that matches the chosen Archetype. If chosen, its bonus Playstyle+ replaces one of the base Playstyle+.
-7. Sort ALL attributes for the chosen archetype into:
-   - Core: 8 most important attributes for this player's role
-   - Secondary: next 12 most important attributes
-   - Tertiary: all remaining attributes
+7. Sort ALL attributes for the chosen archetype into Core (8), Secondary (12), and Tertiary based on which Pillars dominate the target build's meta.
 8. Return ONLY valid JSON matching the schema. No extra text.
 
 RESPONSE FORMAT (strict JSON):
@@ -81,7 +92,7 @@ RESPONSE FORMAT (strict JSON):
   "coreAttributes": ["array of 8 attribute names"],
   "secondaryAttributes": ["array of 12 attribute names"],
   "tertiaryAttributes": ["array of remaining attribute names"],
-  "reasoning": "Brief explanation of choices"
+  "reasoning": "A deeply analytical explanation explicitly evaluating how this build balances the four pillars (The Engine, The Ball, The Brain, and The Output) to match the player's identity."
 }`;
 
       const userPrompt = `Player Identity & Position: ${input.playerIdentity}
@@ -179,7 +190,7 @@ Generate the scouting blueprint for this player.`;
       if (blueprint.playstyles.length !== 9) {
         throw new Error(`Blueprint must have exactly 9 standard Playstyles, got ${blueprint.playstyles.length}`);
       }
-      // Check for overlapping items between Playstyle+ and standard playstyles to protect database entry
+      
       const pPlusNames = blueprint.playstylePlus.map(p => p.replace('+', '').toLowerCase());
       if (blueprint.specialisationPlaystylePlus) {
         pPlusNames.push(blueprint.specialisationPlaystylePlus.replace('+', '').toLowerCase());
