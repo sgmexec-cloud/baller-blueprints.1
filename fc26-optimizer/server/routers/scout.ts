@@ -52,8 +52,9 @@ RULES:
 1. Extract the player's POSITION from the player description (e.g., CB, LW, ST, CDM, etc.). This is REQUIRED.
 2. Pick the SINGLE best Archetype from the archetypes list that fits the player description.
 3. Recommend a Height and Weight WITHIN the archetype's bounds (MinH-MaxH cm, MinW-MaxW kg).
-4. Select EXACTLY 3 Playstyle+ from the archetype's Base_Playstyle_Plus list. If a Specialisation is chosen, one of the Base_Playstyle_Plus slots is REPLACED by the Specialisation's bonus Playstyle+.
-5. Select exactly 8 standard Playstyles from the playstyleReqs list. Look up their exact minimum stat requirements and include them.
+4. Select EXACTLY 4 Playstyle+ from the archetype's Base_Playstyle_Plus list. If a Specialisation is chosen, one of the Base_Playstyle_Plus slots is REPLACED by the Specialisation's bonus Playstyle+.
+5. Select exactly 9 standard Playstyles from the playstyleReqs list. Look up their exact minimum stat requirements and include them. 
+   CRITICAL: A standard Playstyle MUST NOT duplicate any Playstyle+ already equipped by the player (either from the base archetype list or the specialisation). The lists must be entirely mutually exclusive.
 6. Optionally pick ONE Specialisation from the specialisations list that matches the chosen Archetype. If chosen, its bonus Playstyle+ replaces one of the base Playstyle+.
 7. Sort ALL attributes for the chosen archetype into:
    - Core: 8 most important attributes for this player's role
@@ -67,7 +68,7 @@ RESPONSE FORMAT (strict JSON):
   "position": "string — e.g. 'CB', 'LW', 'ST', 'CDM' — extracted from player description (REQUIRED)",
   "heightRange": "string — e.g. '175-182 cm'",
   "weightRange": "string — e.g. '70-78 kg'",
-  "playstylePlus": ["array of exactly 3 Playstyle+ names"],
+  "playstylePlus": ["array of exactly 4 Playstyle+ names"],
   "playstyles": [
     {
       "name": "PlaystyleName",
@@ -172,12 +173,23 @@ Generate the scouting blueprint for this player.`;
       const blueprint = BlueprintSchema.parse(parsed);
 
       // ── Server-side validation of blueprint invariants ────────────────────
-      if (blueprint.playstylePlus.length !== 3) {
-        throw new Error(`Blueprint must have exactly 3 Playstyle+, got ${blueprint.playstylePlus.length}`);
+      if (blueprint.playstylePlus.length !== 4) {
+        throw new Error(`Blueprint must have exactly 4 Playstyle+, got ${blueprint.playstylePlus.length}`);
       }
-      if (blueprint.playstyles.length !== 8) {
-        throw new Error(`Blueprint must have exactly 8 standard Playstyles, got ${blueprint.playstyles.length}`);
+      if (blueprint.playstyles.length !== 9) {
+        throw new Error(`Blueprint must have exactly 9 standard Playstyles, got ${blueprint.playstyles.length}`);
       }
+      // Check for overlapping items between Playstyle+ and standard playstyles to protect database entry
+      const pPlusNames = blueprint.playstylePlus.map(p => p.replace('+', '').toLowerCase());
+      if (blueprint.specialisationPlaystylePlus) {
+        pPlusNames.push(blueprint.specialisationPlaystylePlus.replace('+', '').toLowerCase());
+      }
+      
+      const duplicates = blueprint.playstyles.filter(p => pPlusNames.includes(p.name.toLowerCase()));
+      if (duplicates.length > 0) {
+        throw new Error(`Blueprint contains standard playstyles that duplicate a Playstyle+: ${duplicates.map(d => d.name).join(", ")}`);
+      }
+
       if (blueprint.coreAttributes.length !== 8) {
         throw new Error(`Blueprint must have exactly 8 Core attributes, got ${blueprint.coreAttributes.length}`);
       }
