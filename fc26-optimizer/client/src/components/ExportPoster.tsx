@@ -19,16 +19,31 @@ const CATEGORIES = {
 };
 
 export default function ExportPoster({ blueprint, result, apBudget }: Props) {
-  // 1. Smart Data Parsing: Handle both possible formats of your math engine result
   const stats = (result as any).stats || result;
 
-  // 2. Safely calculate the totals ourselves just in case the summary isn't provided
-  let calculatedSpent = 0;
-  Object.values(stats).forEach((stat: any) => {
-    if (stat && typeof stat.apSpent === 'number') {
-      calculatedSpent += stat.apSpent;
+  // Bulletproof Stat Finder: Handles Arrays, Objects, and case/space differences
+  const getStat = (targetAttr: string) => {
+    // Strip spaces and make lowercase for easy matching
+    const target = targetAttr.toLowerCase().replace(/\s/g, '');
+    
+    if (Array.isArray(stats)) {
+      return stats.find((s: any) => {
+         const name = (s.name || s.attribute || s.attr || "").toLowerCase().replace(/\s/g, '');
+         return name === target;
+      });
+    } else {
+      const key = Object.keys(stats).find(k => k.toLowerCase().replace(/\s/g, '') === target);
+      return key ? stats[key] : undefined;
     }
-  });
+  };
+
+  // Safely calculate the totals ourselves just in case
+  let calculatedSpent = 0;
+  if (Array.isArray(stats)) {
+    stats.forEach((stat: any) => { if (typeof stat.apSpent === 'number') calculatedSpent += stat.apSpent; });
+  } else {
+    Object.values(stats).forEach((stat: any) => { if (stat && typeof stat.apSpent === 'number') calculatedSpent += stat.apSpent; });
+  }
 
   const finalSpent = (result as any).summary?.totalApSpent ?? calculatedSpent;
   const finalEfficiency = (result as any).summary?.efficiency ?? (apBudget > 0 ? (finalSpent / apBudget) * 100 : 0);
@@ -70,15 +85,15 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       {/* Attributes Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "30px", marginBottom: "40px" }}>
         {Object.entries(CATEGORIES).map(([catName, catData]) => {
-          // Filter out attributes that might not be in this build's stats
-          const activeAttrs = catData.attrs.filter((attr) => stats[attr]);
+          // Use the bulletproof finder to check if we have attributes for this category
+          const activeAttrs = catData.attrs.filter((attr) => getStat(attr));
           if (activeAttrs.length === 0) return null;
 
           return (
             <div key={catName} style={{ backgroundColor: "#111", padding: "20px", borderRadius: "12px", border: `1px solid #222` }}>
               <h3 style={{ margin: "0 0 20px 0", color: catData.color, fontSize: "20px", letterSpacing: "2px", fontWeight: "bold" }}>{catName}</h3>
               {activeAttrs.map((attr) => {
-                const stat = stats[attr];
+                const stat = getStat(attr);
                 if (!stat) return null; // Extra safety check
                 
                 const widthPct = Math.min(100, Math.max(0, (stat.total / 99) * 100));
@@ -88,7 +103,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", marginBottom: "5px" }}>
                       <span style={{ color: "#ccc", fontWeight: "500" }}>{attr}</span>
                       <div style={{ display: "flex", gap: "10px" }}>
-                        <span style={{ color: catData.color, fontSize: "12px", alignSelf: "center", fontWeight: "bold" }}>+{stat.apSpent} AP</span>
+                        <span style={{ color: catData.color, fontSize: "12px", alignSelf: "center", fontWeight: "bold" }}>+{stat.apSpent || 0} AP</span>
                         <span style={{ fontWeight: "bold", width: "30px", textAlign: "right", color: stat.total >= 90 ? catData.color : "#fff" }}>
                           {stat.total}
                         </span>
