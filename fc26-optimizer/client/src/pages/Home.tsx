@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
+import { toPng } from "html-to-image";
 import ScoutingReport from "@/components/ScoutingReport";
 import PlayerCard from "@/components/PlayerCard";
+import ExportPoster from "@/components/ExportPoster";
 import type { Blueprint } from "../../../server/routers/scout";
 import type { MathEngineResult } from "../../../server/mathEngine";
 
@@ -213,6 +215,7 @@ export default function Home() {
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
   const [phase, setPhase] = useState<1 | 2>(1);
+  const [isExporting, setIsExporting] = useState(false);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -258,8 +261,40 @@ export default function Home() {
     setApBudget(5000);
   };
 
+  // The Magic Camera Function
+  const handleDownloadImage = async () => {
+    const node = document.getElementById("export-poster");
+    if (!node || !blueprint) return;
+    
+    setIsExporting(true);
+    try {
+      const dataUrl = await toPng(node, { 
+        quality: 1.0, 
+        pixelRatio: 2, 
+        backgroundColor: '#000000' 
+      });
+      const link = document.createElement("a");
+      link.download = `${blueprint.archetype}-FC26-Build.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Failed to export image", err);
+      alert("Failed to export image. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative overflow-hidden">
+      
+      {/* ── THE HIDDEN POSTER (Rendered off-screen) ── */}
+      {blueprint && playerCard && (
+        <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
+          <ExportPoster blueprint={blueprint} result={playerCard} apBudget={apBudget} />
+        </div>
+      )}
+
       <div className="max-w-lg mx-auto px-4 pb-16">
         <HeroHeader />
 
@@ -323,15 +358,6 @@ export default function Home() {
                 "Generate Scouting Report"
               )}
             </button>
-
-            {scoutMutation.isError && (
-              <p
-                className="mt-2 text-xs text-center"
-                style={{ color: "oklch(0.65 0.22 25)" }}
-              >
-                {scoutMutation.error?.message ?? "Something went wrong. Try again."}
-              </p>
-            )}
           </div>
         </section>
 
@@ -423,15 +449,6 @@ export default function Home() {
                   "Calculate Perfect Stats"
                 )}
               </button>
-
-              {calcMutation.isError && (
-                <p
-                  className="mt-2 text-xs text-center"
-                  style={{ color: "oklch(0.65 0.22 25)" }}
-                >
-                  {calcMutation.error?.message ?? "Calculation failed. Try again."}
-                </p>
-              )}
             </div>
           </section>
         )}
@@ -445,6 +462,37 @@ export default function Home() {
         {playerCard && !calcMutation.isPending && (
           <div ref={cardRef} className="animate-fade-up mb-6">
             <PlayerCard result={playerCard} apBudget={apBudget} archetype={blueprint?.archetype ?? ""} />
+            
+            {/* Download Build Button */}
+            <button
+              onClick={handleDownloadImage}
+              disabled={isExporting}
+              className="mt-4 w-full py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2"
+              style={{
+                fontFamily: "'Rajdhani', sans-serif",
+                background: "oklch(0.25 0.02 240)",
+                color: "oklch(0.95 0.01 240)",
+                border: "1px solid oklch(0.45 0.01 240)",
+              }}
+            >
+              {isExporting ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
+                  </svg>
+                  Exporting HQ Image...
+                </>
+              ) : (
+                <>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  Download Build as Image
+                </>
+              )}
+            </button>
           </div>
         )}
 
@@ -458,12 +506,6 @@ export default function Home() {
                 fontFamily: "'Rajdhani', sans-serif",
                 color: "oklch(0.40 0.01 240)",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.color = "oklch(0.65 0.01 240)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.color = "oklch(0.40 0.01 240)")
-              }
             >
               ↺ Start New Build
             </button>
