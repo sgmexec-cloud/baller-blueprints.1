@@ -23,9 +23,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
 
   // Bulletproof Stat Finder: Handles Arrays, Objects, and case/space differences
   const getStat = (targetAttr: string) => {
-    // Strip spaces and make lowercase for easy matching
     const target = targetAttr.toLowerCase().replace(/\s/g, '');
-    
     if (Array.isArray(stats)) {
       return stats.find((s: any) => {
          const name = (s.name || s.attribute || s.attr || "").toLowerCase().replace(/\s/g, '');
@@ -52,7 +50,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
     <div
       id="export-poster"
       style={{
-        width: "1080px", // Fixed width for high-quality social media export
+        width: "1080px",
         backgroundColor: "#050505",
         color: "#ffffff",
         fontFamily: "system-ui, sans-serif",
@@ -85,7 +83,6 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       {/* Attributes Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "30px", marginBottom: "40px" }}>
         {Object.entries(CATEGORIES).map(([catName, catData]) => {
-          // Use the bulletproof finder to check if we have attributes for this category
           const activeAttrs = catData.attrs.filter((attr) => getStat(attr));
           if (activeAttrs.length === 0) return null;
 
@@ -94,18 +91,20 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
               <h3 style={{ margin: "0 0 20px 0", color: catData.color, fontSize: "20px", letterSpacing: "2px", fontWeight: "bold" }}>{catName}</h3>
               {activeAttrs.map((attr) => {
                 const stat = getStat(attr);
-                if (!stat) return null; // Extra safety check
+                if (!stat) return null;
                 
-                const widthPct = Math.min(100, Math.max(0, (stat.total / 99) * 100));
+                // NEW SMART NUMBER FINDER: Check for all possible names the engine might use
+                const finalStatValue = stat.total ?? stat.value ?? stat.final ?? stat.finalValue ?? stat.rating ?? 0;
+                const widthPct = Math.min(100, Math.max(0, (finalStatValue / 99) * 100));
                 
                 return (
                   <div key={attr} style={{ marginBottom: "15px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", marginBottom: "5px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "16px", marginBottom: "5px" }}>
                       <span style={{ color: "#ccc", fontWeight: "500" }}>{attr}</span>
-                      <div style={{ display: "flex", gap: "10px" }}>
-                        <span style={{ color: catData.color, fontSize: "12px", alignSelf: "center", fontWeight: "bold" }}>+{stat.apSpent || 0} AP</span>
-                        <span style={{ fontWeight: "bold", width: "30px", textAlign: "right", color: stat.total >= 90 ? catData.color : "#fff" }}>
-                          {stat.total}
+                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                        <span style={{ color: catData.color, fontSize: "12px", fontWeight: "bold" }}>+{stat.apSpent || 0} AP</span>
+                        <span style={{ fontWeight: "900", fontSize: "18px", width: "24px", textAlign: "right", color: finalStatValue >= 90 ? catData.color : "#fff" }}>
+                          {finalStatValue}
                         </span>
                       </div>
                     </div>
@@ -157,7 +156,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       
       {/* Watermark */}
       <div style={{ textAlign: "center", marginTop: "40px", color: "#444", fontSize: "20px", letterSpacing: "4px", fontWeight: "bold" }}>
-        FC 26 OPTIMIZER
+        ClubDNA
       </div>
     </div>
   );
