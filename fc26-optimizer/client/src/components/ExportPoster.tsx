@@ -21,7 +21,7 @@ const CATEGORIES = {
 export default function ExportPoster({ blueprint, result, apBudget }: Props) {
   const stats = (result as any).stats || result;
 
-  // Bulletproof Stat Finder: Handles Arrays, Objects, and case/space differences
+  // Bulletproof Stat Finder
   const getStat = (targetAttr: string) => {
     const target = targetAttr.toLowerCase().replace(/\s/g, '');
     if (Array.isArray(stats)) {
@@ -51,15 +51,20 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       id="export-poster"
       style={{
         width: "1080px",
+        height: "1350px", // Strict 4:5 Aspect Ratio for Social Media
+        boxSizing: "border-box", // Ensures padding doesn't break the 1080x1350 lock
         backgroundColor: "#050505",
         color: "#ffffff",
         fontFamily: "system-ui, sans-serif",
-        padding: "40px",
+        padding: "50px",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between", // Auto-distributes the vertical space perfectly
         position: "relative",
       }}
     >
       {/* Header Panel */}
-      <div style={{ display: "flex", justifyContent: "space-between", backgroundColor: "#111", padding: "30px", borderRadius: "16px", border: "1px solid #333", marginBottom: "40px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", backgroundColor: "#111", padding: "30px", borderRadius: "16px", border: "1px solid #333" }}>
         <div>
           <h2 style={{ margin: 0, color: "#aaa", fontSize: "24px", letterSpacing: "4px", textTransform: "uppercase" }}>Final Player Card</h2>
           <h1 style={{ margin: "10px 0 0 0", fontSize: "48px", color: "#fff", textTransform: "uppercase", letterSpacing: "2px" }}>{blueprint.archetype} BUILD</h1>
@@ -81,7 +86,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       </div>
 
       {/* Attributes Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "30px", marginBottom: "40px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "30px" }}>
         {Object.entries(CATEGORIES).map(([catName, catData]) => {
           const activeAttrs = catData.attrs.filter((attr) => getStat(attr));
           if (activeAttrs.length === 0) return null;
@@ -93,7 +98,6 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
                 const stat = getStat(attr);
                 if (!stat) return null;
                 
-                // NEW SMART NUMBER FINDER: Check for all possible names the engine might use
                 const finalStatValue = stat.total ?? stat.value ?? stat.final ?? stat.finalValue ?? stat.rating ?? 0;
                 const widthPct = Math.min(100, Math.max(0, (finalStatValue / 99) * 100));
                 
@@ -155,7 +159,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       </div>
       
       {/* Watermark */}
-      <div style={{ textAlign: "center", marginTop: "40px", color: "#444", fontSize: "20px", letterSpacing: "4px", fontWeight: "bold" }}>
+      <div style={{ textAlign: "center", color: "#444", fontSize: "20px", letterSpacing: "4px", fontWeight: "bold" }}>
         ClubDNA
       </div>
     </div>
