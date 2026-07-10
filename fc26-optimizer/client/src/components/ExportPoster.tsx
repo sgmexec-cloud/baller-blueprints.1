@@ -19,7 +19,19 @@ const CATEGORIES = {
 };
 
 export default function ExportPoster({ blueprint, result, apBudget }: Props) {
-  const { stats, summary } = result;
+  // 1. Smart Data Parsing: Handle both possible formats of your math engine result
+  const stats = (result as any).stats || result;
+
+  // 2. Safely calculate the totals ourselves just in case the summary isn't provided
+  let calculatedSpent = 0;
+  Object.values(stats).forEach((stat: any) => {
+    if (stat && typeof stat.apSpent === 'number') {
+      calculatedSpent += stat.apSpent;
+    }
+  });
+
+  const finalSpent = (result as any).summary?.totalApSpent ?? calculatedSpent;
+  const finalEfficiency = (result as any).summary?.efficiency ?? (apBudget > 0 ? (finalSpent / apBudget) * 100 : 0);
 
   return (
     <div
@@ -46,11 +58,11 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
           </div>
           <div>
             <div style={{ color: "#aaa", fontSize: "18px", letterSpacing: "2px" }}>SPENT</div>
-            <div style={{ fontSize: "36px", fontWeight: "bold", color: "#22c55e" }}>{summary.totalApSpent.toLocaleString()}</div>
+            <div style={{ fontSize: "36px", fontWeight: "bold", color: "#22c55e" }}>{finalSpent.toLocaleString()}</div>
           </div>
           <div>
             <div style={{ color: "#aaa", fontSize: "18px", letterSpacing: "2px" }}>EFFICIENCY</div>
-            <div style={{ fontSize: "36px", fontWeight: "bold", color: "#eab308" }}>{summary.efficiency.toFixed(1)}%</div>
+            <div style={{ fontSize: "36px", fontWeight: "bold", color: "#eab308" }}>{finalEfficiency.toFixed(1)}%</div>
           </div>
         </div>
       </div>
@@ -64,16 +76,19 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
 
           return (
             <div key={catName} style={{ backgroundColor: "#111", padding: "20px", borderRadius: "12px", border: `1px solid #222` }}>
-              <h3 style={{ margin: "0 0 20px 0", color: catData.color, fontSize: "20px", letterSpacing: "2px" }}>{catName}</h3>
+              <h3 style={{ margin: "0 0 20px 0", color: catData.color, fontSize: "20px", letterSpacing: "2px", fontWeight: "bold" }}>{catName}</h3>
               {activeAttrs.map((attr) => {
                 const stat = stats[attr];
+                if (!stat) return null; // Extra safety check
+                
                 const widthPct = Math.min(100, Math.max(0, (stat.total / 99) * 100));
+                
                 return (
                   <div key={attr} style={{ marginBottom: "15px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", fontSize: "16px", marginBottom: "5px" }}>
-                      <span style={{ color: "#ccc" }}>{attr}</span>
+                      <span style={{ color: "#ccc", fontWeight: "500" }}>{attr}</span>
                       <div style={{ display: "flex", gap: "10px" }}>
-                        <span style={{ color: catData.color, fontSize: "12px", alignSelf: "center" }}>+{stat.apSpent} AP</span>
+                        <span style={{ color: catData.color, fontSize: "12px", alignSelf: "center", fontWeight: "bold" }}>+{stat.apSpent} AP</span>
                         <span style={{ fontWeight: "bold", width: "30px", textAlign: "right", color: stat.total >= 90 ? catData.color : "#fff" }}>
                           {stat.total}
                         </span>
@@ -96,7 +111,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
         <div style={{ display: "flex", gap: "40px" }}>
           {/* PlayStyle+ */}
           <div style={{ flex: 1 }}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 15px 0", letterSpacing: "2px" }}>★ PLAYSTYLE+</h3>
+            <h3 style={{ color: "#fbbf24", margin: "0 0 15px 0", letterSpacing: "2px", fontWeight: "bold" }}>★ PLAYSTYLE+</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               {blueprint.playstylePlus.map((ps) => (
                 <div key={ps} style={{ backgroundColor: "#382c0a", color: "#fbbf24", padding: "8px 16px", borderRadius: "8px", border: "1px solid #785a0c", fontSize: "18px", fontWeight: "bold" }}>
@@ -113,10 +128,10 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
           
           {/* Standard PlayStyles */}
           <div style={{ flex: 2 }}>
-            <h3 style={{ color: "#3b82f6", margin: "0 0 15px 0", letterSpacing: "2px" }}>STANDARD PLAYSTYLES</h3>
+            <h3 style={{ color: "#3b82f6", margin: "0 0 15px 0", letterSpacing: "2px", fontWeight: "bold" }}>STANDARD PLAYSTYLES</h3>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
               {blueprint.playstyles.map((ps) => (
-                <div key={ps.name} style={{ backgroundColor: "#0f172a", color: "#93c5fd", padding: "8px 16px", borderRadius: "8px", border: "1px solid #1e3a8a", fontSize: "16px" }}>
+                <div key={ps.name} style={{ backgroundColor: "#0f172a", color: "#93c5fd", padding: "8px 16px", borderRadius: "8px", border: "1px solid #1e3a8a", fontSize: "16px", fontWeight: "500" }}>
                   {ps.name}
                 </div>
               ))}
