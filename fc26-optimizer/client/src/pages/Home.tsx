@@ -124,7 +124,6 @@ function HeroHeader() {
   );
 }
 
-
 // ── Phase indicator ────────────────────────────────────────────────────────────
 function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
   return (
@@ -204,6 +203,10 @@ export default function Home() {
         reportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     },
+    onError: (error) => {
+      alert(`Backend Crash: ${error.message}`);
+      console.error("Scout Error:", error);
+    }
   });
 
   const calcMutation = trpc.scout.calculateStats.useMutation({
