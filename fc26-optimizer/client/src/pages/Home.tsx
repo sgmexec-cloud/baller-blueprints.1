@@ -106,39 +106,13 @@ function HeroHeader() {
         style={{ background: "oklch(0.75 0.22 142)" }}
       />
 
-      <div className="relative z-10">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
-            style={{
-              background: "oklch(0.75 0.22 142)",
-              color: "oklch(0.08 0.01 240)",
-              fontFamily: "'Orbitron', sans-serif",
-            }}
-          >
-            FC
-          </div>
-          <span
-            className="text-xs tracking-[0.3em] uppercase"
-            style={{ color: "oklch(0.55 0.01 240)" }}
-          >
-            26
-          </span>
-        </div>
-        <h1
-          className="text-3xl sm:text-4xl font-black leading-tight mb-2"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            background: "linear-gradient(135deg, oklch(0.95 0.01 240) 0%, oklch(0.75 0.22 142) 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            backgroundClip: "text",
-          }}
-        >
-          ATTRIBUTE
-          <br />
-          OPTIMIZER
-        </h1>
+      <div className="relative z-10 flex flex-col items-center justify-center">
+        {/* ClubDNA Logo */}
+        <img 
+          src="/clubdna-logo.png" 
+          alt="ClubDNA - Remove Opinion. Build With Data." 
+          className="w-auto h-40 md:h-48 object-contain mb-4 drop-shadow-2xl"
+        />
         <p
           className="text-sm max-w-xs mx-auto"
           style={{ color: "oklch(0.55 0.01 240)", fontFamily: "'Inter', sans-serif" }}
@@ -149,6 +123,7 @@ function HeroHeader() {
     </header>
   );
 }
+
 
 // ── Phase indicator ────────────────────────────────────────────────────────────
 function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
