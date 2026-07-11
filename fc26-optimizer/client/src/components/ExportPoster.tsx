@@ -158,10 +158,12 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
         </div>
       </div>
       
-      {/* Watermark */}
-      <div style={{ textAlign: "center", color: "#444", fontSize: "18px", letterSpacing: "4px", fontWeight: "bold" }}>
-        ClubDNA
+            {/* Watermark */}
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <img 
+          src="/clubdna-logo.png" 
+          alt="ClubDNA" 
+          style={{ height: "60px", objectFit: "contain" }} 
+        />
       </div>
-    </div>
-  );
 }
