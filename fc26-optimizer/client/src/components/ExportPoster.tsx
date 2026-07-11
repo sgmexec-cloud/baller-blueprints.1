@@ -56,10 +56,10 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
         backgroundColor: "#050505",
         color: "#ffffff",
         fontFamily: "system-ui, sans-serif",
-        padding: "40px", // Slightly reduced outer padding to give content room
+        padding: "40px", 
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between", // Auto-distributes the vertical space perfectly
+        justifyContent: "space-between", 
         position: "relative",
       }}
     >
@@ -158,7 +158,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
         </div>
       </div>
       
-            {/* Watermark */}
+      {/* Watermark */}
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
         <img 
           src="/clubdna-logo.png" 
@@ -166,4 +166,6 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
           style={{ height: "60px", objectFit: "contain" }} 
         />
       </div>
+    </div>
+  );
 }
