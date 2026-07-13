@@ -3,6 +3,10 @@ import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint } from "../mathEngine";
+import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { getDb } from "../db";
+import { users, guestUsage } from "../drizzle/schema";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
@@ -39,7 +43,42 @@ export type Blueprint = z.infer<typeof BlueprintSchema>;
 export const scoutRouter = router({
   generateReport: publicProcedure
     .input(z.object({ playerIdentity: z.string().min(1).max(500) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      
+      // ── 1. THE FREEMIUM BOUNCER ─────────────────────────────────────────────
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
+
+      const user = (ctx as any).user;
+      
+      // Safely extract the IP Address for Guests
+      const headers = (ctx as any).req?.headers || (ctx as any).headers || {};
+      const forwarded = headers['x-forwarded-for'] || headers['x-real-ip'];
+      const ip = typeof forwarded === 'string' 
+        ? forwarded.split(',')[0].trim() 
+        : ((ctx as any).req?.socket?.remoteAddress || "unknown-guest");
+
+      if (user) {
+        // Free User Check
+        if (user.tier === "free") {
+          const now = new Date();
+          const lastBuild = user.lastBuildDate ? new Date(user.lastBuildDate) : new Date(0);
+          const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
+          const currentBuilds = isNewMonth ? 0 : (user.monthlyBuilds || 0);
+
+          if (currentBuilds >= 5) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_FREE" });
+          }
+        }
+      } else {
+        // Guest Check
+        const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
+        if (existingGuest.length > 0 && existingGuest[0].builds >= 1) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_GUEST" });
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       const context = getScoutingContext();
 
       const systemPrompt = `You are an elite FC 26 scout and attribute specialist. Your job is to analyse a player description and produce a precise, data-driven scouting blueprint using ONLY the data provided.
@@ -95,9 +134,7 @@ RESPONSE FORMAT (strict JSON):
   "reasoning": "A deeply analytical explanation explicitly evaluating how this build balances the four pillars (The Engine, The Ball, The Brain, and The Output) to match the player's identity."
 }`;
 
-      const userPrompt = `Player Identity & Position: ${input.playerIdentity}
-
-Generate the scouting blueprint for this player.`;
+      const userPrompt = `Player Identity & Position: ${input.playerIdentity}\n\nGenerate the scouting blueprint for this player.`;
 
       const response = await invokeLLM({
         messages: [
@@ -127,10 +164,7 @@ Generate the scouting blueprint for this player.`;
                         type: "array",
                         items: {
                           type: "object",
-                          properties: {
-                            attr: { type: "string" },
-                            val: { type: "number" },
-                          },
+                          properties: { attr: { type: "string" }, val: { type: "number" } },
                           required: ["attr", "val"],
                           additionalProperties: false,
                         },
@@ -146,10 +180,7 @@ Generate the scouting blueprint for this player.`;
                   type: "array",
                   items: {
                     type: "object",
-                    properties: {
-                      attr: { type: "string" },
-                      val: { type: "number" },
-                    },
+                    properties: { attr: { type: "string" }, val: { type: "number" } },
                     required: ["attr", "val"],
                     additionalProperties: false,
                   },
@@ -183,30 +214,34 @@ Generate the scouting blueprint for this player.`;
       const parsed = JSON.parse(content);
       const blueprint = BlueprintSchema.parse(parsed);
 
-      // ── Server-side validation of blueprint invariants ────────────────────
-      if (blueprint.playstylePlus.length !== 4) {
-        throw new Error(`Blueprint must have exactly 4 Playstyle+, got ${blueprint.playstylePlus.length}`);
-      }
-      if (blueprint.playstyles.length !== 9) {
-        throw new Error(`Blueprint must have exactly 9 standard Playstyles, got ${blueprint.playstyles.length}`);
-      }
-      
-      const pPlusNames = blueprint.playstylePlus.map(p => p.replace('+', '').toLowerCase());
-      if (blueprint.specialisationPlaystylePlus) {
-        pPlusNames.push(blueprint.specialisationPlaystylePlus.replace('+', '').toLowerCase());
-      }
-      
-      const duplicates = blueprint.playstyles.filter(p => pPlusNames.includes(p.name.toLowerCase()));
-      if (duplicates.length > 0) {
-        throw new Error(`Blueprint contains standard playstyles that duplicate a Playstyle+: ${duplicates.map(d => d.name).join(", ")}`);
-      }
+      if (blueprint.playstylePlus.length !== 4) throw new Error(`Blueprint must have exactly 4 Playstyle+, got ${blueprint.playstylePlus.length}`);
+      if (blueprint.playstyles.length !== 9) throw new Error(`Blueprint must have exactly 9 standard Playstyles, got ${blueprint.playstyles.length}`);
+      if (blueprint.coreAttributes.length !== 8) throw new Error(`Blueprint must have exactly 8 Core attributes, got ${blueprint.coreAttributes.length}`);
+      if (blueprint.secondaryAttributes.length !== 12) throw new Error(`Blueprint must have exactly 12 Secondary attributes, got ${blueprint.secondaryAttributes.length}`);
 
-      if (blueprint.coreAttributes.length !== 8) {
-        throw new Error(`Blueprint must have exactly 8 Core attributes, got ${blueprint.coreAttributes.length}`);
+      // ── 2. THE INCREMENTER (Only runs if AI succeeds) ───────────────────────
+      if (user) {
+         if (user.tier === "free") {
+            const now = new Date();
+            const lastBuild = user.lastBuildDate ? new Date(user.lastBuildDate) : new Date(0);
+            const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
+            const newCount = isNewMonth ? 1 : ((user.monthlyBuilds || 0) + 1);
+
+            await db.update(users)
+              .set({ monthlyBuilds: newCount, lastBuildDate: now })
+              .where(eq(users.id, user.id));
+         }
+      } else {
+         const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
+         if (existingGuest.length > 0) {
+            await db.update(guestUsage)
+              .set({ builds: existingGuest[0].builds + 1, updatedAt: new Date() })
+              .where(eq(guestUsage.ip, ip));
+         } else {
+            await db.insert(guestUsage).values({ ip, builds: 1 });
+         }
       }
-      if (blueprint.secondaryAttributes.length !== 12) {
-        throw new Error(`Blueprint must have exactly 12 Secondary attributes, got ${blueprint.secondaryAttributes.length}`);
-      }
+      // ────────────────────────────────────────────────────────────────────────
 
       return blueprint;
     }),
