@@ -1,28 +1,33 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
-import { sdk } from "./sdk";
+import { jwtVerify } from "jose";
+import * as cookie from "cookie";
 
-export type TrpcContext = {
-  req: CreateExpressContextOptions["req"];
-  res: CreateExpressContextOptions["res"];
-  user: User | null;
-};
+// The exact same secret we used to lock the cookie in auth.ts
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-secret-clubdna-key-change-me");
 
-export async function createContext(
-  opts: CreateExpressContextOptions
-): Promise<TrpcContext> {
-  let user: User | null = null;
+export async function createContext({ req, res }: CreateExpressContextOptions) {
+  let userId = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    // 1. Grab the cookies from the user's browser
+    const cookies = cookie.parse(req.headers.cookie || "");
+    const token = cookies.clubdna_auth;
+
+    // 2. If they have a token, unlock it and find out who they are!
+    if (token) {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+      userId = payload.userId as string; // This is their Discord ID
+    }
   } catch (error) {
-    // Authentication is optional for public procedures.
-    user = null;
+    // If the token is fake or expired, we just ignore it
   }
 
+  // 3. Pass the userId to the rest of our app
   return {
-    req: opts.req,
-    res: opts.res,
-    user,
+    req,
+    res,
+    userId,
   };
 }
+
+export type Context = Awaited<ReturnType<typeof createContext>>;
