@@ -6,7 +6,7 @@ import { runMathEngine, ScoutingBlueprint } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
-import { users, guestUsage } from "../drizzle/schema";
+import { users, guestUsage } from "../../drizzle/schema";
 
 // ── Zod schemas ───────────────────────────────────────────────────────────────
 
