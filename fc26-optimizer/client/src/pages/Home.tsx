@@ -41,7 +41,6 @@ function Spinner({ label }: { label: string }) {
         {label}
       </p>
 
-      {/* Sponsored Loading Banner */}
       <a
         href="https://www.u7buy.com/fc26/fc26-coins?referral-code=xbRz7JOo"
         target="_blank"
@@ -73,7 +72,6 @@ function Spinner({ label }: { label: string }) {
 function HeroHeader() {
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
-      {/* Premium VIP Button */}
       <div className="absolute top-4 right-4 z-20">
         <a
           href="https://discord.gg/ZEypgpczDH"
@@ -91,7 +89,6 @@ function HeroHeader() {
         </a>
       </div>
 
-      {/* Background grid lines */}
       <div
         className="absolute inset-0 opacity-5"
         style={{
@@ -100,14 +97,12 @@ function HeroHeader() {
           backgroundSize: "40px 40px",
         }}
       />
-      {/* Glow orb */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 opacity-20 blur-3xl"
         style={{ background: "oklch(0.75 0.22 142)" }}
       />
 
       <div className="relative z-10 flex flex-col items-center justify-center">
-        {/* ClubDNA Logo */}
         <img 
           src="/clubdna-logo.png" 
           alt="ClubDNA - Remove Opinion. Build With Data." 
@@ -204,7 +199,11 @@ export default function Home() {
       }, 100);
     },
     onError: (error) => {
-      alert(`Backend Crash: ${error.message}`);
+      if (error.message.includes("LIMIT_REACHED")) {
+        alert("Build limit reached! Please upgrade to Premium for unlimited scouting.");
+      } else {
+        alert(`Scouting failed: ${error.message}`);
+      }
       console.error("Scout Error:", error);
     }
   });
@@ -239,7 +238,6 @@ export default function Home() {
     setApBudget(5000);
   };
 
-  // The Magic Camera Function
   const handleDownloadImage = async () => {
     const node = document.getElementById("export-poster");
     if (!node || !blueprint) return;
@@ -265,8 +263,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      
-      {/* ── THE HIDDEN POSTER (Rendered off-screen) ── */}
       {blueprint && playerCard && (
         <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
           <ExportPoster blueprint={blueprint} result={playerCard} apBudget={apBudget} />
@@ -276,7 +272,6 @@ export default function Home() {
       <div className="max-w-lg mx-auto px-4 pb-16">
         <HeroHeader />
 
-        {/* ── Phase 1: Scouting Input ─────────────────────────────────────── */}
         <section className="mb-6">
           <PhaseIndicator phase={phase} />
 
@@ -339,19 +334,16 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Loading state ────────────────────────────────────────────────── */}
         {scoutMutation.isPending && (
           <Spinner label="Running AI Scout Analysis..." />
         )}
 
-        {/* ── Phase 1 Result: Scouting Blueprint ──────────────────────────── */}
         {blueprint && !scoutMutation.isPending && (
           <div ref={reportRef} className="animate-fade-up mb-6">
             <ScoutingReport blueprint={blueprint} />
           </div>
         )}
 
-        {/* ── Phase 2: AP Budget Calculator ───────────────────────────────── */}
         {blueprint && !scoutMutation.isPending && (
           <section className="mb-6 animate-fade-up">
             <div
@@ -431,17 +423,14 @@ export default function Home() {
           </section>
         )}
 
-        {/* ── Loading state for calc ───────────────────────────────────────── */}
         {calcMutation.isPending && (
           <Spinner label="Running Math Engine..." />
         )}
 
-        {/* ── Phase 2 Result: Player Card ──────────────────────────────────── */}
         {playerCard && !calcMutation.isPending && (
           <div ref={cardRef} className="animate-fade-up mb-6">
             <PlayerCard result={playerCard} apBudget={apBudget} archetype={blueprint?.archetype ?? ""} />
             
-            {/* Download Build Button */}
             <button
               onClick={handleDownloadImage}
               disabled={isExporting}
@@ -474,7 +463,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── Reset button ─────────────────────────────────────────────────── */}
         {blueprint && (
           <div className="text-center mt-2">
             <button
