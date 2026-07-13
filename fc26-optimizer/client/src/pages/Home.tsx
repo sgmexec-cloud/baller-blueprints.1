@@ -70,6 +70,11 @@ function Spinner({ label }: { label: string }) {
 
 // ── Hero header ────────────────────────────────────────────────────────────────
 function HeroHeader() {
+  // This is where we ask the backend for the user's info!
+  const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
+    retry: false, // Don't keep asking if they aren't logged in
+  });
+
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
       <div className="absolute top-4 right-4 z-20">
@@ -115,22 +120,44 @@ function HeroHeader() {
           AI-powered scouting &amp; build calculator for the perfect player
         </p>
 
-        {/* ── Discord Login Button ── */}
-        <a
-          href="/api/auth/discord"
-          className="inline-flex items-center gap-3 px-6 py-3 rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-105 hover:shadow-lg"
-          style={{
-            backgroundColor: "#5865F2",
-            color: "#ffffff",
-            boxShadow: "0 0 20px rgba(88, 101, 242, 0.4)",
-            fontFamily: "'Rajdhani', sans-serif",
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor">
-            <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.2,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
-          </svg>
-          Login with Discord
-        </a>
+        {/* ── Show Profile if logged in, otherwise show Discord Button ── */}
+        {isLoading ? (
+          <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
+        ) : user ? (
+          <div className="flex items-center gap-4 bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg"
+                 style={{ backgroundColor: "#5865F2", color: "#fff" }}>
+              {user.name?.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
+                {user.name}
+              </p>
+              <p className="text-xs font-medium" style={{ color: user.tier === "premium" ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
+                {user.tier === "premium" ? "👑 Premium Member" : `${Math.max(0, 5 - (user.monthlyBuilds || 0))} Free Builds Left`}
+              </p>
+            </div>
+            <a href="/api/auth/logout" className="ml-2 text-xs font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+              Logout
+            </a>
+          </div>
+        ) : (
+          <a
+            href="/api/auth/discord"
+            className="inline-flex items-center gap-3 px-6 py-3 rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-105 hover:shadow-lg"
+            style={{
+              backgroundColor: "#5865F2",
+              color: "#ffffff",
+              boxShadow: "0 0 20px rgba(88, 101, 242, 0.4)",
+              fontFamily: "'Rajdhani', sans-serif",
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 127.14 96.36" fill="currentColor">
+              <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.31,60,73.31,53s5-12.74,11.43-12.74S96.2,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+            </svg>
+            Login with Discord
+          </a>
+        )}
       </div>
     </header>
   );
