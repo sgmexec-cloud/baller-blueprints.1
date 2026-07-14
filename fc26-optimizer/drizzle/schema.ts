@@ -15,6 +15,10 @@ export const users = pgTable("users", {
   monthlyBuilds: integer("monthlyBuilds").default(0).notNull(),
   lastBuildDate: timestamp("lastBuildDate"),
 
+  // 👉 NEW STRIPE COLUMNS ADDED HERE
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
+
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
