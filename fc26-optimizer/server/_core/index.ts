@@ -10,11 +10,11 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { authRouter } from "../auth";
 
-// 👉 NEW IMPORTS FOR STRIPE WEBHOOK
+// 👉 NEW IMPORTS FOR STRIPE WEBHOOK & DB FIX
 import Stripe from "stripe";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm"; // 👉 Added 'sql' here
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -38,6 +38,18 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  
+  // 👉 FREE DATABASE FIX: Add columns manually on startup
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
+      await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
+      console.log("Stripe columns added to database!");
+    }
+  } catch (err) {
+    console.log("Notice: Columns might already exist or skipped.");
+  }
   
   // ── 1. STRIPE WEBHOOK (MUST BE BEFORE express.json) ──
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
