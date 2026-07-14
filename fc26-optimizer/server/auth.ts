@@ -58,13 +58,16 @@ authRouter.get("/discord/callback", async (req, res) => {
       .setExpirationTime("7d")
       .sign(JWT_SECRET);
 
-    // E. Put the cookie in their browser and send them back to the homepage
+        // E. Put the cookie in their browser and send them back to the homepage
     res.cookie("clubdna_auth", token, {
       httpOnly: true,
-      secure: true,
+      // Only set secure: true if we are in production
+      secure: process.env.NODE_ENV === "production", 
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // Stays logged in for 7 days
+      path: "/", // Explicitly set the path to root
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
 
     res.redirect("/");
   } catch (error) {
