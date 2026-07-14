@@ -59,14 +59,14 @@ authRouter.get("/discord/callback", async (req, res) => {
       .sign(JWT_SECRET);
 
         // E. Put the cookie in their browser and send them back to the homepage
-    res.cookie("clubdna_auth", token, {
+        res.cookie("clubdna_auth", token, {
       httpOnly: true,
-      // Only set secure: true if we are in production
-      secure: process.env.NODE_ENV === "production", 
-      sameSite: "lax",
-      path: "/", // Explicitly set the path to root
+      secure: false,        // Change to false temporarily to test
+      sameSite: "lax",      // Keep as lax
+      path: "/",            // Keep as root
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
+
 
 
     res.redirect("/");
