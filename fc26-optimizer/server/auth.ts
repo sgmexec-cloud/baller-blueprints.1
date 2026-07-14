@@ -43,10 +43,18 @@ authRouter.get("/discord/callback", async (req, res) => {
     });
     const discordUser = await userResponse.json();
 
-    // C. Save this user into our Neon Postgres database!
+    // DEBUG: Log the data to see what Discord actually returned
+    console.log("Discord User Data Received:", JSON.stringify(discordUser, null, 2));
+
+    // C. Validation: Ensure we actually got an ID
+    if (!discordUser.id) {
+      throw new Error("Discord failed to return user ID. Check your OAuth scopes.");
+    }
+
+    // Save this user into our Neon Postgres database!
     await upsertUser({
       openId: discordUser.id,
-      name: discordUser.username,
+      name: discordUser.username || "Unknown",
       email: discordUser.email || null,
       loginMethod: "discord",
     });
@@ -58,16 +66,14 @@ authRouter.get("/discord/callback", async (req, res) => {
       .setExpirationTime("7d")
       .sign(JWT_SECRET);
 
-        // E. Put the cookie in their browser and send them back to the homepage
-        res.cookie("clubdna_auth", token, {
+    // E. Put the cookie in their browser and send them back to the homepage
+    res.cookie("clubdna_auth", token, {
       httpOnly: true,
-      secure: false,        // Change to false temporarily to test
-      sameSite: "lax",      // Keep as lax
-      path: "/",            // Keep as root
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === "production", 
+      sameSite: "lax",
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
-
-
 
     res.redirect("/");
   } catch (error) {
