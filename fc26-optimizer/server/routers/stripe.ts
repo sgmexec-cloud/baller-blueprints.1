@@ -10,9 +10,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export const stripeRouter = router({
   createCheckout: publicProcedure.mutation(async ({ ctx }) => {
-    // 2. Make sure the user is actually logged in
-    const user = (ctx as any).user;
-    if (!user) {
+    // 👉 FIX: Look for userId instead of the full user object
+    const userId = (ctx as any).userId;
+    
+    if (!userId) {
       throw new TRPCError({ code: "UNAUTHORIZED", message: "You must log in first!" });
     }
 
@@ -30,8 +31,8 @@ export const stripeRouter = router({
         },
       ],
       mode: "subscription",
-      // CRITICAL: We sneak their Discord ID to Stripe so it knows WHO paid later
-      client_reference_id: user.openId, 
+      // 👉 FIX: Use the userId directly since it is your Discord ID
+      client_reference_id: userId, 
       // Where to send them after they pay or cancel
       success_url: `${domain}/?upgrade=success`,
       cancel_url: `${domain}/?upgrade=canceled`,
