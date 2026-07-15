@@ -49,7 +49,16 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
 
-      const user = (ctx as any).user;
+      const ctxUser = (ctx as any).user;
+      let dbUser = null;
+
+      // 👉 FIX: Check the actual database for the fresh tier instead of trusting the stale cookie
+      if (ctxUser && ctxUser.id) {
+        const freshUserResult = await db.select().from(users).where(eq(users.id, ctxUser.id)).limit(1);
+        if (freshUserResult.length > 0) {
+          dbUser = freshUserResult[0];
+        }
+      }
       
       // Safely extract the IP Address for Guests
       const headers = (ctx as any).req?.headers || (ctx as any).headers || {};
@@ -58,13 +67,13 @@ export const scoutRouter = router({
         ? forwarded.split(',')[0].trim() 
         : ((ctx as any).req?.socket?.remoteAddress || "unknown-guest");
 
-      if (user) {
-        // Free User Check
-        if (user.tier === "free") {
+      if (dbUser) {
+        // Free User Check (using the fresh database info)
+        if (dbUser.tier !== "premium") {
           const now = new Date();
-          const lastBuild = user.lastBuildDate ? new Date(user.lastBuildDate) : new Date(0);
+          const lastBuild = dbUser.lastBuildDate ? new Date(dbUser.lastBuildDate) : new Date(0);
           const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
-          const currentBuilds = isNewMonth ? 0 : (user.monthlyBuilds || 0);
+          const currentBuilds = isNewMonth ? 0 : (dbUser.monthlyBuilds || 0);
 
           if (currentBuilds >= 5) {
             throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_FREE" });
@@ -220,16 +229,16 @@ RESPONSE FORMAT (strict JSON):
       if (blueprint.secondaryAttributes.length !== 12) throw new Error(`Blueprint must have exactly 12 Secondary attributes, got ${blueprint.secondaryAttributes.length}`);
 
       // ── 2. THE INCREMENTER (Only runs if AI succeeds) ───────────────────────
-      if (user) {
-         if (user.tier === "free") {
+      if (dbUser) {
+         if (dbUser.tier !== "premium") {
             const now = new Date();
-            const lastBuild = user.lastBuildDate ? new Date(user.lastBuildDate) : new Date(0);
+            const lastBuild = dbUser.lastBuildDate ? new Date(dbUser.lastBuildDate) : new Date(0);
             const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
-            const newCount = isNewMonth ? 1 : ((user.monthlyBuilds || 0) + 1);
+            const newCount = isNewMonth ? 1 : ((dbUser.monthlyBuilds || 0) + 1);
 
             await db.update(users)
               .set({ monthlyBuilds: newCount, lastBuildDate: now })
-              .where(eq(users.id, user.id));
+              .where(eq(users.id, dbUser.id));
          }
       } else {
          const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
