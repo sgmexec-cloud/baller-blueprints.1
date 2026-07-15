@@ -49,12 +49,12 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
 
-      const ctxUser = (ctx as any).user;
+      // 👉 FIX: Check for userId directly, exactly like we did in the Stripe router!
+      const userId = (ctx as any).userId || (ctx as any).user?.id;
       let dbUser = null;
 
-      // 👉 FIX: Check the actual database for the fresh tier instead of trusting the stale cookie
-      if (ctxUser && ctxUser.id) {
-        const freshUserResult = await db.select().from(users).where(eq(users.id, ctxUser.id)).limit(1);
+      if (userId) {
+        const freshUserResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (freshUserResult.length > 0) {
           dbUser = freshUserResult[0];
         }
