@@ -70,29 +70,47 @@ function Spinner({ label }: { label: string }) {
 
 // ── Hero header ────────────────────────────────────────────────────────────────
 function HeroHeader() {
-  // This is where we ask the backend for the user's info!
   const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
-    retry: false, // Don't keep asking if they aren't logged in
+    retry: false,
   });
+
+  // 👉 ADDED: The Stripe checkout logic from your test button
+  const checkoutMutation = trpc.stripe.createCheckout.useMutation({
+    onSuccess: (data) => {
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    },
+    onError: (error) => {
+      alert(error.message);
+    }
+  });
+
+  const isCheckoutLoading = (checkoutMutation as any).isLoading || (checkoutMutation as any).isPending;
 
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
-      <div className="absolute top-4 right-4 z-20">
-        <a
-          href="https://discord.gg/ZEypgpczDH"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs tracking-wider uppercase transition-all duration-200 hover:scale-110 hover:shadow-lg"
-          style={{
-            background: "linear-gradient(135deg, oklch(0.78 0.18 85) 0%, oklch(0.75 0.22 142) 100%)",
-            color: "oklch(0.08 0.01 240)",
-            boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.4), inset 0 1px 2px oklch(0.95 0.01 240 / 0.2)",
-            fontFamily: "'Rajdhani', sans-serif",
-          }}
-        >
-          👑 Unlock Premium Features &amp; VIP Blueprints
-        </a>
-      </div>
+      
+      {/* 👉 ADDED: Hide banner if they are Premium! */}
+      {user?.tier !== "premium" && (
+        <div className="absolute top-4 right-4 z-20">
+          <button
+            onClick={() => checkoutMutation.mutate()}
+            disabled={isCheckoutLoading}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs tracking-wider uppercase transition-all duration-200 hover:scale-110 hover:shadow-lg"
+            style={{
+              background: "linear-gradient(135deg, oklch(0.78 0.18 85) 0%, oklch(0.75 0.22 142) 100%)",
+              color: "oklch(0.08 0.01 240)",
+              boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.4), inset 0 1px 2px oklch(0.95 0.01 240 / 0.2)",
+              fontFamily: "'Rajdhani', sans-serif",
+              border: "none",
+              cursor: isCheckoutLoading ? "not-allowed" : "pointer"
+            }}
+          >
+            {isCheckoutLoading ? "Redirecting to checkout..." : "👑 Unlock Premium Features & VIP Blueprints"}
+          </button>
+        </div>
+      )}
 
       <div
         className="absolute inset-0 opacity-5"
@@ -120,7 +138,6 @@ function HeroHeader() {
           AI-powered scouting &amp; build calculator for the perfect player
         </p>
 
-        {/* ── Show Profile if logged in, otherwise show Discord Button ── */}
         {isLoading ? (
           <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
         ) : user ? (
