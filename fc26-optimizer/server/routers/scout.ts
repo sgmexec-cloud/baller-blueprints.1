@@ -49,12 +49,19 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
 
-      // 👉 FIX: Check for userId directly, exactly like we did in the Stripe router!
-      const userId = (ctx as any).userId || (ctx as any).user?.id;
+      const ctxUser = (ctx as any).user;
+      const fallbackUserId = (ctx as any).userId; // Your Discord ID
       let dbUser = null;
 
-      if (userId) {
-        const freshUserResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      if (ctxUser && ctxUser.id) {
+        // If we have the proper database ID
+        const freshUserResult = await db.select().from(users).where(eq(users.id, ctxUser.id)).limit(1);
+        if (freshUserResult.length > 0) {
+          dbUser = freshUserResult[0];
+        }
+      } else if (fallbackUserId) {
+        // 👉 FIX: If we only have the Discord ID, search the 'openId' column as a string!
+        const freshUserResult = await db.select().from(users).where(eq(users.openId, String(fallbackUserId))).limit(1);
         if (freshUserResult.length > 0) {
           dbUser = freshUserResult[0];
         }
@@ -238,7 +245,7 @@ RESPONSE FORMAT (strict JSON):
 
             await db.update(users)
               .set({ monthlyBuilds: newCount, lastBuildDate: now })
-              .where(eq(users.id, dbUser.id));
+              .where(eq(users.id, dbUser.id)); // Safe to use users.id here because dbUser has the correct UUID
          }
       } else {
          const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
