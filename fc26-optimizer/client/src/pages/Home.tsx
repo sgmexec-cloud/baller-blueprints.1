@@ -140,10 +140,19 @@ function HeroHeader() {
           <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
         ) : user ? (
           <div className="flex items-center gap-4 bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg"
-                 style={{ backgroundColor: "#5865F2", color: "#fff" }}>
-              {user.name?.charAt(0).toUpperCase() || "?"}
-            </div>
+            {/* 👉 NEW: Profile Picture or Fallback Letter */}
+            {user.avatar ? (
+              <img 
+                src={user.avatar} 
+                alt={`${user.name}'s avatar`} 
+                className="w-10 h-10 rounded-full shadow-lg object-cover border border-white/20"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg border border-white/20"
+                   style={{ backgroundColor: "#5865F2", color: "#fff" }}>
+                {user.name?.charAt(0).toUpperCase() || "?"}
+              </div>
+            )}
             <div className="text-left">
               <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
                 {user.name}
