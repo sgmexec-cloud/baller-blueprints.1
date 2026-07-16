@@ -20,8 +20,6 @@ export async function calculateEligiblePlayStyles(
       if (!playstyleName) continue;
 
       let isEligible = true;
-
-      // Loop through Attr1/Val1 (j=1,2), Attr2/Val2 (j=3,4), Attr3/Val3 (j=5,6)
       for (let j = 1; j < 6; j += 2) {
         const attrName = parts[j]?.trim();
         const rawVal = parts[j + 1]?.trim();
@@ -30,17 +28,13 @@ export async function calculateEligiblePlayStyles(
         if (attrName && !isNaN(requiredValue)) {
           const statKey = attrName.charAt(0).toLowerCase() + attrName.slice(1);
           const actualValue = finalStats[statKey] || 0;
-          
           if (actualValue < requiredValue) {
             isEligible = false;
             break;
           }
         }
       }
-
-      if (isEligible) {
-        eligibleStandard.push(playstyleName);
-      }
+      if (isEligible) eligibleStandard.push(playstyleName);
     }
 
     return {
@@ -50,7 +44,6 @@ export async function calculateEligiblePlayStyles(
     };
   } catch (error) {
     console.error("PlayStyle Calculation Error:", error);
-    // Return empty arrays to prevent the frontend from crashing
     return { signatures: [], standard: [], specialisation: null };
   }
 }
