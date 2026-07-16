@@ -47,7 +47,15 @@ export const scoutRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
       const context = getScoutingContext();
-      const systemPrompt = `You are an elite FC 26 scout. CRITICAL: You MUST ONLY use the archetypes, playstyles, and attributes provided in this context: ${context}. IF A PLAYER DESCRIPTION DOES NOT MATCH ANY ARCHETYPE, PICK THE CLOSEST ONE. NEVER INVENT ARCHETYPES. Return ONLY valid JSON matching the required schema.`;
+      // STRICT SYSTEM PROMPT: Forces AI to only use provided CSV data
+      const systemPrompt = `You are a strict FC 26 build engine.
+YOU MUST ONLY USE THE ARCHETYPES AND DATA PROVIDED IN THIS JSON CONTEXT: ${context}
+
+RULES:
+1. DO NOT INVENT ARCHETYPES.
+2. IF A PLAYER DESCRIPTION DOES NOT MATCH AN ARCHETYPE, CHOOSE THE BEST FIT FROM THE LIST ABOVE.
+3. OUTPUT MUST BE STRICT JSON THAT CONFORMS TO THE PROVIDED SCHEMA.
+4. IF A PLAYSTYLE OR ATTRIBUTE IS NOT IN THE CONTEXT, DO NOT USE IT.`;
 
       const response = await invokeLLM({
         messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `Player Identity: ${input.playerIdentity}` }],
