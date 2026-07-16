@@ -1,7 +1,14 @@
 import type { MathEngineResult, StatResult } from "../../../server/mathEngine";
 
+// 👉 UPDATED: Added playstyles to the interface
 interface Props {
-  result: MathEngineResult;
+  result: MathEngineResult & {
+    playstyles?: {
+      signatures: string[];
+      standard: string[];
+      specialisation: string | null;
+    };
+  };
   apBudget: number;
   archetype: string;
 }
@@ -145,7 +152,6 @@ function CategoryBlock({
   };
 
   const totalAP = stats.reduce((s, r) => s + r.apSpent, 0);
-  // Category average (for non-star stats)
   const numericStats = stats.filter((s) => s.max > 5);
   const avg =
     numericStats.length > 0
@@ -157,7 +163,6 @@ function CategoryBlock({
       className="rounded-xl border p-3 mb-3"
       style={{ background: cfg.bg, borderColor: cfg.border }}
     >
-      {/* Category header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-base">{cfg.icon}</span>
@@ -192,8 +197,6 @@ function CategoryBlock({
           )}
         </div>
       </div>
-
-      {/* Stats */}
       {stats.map((stat) => (
         <StatRow key={stat.attribute} stat={stat} catColor={cfg.color} />
       ))}
@@ -207,14 +210,7 @@ export default function PlayerCard({ result, apBudget, archetype }: Props) {
   const remaining = apBudget - result.totalApSpent;
 
   const categoryOrder = [
-    "Pace",
-    "Shooting",
-    "Passing",
-    "Dribbling",
-    "Defending",
-    "Physicality",
-    "Skill Moves",
-    "Weak Foot",
+    "Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality", "Skill Moves", "Weak Foot",
   ];
 
   return (
@@ -226,7 +222,6 @@ export default function PlayerCard({ result, apBudget, archetype }: Props) {
         boxShadow: "0 0 30px oklch(0.78 0.18 85 / 0.08)",
       }}
     >
-      {/* Header */}
       <div
         className="px-4 py-3 border-b"
         style={{
@@ -242,63 +237,54 @@ export default function PlayerCard({ result, apBudget, archetype }: Props) {
         </div>
         <div
           className="text-xl font-black mb-2"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            color: "oklch(0.95 0.01 240)",
-          }}
+          style={{ fontFamily: "'Orbitron', sans-serif", color: "oklch(0.95 0.01 240)" }}
         >
           {archetype.toUpperCase()} BUILD
         </div>
-
-        {/* AP Summary */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Budget", value: apBudget.toLocaleString(), color: "oklch(0.65 0.01 240)" },
             { label: "Spent", value: result.totalApSpent.toLocaleString(), color: "oklch(0.75 0.22 142)" },
             { label: "Efficiency", value: `${efficiency}%`, color: remaining === 0 ? "oklch(0.75 0.22 142)" : "oklch(0.78 0.18 85)" },
           ].map(({ label, value, color }) => (
-            <div
-              key={label}
-              className="rounded-lg p-2 text-center border"
-              style={{
-                background: "oklch(0.13 0.015 240)",
-                borderColor: "oklch(0.20 0.02 240)",
-              }}
-            >
-              <div
-                className="text-xs tracking-wider uppercase mb-0.5"
-                style={{ color: "oklch(0.45 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}
-              >
-                {label}
-              </div>
-              <div
-                className="text-base font-black"
-                style={{ color, fontFamily: "'Orbitron', sans-serif" }}
-              >
-                {value}
-              </div>
+            <div key={label} className="rounded-lg p-2 text-center border" style={{ background: "oklch(0.13 0.015 240)", borderColor: "oklch(0.20 0.02 240)" }}>
+              <div className="text-xs tracking-wider uppercase mb-0.5" style={{ color: "oklch(0.45 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>{label}</div>
+              <div className="text-base font-black" style={{ color, fontFamily: "'Orbitron', sans-serif" }}>{value}</div>
             </div>
           ))}
         </div>
-
-        {remaining > 0 && (
-          <p
-            className="text-xs mt-2 text-center"
-            style={{ color: "oklch(0.65 0.22 25)", fontFamily: "'Inter', sans-serif" }}
-          >
-            {remaining.toLocaleString()} AP unspent — all attributes at maximum
-          </p>
-        )}
       </div>
 
-      {/* Stats body */}
-      <div className="p-4 stagger-children">
+      <div className="p-4">
         {categoryOrder.map((cat) => {
           const stats = result.byCategory[cat];
           if (!stats || stats.length === 0) return null;
           return <CategoryBlock key={cat} name={cat} stats={stats} />;
         })}
       </div>
+
+      {result.playstyles && (
+        <div className="px-4 pb-6 mt-2 border-t border-slate-700 pt-4">
+          <h3 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+            Recommended PlayStyle Loadout
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {result.playstyles.signatures.map((sig, i) => (
+              <span key={`sig-${i}`} className="px-2 py-1 bg-blue-900/30 border border-blue-500/50 rounded text-[10px] font-bold text-blue-200 uppercase tracking-wider">
+                ★ {sig}
+              </span>
+            ))}
+            {result.playstyles.standard.map((ps, i) => (
+              <span key={`std-${i}`} className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                {ps}
+              </span>
+            ))}
+            {result.playstyles.standard.length === 0 && result.playstyles.signatures.length === 0 && (
+              <span className="text-[10px] text-gray-500 italic">No playstyles met requirements.</span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
