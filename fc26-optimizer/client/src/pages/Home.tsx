@@ -140,7 +140,6 @@ function HeroHeader() {
           <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
         ) : user ? (
           <div className="flex items-center gap-4 bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
-            {/* 👉 NEW: Profile Picture or Fallback Letter */}
             {user.avatar ? (
               <img 
                 src={user.avatar} 
@@ -261,7 +260,8 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [playerIdentity, setPlayerIdentity] = useState("");
-  const [apBudget, setApBudget] = useState<number>(5000);
+  // 👉 NEW: Replaced apBudget state with level state
+  const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
   const [phase, setPhase] = useState<1 | 2>(1);
@@ -269,6 +269,12 @@ export default function Home() {
 
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // 👉 NEW: Fetch progression data
+  const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
+
+  // 👉 NEW: Automatically derive the AP budget from the selected level so your math engine doesn't break
+  const apBudget = progressionData ? progressionData[level]?.apAvailable : 0;
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -316,7 +322,7 @@ export default function Home() {
     setPlayerCard(null);
     setPhase(1);
     setPlayerIdentity("");
-    setApBudget(5000);
+    setLevel(1); // 👉 Resets back to level 1
   };
 
   const handleDownloadImage = async () => {
@@ -451,22 +457,46 @@ export default function Home() {
                 </span>
               </div>
 
+              {/* 👉 NEW: Replaced AP Input with Level Dropdown & Stats Panel */}
               <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Inter', sans-serif" }}
               >
-                AP Budget
+                Player Level
               </label>
-              <input
-                type="number"
-                className="input-gaming mb-3"
-                min={1}
-                max={999999}
-                value={apBudget}
-                onChange={(e) => setApBudget(Math.max(1, parseInt(e.target.value) || 0))}
-                disabled={calcMutation.isPending}
-                placeholder="Enter AP budget..."
-              />
+
+              {isProgressionLoading || !progressionData ? (
+                <div className="text-green-400 mb-4 animate-pulse text-sm">Loading progression limits...</div>
+              ) : (
+                <>
+                  <select 
+                    value={level} 
+                    onChange={(e) => setLevel(Number(e.target.value))}
+                    className="input-gaming w-full mb-4 text-white appearance-none bg-black/40"
+                  >
+                    {Object.keys(progressionData).map((lvl) => (
+                      <option key={lvl} value={lvl}>
+                        Level {lvl}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="grid grid-cols-3 gap-3 text-center mb-6">
+                    <div className="p-3 bg-black/40 rounded-lg border border-white/5">
+                      <div className="text-xl font-bold" style={{ color: "oklch(0.75 0.22 142)" }}>{progressionData[level]?.apAvailable}</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Avail. AP</div>
+                    </div>
+                    <div className="p-3 bg-black/40 rounded-lg border border-white/5">
+                      <div className="text-xl font-bold text-blue-400">{progressionData[level]?.signatureUpgrades}</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Sig. Upgrades</div>
+                    </div>
+                    <div className="p-3 bg-black/40 rounded-lg border border-white/5">
+                      <div className="text-xl font-bold text-purple-400">{progressionData[level]?.customSlots}</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">Custom Slots</div>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <button
                 className="w-full py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all duration-200"
