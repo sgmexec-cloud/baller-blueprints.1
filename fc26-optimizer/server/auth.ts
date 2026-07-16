@@ -51,12 +51,20 @@ authRouter.get("/discord/callback", async (req, res) => {
       throw new Error("Discord failed to return user ID. Check your OAuth scopes.");
     }
 
+    // 👉 NEW: Construct the Discord Avatar URL
+    let avatarUrl = null;
+    if (discordUser.avatar) {
+      // Discord avatars are hosted at this specific CDN URL using their ID and Avatar Hash
+      avatarUrl = `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`;
+    }
+
     // Save this user into our Neon Postgres database!
     await upsertUser({
       openId: discordUser.id,
       name: discordUser.username || "Unknown",
       email: discordUser.email || null,
       loginMethod: "discord",
+      avatar: avatarUrl, // 👉 NEW: Pass the avatar URL to the database function
     });
 
     // D. Create a secure "VIP Pass" (a Cookie) so they stay logged in
