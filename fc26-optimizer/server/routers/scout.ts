@@ -47,15 +47,25 @@ export const scoutRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
       const context = getScoutingContext();
-      // STRICT SYSTEM PROMPT: Forces AI to only use provided CSV data
-      const systemPrompt = `You are a strict FC 26 build engine.
-YOU MUST ONLY USE THE ARCHETYPES AND DATA PROVIDED IN THIS JSON CONTEXT: ${context}
+      
+      // 👉 THE ULTIMATE FC 26 SCOUT PROMPT (Restored to your exact specifications)
+      const systemPrompt = `You are the ultimate FC 26 Scout and Attribute Optimizer.
+Your job is to create a Phase 1 Scouting Blueprint based STRICTLY on this JSON context data:
+${context}
 
-RULES:
-1. DO NOT INVENT ARCHETYPES.
-2. IF A PLAYER DESCRIPTION DOES NOT MATCH AN ARCHETYPE, CHOOSE THE BEST FIT FROM THE LIST ABOVE.
-3. OUTPUT MUST BE STRICT JSON THAT CONFORMS TO THE PROVIDED SCHEMA.
-4. IF A PLAYSTYLE OR ATTRIBUTE IS NOT IN THE CONTEXT, DO NOT USE IT.`;
+=== THE SCOUTING REPORT RULES (The Blueprint) ===
+1. Chosen Archetype: Read the provided context to pick the perfect Archetype. DO NOT invent archetypes.
+2. Physical Profile: Recommend a Height and Weight within the Min/Max bounds for that Archetype.
+3. Playstyle+: Choose EXACTLY 3 Playstyle+. Read the Base_Playstyle_Plus for the archetype. 
+4. Specialisation (Optional): ONLY choose a Specialisation path if it improves realism. If you choose a Specialisation, its bonus Playstyle+ MUST replace one of the 3 Base Playstyle+ (Result = 2 Base + 1 Specialisation). Note its minimum stat targets exactly.
+5. Standard Playstyles: Select EXACTLY 8 standard Playstyles from the context.
+   CRITICAL: For each of the 8 Playstyles, you MUST list the exact Attribute minimums required next to their name exactly as they appear in the context. DO NOT HALLUCINATE ATTRIBUTE REQUIREMENTS.
+6. Attribute Pillars: Sort outfield attributes into three realistic tiers:
+   - Core (6 to 8 stats): What the player is known for (Elite traits).
+   - Secondary (10 to 12 stats): Well-rounded areas.
+   - Tertiary (The rest): Areas of weakness or average ability to add realism.
+
+You must return this Blueprint STRICTLY as JSON matching the requested schema. DO NOT invent archetypes, playstyles, or attribute points. ONLY use the exact names and numbers provided in the context.`;
 
       const response = await invokeLLM({
         messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `Player Identity: ${input.playerIdentity}` }],
@@ -64,7 +74,27 @@ RULES:
 
       const rawContent = response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("LLM returned empty response");
-      return BlueprintSchema.parse(JSON.parse(rawContent));
+      const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
+      const blueprint = BlueprintSchema.parse(parsed);
+
+      if (dbUser) {
+         if (dbUser.tier !== "premium") {
+            const now = new Date();
+            const lastBuild = dbUser.lastBuildDate ? new Date(dbUser.lastBuildDate) : new Date(0);
+            const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
+            const newCount = isNewMonth ? 1 : ((dbUser.monthlyBuilds || 0) + 1);
+            await db.update(users).set({ monthlyBuilds: newCount, lastBuildDate: now }).where(eq(users.id, dbUser.id));
+         }
+      } else {
+         const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
+         if (existingGuest.length > 0) {
+            await db.update(guestUsage).set({ builds: existingGuest[0].builds + 1, updatedAt: new Date() }).where(eq(guestUsage.ip, ip));
+         } else {
+            await db.insert(guestUsage).values({ ip, builds: 1 });
+         }
+      }
+
+      return blueprint;
     }),
 
   calculateStats: publicProcedure
