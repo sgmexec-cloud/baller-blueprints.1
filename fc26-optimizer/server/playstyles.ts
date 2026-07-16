@@ -7,57 +7,50 @@ export async function calculateEligiblePlayStyles(
   signatureUpgrades: number,
   archetype: string
 ) {
-  const filePath = path.join(process.cwd(), "server", "data", "PLAYSTYLES.csv");
-  const fileContent = await fs.readFile(filePath, "utf-8");
-  const lines = fileContent.trim().split("\n");
+  try {
+    const filePath = path.join(process.cwd(), "server", "data", "PLAYSTYLES.csv");
+    const fileContent = await fs.readFile(filePath, "utf-8");
+    const lines = fileContent.trim().split("\n");
 
-  const eligibleStandard: string[] = [];
+    const eligibleStandard: string[] = [];
 
-  // Start at i=1 to skip the header row
-  for (let i = 1; i < lines.length; i++) {
-    // Split by comma (handles blank columns safely)
-    const parts = lines[i].split(",");
-    const playstyleName = parts[0]?.trim();
-    if (!playstyleName) continue;
+    for (let i = 1; i < lines.length; i++) {
+      const parts = lines[i].split(",");
+      const playstyleName = parts[0]?.trim();
+      if (!playstyleName) continue;
 
-    let isEligible = true;
+      let isEligible = true;
 
-    // Loop through Attr1/Val1, Attr2/Val2, Attr3/Val3
-    for (let j = 1; j < parts.length; j += 2) {
-      const attrName = parts[j]?.trim();
-      const requiredValue = parseInt(parts[j + 1]?.trim(), 10);
+      // Loop through Attr1/Val1 (j=1,2), Attr2/Val2 (j=3,4), Attr3/Val3 (j=5,6)
+      for (let j = 1; j < 6; j += 2) {
+        const attrName = parts[j]?.trim();
+        const rawVal = parts[j + 1]?.trim();
+        const requiredValue = rawVal ? parseInt(rawVal, 10) : NaN;
 
-      if (attrName && !isNaN(requiredValue)) {
-        // Convert CSV attribute name (e.g., "BallControl") to match MathEngine keys (e.g., "ballControl")
-        const statKey = attrName.charAt(0).toLowerCase() + attrName.slice(1);
-        
-        const actualValue = finalStats[statKey] || 0;
-        
-        // If the player fails even one requirement, they don't get the PlayStyle
-        if (actualValue < requiredValue) {
-          isEligible = false;
-          break;
+        if (attrName && !isNaN(requiredValue)) {
+          const statKey = attrName.charAt(0).toLowerCase() + attrName.slice(1);
+          const actualValue = finalStats[statKey] || 0;
+          
+          if (actualValue < requiredValue) {
+            isEligible = false;
+            break;
+          }
         }
+      }
+
+      if (isEligible) {
+        eligibleStandard.push(playstyleName);
       }
     }
 
-    if (isEligible) {
-      eligibleStandard.push(playstyleName);
-    }
+    return {
+      signatures: Array.from({ length: Math.max(0, signatureUpgrades) }, (_, i) => `${archetype} Signature+ ${i + 1}`),
+      standard: eligibleStandard.slice(0, Math.max(0, customSlots)) || [],
+      specialisation: null,
+    };
+  } catch (error) {
+    console.error("PlayStyle Calculation Error:", error);
+    // Return empty arrays to prevent the frontend from crashing
+    return { signatures: [], standard: [], specialisation: null };
   }
-
-  // Cap the equipped standard playstyles based on the user's unlocked slots
-  const equippedStandard = eligibleStandard.slice(0, customSlots);
-
-  // Generate placeholders for the Signature Upgrades based on their level
-  const equippedSignatures = Array.from(
-    { length: signatureUpgrades },
-    (_, i) => `${archetype} Signature+ ${i + 1}`
-  );
-
-  return {
-    signatures: equippedSignatures,
-    standard: equippedStandard,
-    specialisation: null, // Placeholder for future specialisation logic
-  };
 }
