@@ -74,7 +74,6 @@ function HeroHeader() {
     retry: false,
   });
 
-  // 👉 ADDED: The Stripe checkout logic from your test button
   const checkoutMutation = trpc.stripe.createCheckout.useMutation({
     onSuccess: (data) => {
       if (data.checkoutUrl) {
@@ -91,7 +90,6 @@ function HeroHeader() {
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
       
-      {/* 👉 ADDED: Hide banner if they are Premium! */}
       {user?.tier !== "premium" && (
         <div className="absolute top-4 right-4 z-20">
           <button
@@ -154,9 +152,22 @@ function HeroHeader() {
                 {user.tier === "premium" ? "👑 Premium Member" : `${Math.max(0, 5 - (user.monthlyBuilds || 0))} Free Builds Left`}
               </p>
             </div>
-            <a href="/api/auth/logout" className="ml-2 text-xs font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
-              Logout
-            </a>
+            <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
+              {user.tier === "premium" && (
+                <a 
+                  href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-[10px] font-bold uppercase tracking-wider transition-colors hover:opacity-80"
+                  style={{ color: "oklch(0.78 0.18 85)" }}
+                >
+                  Manage Sub
+                </a>
+              )}
+              <a href="/api/auth/logout" className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+                Logout
+              </a>
+            </div>
           </div>
         ) : (
           <a
