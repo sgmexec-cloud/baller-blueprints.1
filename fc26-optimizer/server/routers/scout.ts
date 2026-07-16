@@ -7,12 +7,9 @@ import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
 import { users, guestUsage } from "../../drizzle/schema";
-// 👉 NEW IMPORTS
 import fs from "fs/promises";
 import path from "path";
 import { calculateEligiblePlayStyles } from "../playstyles";
-
-// ── Zod schemas ───────────────────────────────────────────────────────────────
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
@@ -42,20 +39,15 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-// ── Scout router ──────────────────────────────────────────────────────────────
-
 export const scoutRouter = router({
   generateReport: publicProcedure
     .input(z.object({ playerIdentity: z.string().min(1).max(500) }))
     .mutation(async ({ input, ctx }) => {
-      
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
-
       const ctxUser = (ctx as any).user;
       const fallbackUserId = (ctx as any).userId;
       let dbUser = null;
-
       if (ctxUser && ctxUser.id) {
         const freshUserResult = await db.select().from(users).where(eq(users.id, ctxUser.id)).limit(1);
         if (freshUserResult.length > 0) dbUser = freshUserResult[0];
@@ -63,35 +55,30 @@ export const scoutRouter = router({
         const freshUserResult = await db.select().from(users).where(eq(users.openId, String(fallbackUserId))).limit(1);
         if (freshUserResult.length > 0) dbUser = freshUserResult[0];
       }
-      
       const headers = (ctx as any).req?.headers || (ctx as any).headers || {};
       const forwarded = headers['x-forwarded-for'] || headers['x-real-ip'];
       const ip = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : ((ctx as any).req?.socket?.remoteAddress || "unknown-guest");
-
       if (dbUser) {
         if (dbUser.tier !== "premium") {
           const now = new Date();
           const lastBuild = dbUser.lastBuildDate ? new Date(dbUser.lastBuildDate) : new Date(0);
           const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
           const currentBuilds = isNewMonth ? 0 : (dbUser.monthlyBuilds || 0);
-
           if (currentBuilds >= 5) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_FREE" });
         }
       } else {
         const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
         if (existingGuest.length > 0 && existingGuest[0].builds >= 1) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_GUEST" });
       }
-
       const context = getScoutingContext();
-      // (System prompt omitted for brevity - keep your existing one here!)
-      // ... 
-
-      const response = await invokeLLM({ /* ... your existing LLM call ... */ } as any);
+      const response = await invokeLLM({
+        messages: [{ role: "system", content: "You are an elite FC 26 scout..." }, { role: "user", content: `Player Identity: ${input.playerIdentity}` }],
+        response_format: { type: "json_schema", json_schema: { name: "scouting_blueprint", strict: true, schema: { type: "object", properties: { archetype: { type: "string" }, heightRange: { type: "string" }, weightRange: { type: "string" }, position: { type: "string" }, playstylePlus: { type: "array", items: { type: "string" } }, playstyles: { type: "array", items: { type: "object", properties: { name: { type: "string" }, requirements: { type: "array", items: { type: "object", properties: { attr: { type: "string" }, val: { type: "number" } }, required: ["attr", "val"], additionalProperties: false } } }, required: ["name", "requirements"], additionalProperties: false } }, specialisation: { type: "string" }, specialisationPlaystylePlus: { type: "string" }, specialisationMinAttrs: { type: "array", items: { type: "object", properties: { attr: { type: "string" }, val: { type: "number" } }, required: ["attr", "val"], additionalProperties: false } }, coreAttributes: { type: "array", items: { type: "string" } }, secondaryAttributes: { type: "array", items: { type: "string" } }, tertiaryAttributes: { type: "array", items: { type: "string" } }, reasoning: { type: "string" } }, required: ["archetype", "position", "heightRange", "weightRange", "playstylePlus", "playstyles", "coreAttributes", "secondaryAttributes", "tertiaryAttributes"], additionalProperties: false } } }
+      } as any);
       const rawContent = response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("LLM returned empty response");
       const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
       const blueprint = BlueprintSchema.parse(parsed);
-
       if (dbUser) {
          if (dbUser.tier !== "premium") {
             const now = new Date();
@@ -108,17 +95,11 @@ export const scoutRouter = router({
             await db.insert(guestUsage).values({ ip, builds: 1 });
          }
       }
-
       return blueprint;
     }),
 
   calculateStats: publicProcedure
-    .input(
-      z.object({
-        blueprint: BlueprintSchema,
-        apBudget: z.number().int().min(1).max(999999),
-      })
-    )
+    .input(z.object({ blueprint: BlueprintSchema, apBudget: z.number().int().min(1).max(999999) }))
     .mutation(async ({ input }) => {
       const engineBlueprint: ScoutingBlueprint = {
         archetype: input.blueprint.archetype,
@@ -132,38 +113,26 @@ export const scoutRouter = router({
         secondaryAttributes: input.blueprint.secondaryAttributes,
         tertiaryAttributes: input.blueprint.tertiaryAttributes,
       };
-
       const result = runMathEngine(engineBlueprint, input.apBudget);
-
-      const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
-      const progContent = await fs.readFile(progPath, "utf-8");
-      const progLines = progContent.trim().split("\n");
-
       let customSlots = 0;
       let signatureUpgrades = 0;
-
-      for (let i = 1; i < progLines.length; i++) {
-        const parts = progLines[i].split(",");
-        const ap = Number(parts[1]);
-        const sig = Number(parts[2]);
-        const custom = Number(parts[3]);
-        
-        if (input.apBudget >= ap) {
-          customSlots = custom;
-          signatureUpgrades = sig;
+      try {
+        const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
+        const progContent = await fs.readFile(progPath, "utf-8");
+        const lines = progContent.trim().split("\n");
+        for (let i = 1; i < lines.length; i++) {
+          const p = lines[i].split(",");
+          if (input.apBudget >= Number(p[1])) { customSlots = Number(p[3]); signatureUpgrades = Number(p[2]); }
         }
-      }
-
-      const eligiblePlaystyles = await calculateEligiblePlayStyles(
-        result.finalStats,
-        customSlots,
-        signatureUpgrades,
-        input.blueprint.archetype
-      );
-
+      } catch (e) { console.error("Progression error:", e); }
+      const eligiblePlaystyles = await calculateEligiblePlayStyles(result.finalStats, customSlots, signatureUpgrades, input.blueprint.archetype);
       return {
         ...result,
-        playstyles: eligiblePlaystyles,
+        playstyles: {
+          signatures: eligiblePlaystyles?.signatures || [],
+          standard: eligiblePlaystyles?.standard || [],
+          specialisation: eligiblePlaystyles?.specialisation || null
+        }
       };
     }),
 });
