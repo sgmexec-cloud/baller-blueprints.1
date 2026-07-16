@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
+  avatar: text("avatar"), // 👉 NEW: Store the Discord profile picture URL
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: roleEnum("role").default("user").notNull(),
   
@@ -15,7 +16,6 @@ export const users = pgTable("users", {
   monthlyBuilds: integer("monthlyBuilds").default(0).notNull(),
   lastBuildDate: timestamp("lastBuildDate"),
 
-  // 👉 NEW STRIPE COLUMNS ADDED HERE
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
 
