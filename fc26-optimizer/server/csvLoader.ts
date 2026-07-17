@@ -47,7 +47,7 @@ export interface ArchetypeProfile {
   MaxH: string;
   MinW: string;
   MaxW: string;
-  Base_Playstyle_Plus: string;
+  Signature_PlayStyles: string;
   Recommended_Positions: string;
   Key_Attributes: string;
   Specialisations: string;
@@ -137,7 +137,7 @@ export function getScoutingContext(): string {
     archetype: a.Archetype,
     heightRange: `${a.MinH}–${a.MaxH} cm`,
     weightRange: `${a.MinW}–${a.MaxW} kg`,
-    basePlaystylePlus: a.Base_Playstyle_Plus,
+    signaturePlaystyles: a.Signature_PlayStyles,
     recommendedPositions: a.Recommended_Positions,
     keyAttributes: a.Key_Attributes,
     specialisations: a.Specialisations,
