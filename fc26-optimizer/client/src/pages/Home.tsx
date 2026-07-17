@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { toPng } from "html-to-image";
-import ScoutingReport from "@/components/ScoutingReport";
 import PlayerCard from "@/components/PlayerCard";
 import ExportPoster from "@/components/ExportPoster";
 import type { Blueprint } from "../../../server/routers/scout";
@@ -260,7 +259,6 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [playerIdentity, setPlayerIdentity] = useState("");
-  // 👉 NEW: Replaced apBudget state with level state
   const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
@@ -270,10 +268,8 @@ export default function Home() {
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // 👉 NEW: Fetch progression data
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
 
-  // 👉 NEW: Automatically derive the AP budget from the selected level so your math engine doesn't break
   const apBudget = progressionData ? progressionData[level]?.apAvailable : 0;
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
@@ -322,7 +318,7 @@ export default function Home() {
     setPlayerCard(null);
     setPhase(1);
     setPlayerIdentity("");
-    setLevel(1); // 👉 Resets back to level 1
+    setLevel(1);
   };
 
   const handleDownloadImage = async () => {
@@ -427,7 +423,49 @@ export default function Home() {
 
         {blueprint && !scoutMutation.isPending && (
           <div ref={reportRef} className="animate-fade-up mb-6">
-            <ScoutingReport blueprint={blueprint} />
+            {/* ========================================= */}
+            {/* PHASE 1: SCOUTING BLUEPRINT (CLEAN UI)    */}
+            {/* ========================================= */}
+            <div className="rounded-xl border border-green-900/40 bg-black/40 overflow-hidden mb-6">
+              
+              {/* HEADER: Archetype, Height, Weight */}
+              <div className="p-4 border-b border-green-900/30 flex justify-between items-end" style={{ background: "linear-gradient(to bottom, rgba(20,83,45,0.1), transparent)" }}>
+                <div>
+                  <div className="text-[10px] font-bold text-green-500 tracking-widest uppercase mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                    Scouting Blueprint
+                  </div>
+                  <div className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                    {blueprint.archetype}
+                  </div>
+                </div>
+                <div className="text-right text-xs text-gray-400 font-medium tracking-wide">
+                  <div>{blueprint.heightRange}</div>
+                  <div>{blueprint.weightRange}</div>
+                </div>
+              </div>
+
+              {/* CHIEF SCOUT'S VERDICT */}
+              {blueprint.scoutSummary && (
+                <div className="p-4">
+                  <div className="rounded-xl border border-green-900/30 bg-green-950/20 p-5 relative overflow-hidden">
+                    {/* Subtle background glow */}
+                    <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none bg-green-500" />
+                    
+                    <div className="flex items-center gap-2 mb-3 relative z-10">
+                      <span className="text-base">📋</span>
+                      <h3 className="text-[11px] font-bold text-green-500 uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                        Chief Scout's Verdict
+                      </h3>
+                    </div>
+                    
+                    <p className="text-[13px] sm:text-sm leading-relaxed text-gray-300 relative z-10" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {blueprint.scoutSummary}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            </div>
           </div>
         )}
 
@@ -457,7 +495,6 @@ export default function Home() {
                 </span>
               </div>
 
-              {/* 👉 NEW: Replaced AP Input with Level Dropdown & Stats Panel */}
               <label
                 className="block text-sm font-medium mb-2"
                 style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Inter', sans-serif" }}
