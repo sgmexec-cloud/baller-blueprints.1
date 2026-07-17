@@ -121,7 +121,6 @@ export const scoutRouter = router({
         if (existingGuest.length > 0 && existingGuest[0].builds >= 1) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_GUEST" });
       }
 
-      // STAGE 1: HIDDEN SCOUT REPORT
       const stage1Response = await invokeLLM({
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
@@ -132,7 +131,6 @@ export const scoutRouter = router({
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      // STAGE 2: DATA ANALYST TRANSLATION
       const context = getScoutingContext();
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst.
 Read the Chief Scout's detailed report provided by the user. Your job is to translate their real-world observations into strict FC 26 JSON data using ONLY this context:
@@ -160,7 +158,6 @@ Return strictly valid JSON matching the requested schema.`;
       const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
       const blueprint = BlueprintSchema.parse(parsed);
 
-      // LOG USAGE
       if (dbUser) {
          if (dbUser.tier !== "premium") {
             const now = new Date();
@@ -184,24 +181,11 @@ Return strictly valid JSON matching the requested schema.`;
   calculateStats: publicProcedure
     .input(z.object({ blueprint: BlueprintSchema, apBudget: z.number().int().min(1).max(999999) }))
     .mutation(async ({ input }) => {
-      const engineBlueprint: ScoutingBlueprint = {
-        archetype: input.blueprint.archetype,
-        position: input.blueprint.position,
-        playstylePlus: input.blueprint.playstylePlus,
-        playstyles: input.blueprint.playstyles,
-        specialisation: input.blueprint.specialisation,
-        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus,
-        specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
-        coreAttributes: input.blueprint.coreAttributes,
-        secondaryAttributes: input.blueprint.secondaryAttributes,
-        tertiaryAttributes: input.blueprint.tertiaryAttributes,
-      };
-
-      const result = runMathEngine(engineBlueprint, input.apBudget);
+      
       let customSlots = 0;
       let signatureUpgrades = 0;
 
-      // GET PROGRESSION LIMITS
+      // 👉 GET PROGRESSION LIMITS FIRST
       try {
         const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
         const progContent = await fs.readFile(progPath, "utf-8");
@@ -215,21 +199,35 @@ Return strictly valid JSON matching the requested schema.`;
         }
       } catch (e) { console.error("Progression error:", e); }
 
-      // EA FC 26: DYNAMIC SIGNATURE PLAYSTYLE RESOLVER
+      const engineBlueprint: ScoutingBlueprint = {
+        archetype: input.blueprint.archetype,
+        position: input.blueprint.position,
+        playstylePlus: input.blueprint.playstylePlus,
+        playstyles: input.blueprint.playstyles,
+        specialisation: input.blueprint.specialisation,
+        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus,
+        specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
+        coreAttributes: input.blueprint.coreAttributes,
+        secondaryAttributes: input.blueprint.secondaryAttributes,
+        tertiaryAttributes: input.blueprint.tertiaryAttributes,
+      };
+
+      // 👉 PASS CUSTOM SLOTS INTO THE MATH ENGINE
+      const result = runMathEngine(engineBlueprint, input.apBudget, customSlots);
+
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
         input.blueprint.specialisationPlaystylePlus
       );
 
-      // (We will update the Standard Customizable slots next!)
       const eligiblePlaystyles = await calculateEligiblePlayStyles(result.finalStats, customSlots, signatureUpgrades, input.blueprint.archetype);
       
       return {
         ...result,
         scoutSummary: input.blueprint.scoutSummary,
         playstyles: {
-          signatures: resolvedSignatures, // 👉 Replaced with our new EA mathematical resolver
+          signatures: resolvedSignatures,
           standard: eligiblePlaystyles?.standard || [],
           specialisation: input.blueprint.specialisation || null
         }
