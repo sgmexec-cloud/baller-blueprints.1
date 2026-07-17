@@ -9,7 +9,6 @@ import { getDb } from "../db";
 import { users, guestUsage } from "../../drizzle/schema";
 import fs from "fs/promises";
 import path from "path";
-import { calculateEligiblePlayStyles } from "../playstyles";
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
@@ -185,7 +184,6 @@ Return strictly valid JSON matching the requested schema.`;
       let customSlots = 0;
       let signatureUpgrades = 0;
 
-      // 👉 GET PROGRESSION LIMITS FIRST
       try {
         const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
         const progContent = await fs.readFile(progPath, "utf-8");
@@ -193,8 +191,8 @@ Return strictly valid JSON matching the requested schema.`;
         for (let i = 1; i < lines.length; i++) {
           const p = lines[i].split(",");
           if (input.apBudget >= Number(p[1])) {
-            signatureUpgrades = Number(p[2]); // Slot 2 in progression.csv
-            customSlots = Number(p[3]);       // Slot 3 in progression.csv
+            signatureUpgrades = Number(p[2]);
+            customSlots = Number(p[3]);      
           }
         }
       } catch (e) { console.error("Progression error:", e); }
@@ -212,7 +210,6 @@ Return strictly valid JSON matching the requested schema.`;
         tertiaryAttributes: input.blueprint.tertiaryAttributes,
       };
 
-      // 👉 PASS CUSTOM SLOTS INTO THE MATH ENGINE
       const result = runMathEngine(engineBlueprint, input.apBudget, customSlots);
 
       const resolvedSignatures = resolveSignaturePlaystyles(
@@ -221,14 +218,17 @@ Return strictly valid JSON matching the requested schema.`;
         input.blueprint.specialisationPlaystylePlus
       );
 
-      const eligiblePlaystyles = await calculateEligiblePlayStyles(result.finalStats, customSlots, signatureUpgrades, input.blueprint.archetype);
+      // 👉 FIX: Directly extract the Standard Playstyles that the Math Engine just bought stats for
+      const standardPlaystyles = input.blueprint.playstyles
+        .slice(0, customSlots)
+        .map(ps => ps.name);
       
       return {
         ...result,
         scoutSummary: input.blueprint.scoutSummary,
         playstyles: {
           signatures: resolvedSignatures,
-          standard: eligiblePlaystyles?.standard || [],
+          standard: standardPlaystyles, // 👉 Passed cleanly to the UI
           specialisation: input.blueprint.specialisation || null
         }
       };
