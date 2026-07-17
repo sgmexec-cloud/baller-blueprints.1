@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint } from "../mathEngine";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
@@ -22,7 +22,7 @@ const PlaystyleSchema = z.object({
 });
 
 const BlueprintSchema = z.object({
-  scoutSummary: z.string(), // NEW: The user-facing summary
+  scoutSummary: z.string(),
   archetype: z.string(),
   position: z.string().optional(),
   heightRange: z.string(),
@@ -40,7 +40,6 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-// 👉 THE USER'S CHIEF SCOUT PROMPT (Stage 1)
 const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout with extensive experience working for Premier League and Champions League clubs.
 Your task is to produce an objective, evidence-based scouting report on the player provided.
 The report is NOT intended for human scouting only. It will be analysed by a mathematical engine that converts football language into EA SPORTS FC26 attributes and PlayStyles.
@@ -122,9 +121,7 @@ export const scoutRouter = router({
         if (existingGuest.length > 0 && existingGuest[0].builds >= 1) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_GUEST" });
       }
 
-      // ====================================================================
-      // STAGE 1: GENERATE THE HIDDEN 10-SECTION REPORT
-      // ====================================================================
+      // STAGE 1: HIDDEN SCOUT REPORT
       const stage1Response = await invokeLLM({
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
@@ -135,9 +132,7 @@ export const scoutRouter = router({
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      // ====================================================================
-      // STAGE 2: TRANSLATE TO JSON & CREATE SUMMARY
-      // ====================================================================
+      // STAGE 2: DATA ANALYST TRANSLATION
       const context = getScoutingContext();
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst.
 Read the Chief Scout's detailed report provided by the user. Your job is to translate their real-world observations into strict FC 26 JSON data using ONLY this context:
@@ -165,9 +160,7 @@ Return strictly valid JSON matching the requested schema.`;
       const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
       const blueprint = BlueprintSchema.parse(parsed);
 
-      // ====================================================================
-      // LOG USAGE TO DATABASE
-      // ====================================================================
+      // LOG USAGE
       if (dbUser) {
          if (dbUser.tier !== "premium") {
             const now = new Date();
@@ -208,6 +201,7 @@ Return strictly valid JSON matching the requested schema.`;
       let customSlots = 0;
       let signatureUpgrades = 0;
 
+      // GET PROGRESSION LIMITS
       try {
         const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
         const progContent = await fs.readFile(progPath, "utf-8");
@@ -215,20 +209,29 @@ Return strictly valid JSON matching the requested schema.`;
         for (let i = 1; i < lines.length; i++) {
           const p = lines[i].split(",");
           if (input.apBudget >= Number(p[1])) {
-            customSlots = Number(p[3]);
-            signatureUpgrades = Number(p[2]);
+            signatureUpgrades = Number(p[2]); // Slot 2 in progression.csv
+            customSlots = Number(p[3]);       // Slot 3 in progression.csv
           }
         }
       } catch (e) { console.error("Progression error:", e); }
 
+      // EA FC 26: DYNAMIC SIGNATURE PLAYSTYLE RESOLVER
+      const resolvedSignatures = resolveSignaturePlaystyles(
+        input.blueprint.archetype,
+        signatureUpgrades,
+        input.blueprint.specialisationPlaystylePlus
+      );
+
+      // (We will update the Standard Customizable slots next!)
       const eligiblePlaystyles = await calculateEligiblePlayStyles(result.finalStats, customSlots, signatureUpgrades, input.blueprint.archetype);
+      
       return {
         ...result,
-        scoutSummary: input.blueprint.scoutSummary, // Pass it down to the final response
+        scoutSummary: input.blueprint.scoutSummary,
         playstyles: {
-          signatures: eligiblePlaystyles?.signatures || [],
+          signatures: resolvedSignatures, // 👉 Replaced with our new EA mathematical resolver
           standard: eligiblePlaystyles?.standard || [],
-          specialisation: eligiblePlaystyles?.specialisation || null
+          specialisation: input.blueprint.specialisation || null
         }
       };
     }),
