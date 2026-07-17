@@ -1,4 +1,4 @@
-import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT } from "./csvLoader";
+import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT, PLAYSTYLES } from "./csvLoader";
 
 // ── Attribute category groupings ──────────────────────────────────────────────
 
@@ -86,7 +86,8 @@ function isCBOrST(position?: string): boolean {
 
 export function runMathEngine(
   blueprint: ScoutingBlueprint,
-  apBudget: number
+  apBudget: number,
+  customSlots: number = 0 // 👉 New Parameter!
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
 
@@ -167,10 +168,18 @@ export function runMathEngine(
     }
   }
 
-  // 2. Upgrade Playstyle minimums
-  for (const ps of blueprint.playstyles) {
-    for (const req of ps.requirements) {
-      upgradeToMin(req.attr, req.val);
+  // ── EA RULE: Custom Slots & CSV Lookup ───────────────────────────────────
+  // Slice the AI's playstyle list to ONLY include the allowed Custom Slots
+  const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
+  
+  for (const ps of activePlaystyles) {
+    // Look up the exact stats directly from the CSV so the AI can never make a mistake
+    const realReqs = PLAYSTYLES.find((p) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
+    
+    if (realReqs) {
+      if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
+      if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
+      if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10));
     }
   }
 
@@ -294,7 +303,7 @@ export function runMathEngine(
   };
 }
 
-// ── NEW: EA FC 26 Signature PlayStyle Resolver ────────────────────────────────
+// ── EA FC 26 Signature PlayStyle Resolver ────────────────────────────────────
 export function resolveSignaturePlaystyles(
   archetypeName: string,
   signatureUpgrades: number,
@@ -303,18 +312,14 @@ export function resolveSignaturePlaystyles(
   const arch = ARCHETYPE_PROFILES.find((a) => a.Archetype.toLowerCase() === archetypeName.toLowerCase());
   if (!arch) return [];
 
-  // 1. Get the base signatures in order
   const baseSignatures = arch.Signature_PlayStyles.split(",").map((s) => s.trim());
 
-  // 2. Map them to Plus (+) based on available upgrades
   const upgradedSignatures = baseSignatures.map((ps, index) => {
     return index < signatureUpgrades ? `${ps}+` : ps;
   });
 
-  // 3. Swap for Specialisation Bonus (EA Rule: Replaces one Signature slot, max 4 total)
   if (specialisationBonusPlus) {
     const formattedBonus = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
-    // We swap the 4th slot to maintain the 4-slot limit
     upgradedSignatures[3] = formattedBonus;
   }
 
