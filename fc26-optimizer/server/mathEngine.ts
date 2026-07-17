@@ -1,4 +1,4 @@
-import { ALL_ARCHETYPES, COST_DICT } from "./csvLoader";
+import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT } from "./csvLoader";
 
 // ── Attribute category groupings ──────────────────────────────────────────────
 
@@ -292,4 +292,31 @@ export function runMathEngine(
     totalApSpent,
     byCategory,
   };
+}
+
+// ── NEW: EA FC 26 Signature PlayStyle Resolver ────────────────────────────────
+export function resolveSignaturePlaystyles(
+  archetypeName: string,
+  signatureUpgrades: number,
+  specialisationBonusPlus?: string
+): string[] {
+  const arch = ARCHETYPE_PROFILES.find((a) => a.Archetype.toLowerCase() === archetypeName.toLowerCase());
+  if (!arch) return [];
+
+  // 1. Get the base signatures in order
+  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s) => s.trim());
+
+  // 2. Map them to Plus (+) based on available upgrades
+  const upgradedSignatures = baseSignatures.map((ps, index) => {
+    return index < signatureUpgrades ? `${ps}+` : ps;
+  });
+
+  // 3. Swap for Specialisation Bonus (EA Rule: Replaces one Signature slot, max 4 total)
+  if (specialisationBonusPlus) {
+    const formattedBonus = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
+    // We swap the 4th slot to maintain the 4-slot limit
+    upgradedSignatures[3] = formattedBonus;
+  }
+
+  return upgradedSignatures.slice(0, 4);
 }
