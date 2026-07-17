@@ -85,10 +85,10 @@ ${context}
 === THE SCOUTING REPORT RULES (The Blueprint) ===
 1. Chosen Archetype: Read the provided context to pick the perfect Archetype. DO NOT invent archetypes.
 2. Physical Profile: Recommend a Height and Weight within the Min/Max bounds for that Archetype.
-3. Playstyle+: Choose EXACTLY 3 Playstyle+. Read the Base_Playstyle_Plus for the archetype. 
-4. Specialisation (Optional): ONLY choose a Specialisation path if it improves realism. If you choose a Specialisation, its bonus Playstyle+ MUST replace one of the 3 Base Playstyle+ (Result = 2 Base + 1 Specialisation). Note its minimum stat targets exactly.
-5. Standard Playstyles: Select EXACTLY 8 standard Playstyles from the context.
-   CRITICAL: For each of the 8 Playstyles, you MUST list the exact Attribute minimums required next to their name exactly as they appear in the context. DO NOT HALLUCINATE ATTRIBUTE REQUIREMENTS.
+3. Playstyle+: Choose EXACTLY 4 Playstyle+. Read the Base_Playstyle_Plus for the archetype. 
+4. Specialisation (Optional): ONLY choose a Specialisation path if it improves realism. If you choose a Specialisation, its bonus Playstyle+ MUST replace one of the 4 Base Playstyle+ (Result = 3 Base + 1 Specialisation). Note its minimum stat targets exactly.
+5. Standard Playstyles: Select EXACTLY 9 standard Playstyles from the context.
+   CRITICAL: For each of the 9 Playstyles, you MUST list the exact Attribute minimums required next to their name exactly as they appear in the context. DO NOT HALLUCINATE ATTRIBUTE REQUIREMENTS.
 6. Attribute Pillars: Sort outfield attributes into three realistic tiers:
    - Core (6 to 8 stats): What the player is known for (Elite traits).
    - Secondary (10 to 12 stats): Well-rounded areas.
