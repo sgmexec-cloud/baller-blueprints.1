@@ -111,42 +111,6 @@ export default function PlayerCard({ result, apBudget, archetype }: Props) {
         </div>
       </div>
 
-      {/* EXECUTIVE SCOUT SUMMARY BLOCK */}
-      {result.scoutSummary && (
-        <div className="px-4 pt-4">
-          <div 
-            className="p-4 rounded-xl border relative overflow-hidden" 
-            style={{ 
-              background: "oklch(0.12 0.015 240)", 
-              borderColor: "oklch(0.75 0.22 142 / 0.3)",
-              boxShadow: "0 4px 20px oklch(0.75 0.22 142 / 0.05)"
-            }}
-          >
-            <div 
-              className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none"
-              style={{ background: "oklch(0.75 0.22 142)" }}
-            />
-            
-            <div className="flex items-center gap-2 mb-2 relative z-10">
-              <span className="text-base">📋</span>
-              <h3 
-                className="text-xs font-bold uppercase tracking-widest" 
-                style={{ color: "oklch(0.75 0.22 142)", fontFamily: "'Rajdhani', sans-serif" }}
-              >
-                Chief Scout's Verdict
-              </h3>
-            </div>
-            
-            <p 
-              className="text-sm leading-relaxed relative z-10" 
-              style={{ color: "oklch(0.85 0.01 240)", fontFamily: "'Inter', sans-serif" }}
-            >
-              {result.scoutSummary}
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* STATS SECTION */}
       <div className="p-4">
         {categoryOrder.map((cat) => {
