@@ -45,10 +45,39 @@ export const scoutRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
+
+      const ctxUser = (ctx as any).user;
+      const fallbackUserId = (ctx as any).userId;
+      let dbUser = null;
+
+      if (ctxUser && ctxUser.id) {
+        const freshUserResult = await db.select().from(users).where(eq(users.id, ctxUser.id)).limit(1);
+        if (freshUserResult.length > 0) dbUser = freshUserResult[0];
+      } else if (fallbackUserId) {
+        const freshUserResult = await db.select().from(users).where(eq(users.openId, String(fallbackUserId))).limit(1);
+        if (freshUserResult.length > 0) dbUser = freshUserResult[0];
+      }
       
+      const headers = (ctx as any).req?.headers || (ctx as any).headers || {};
+      const forwarded = headers['x-forwarded-for'] || headers['x-real-ip'];
+      const ip = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : ((ctx as any).req?.socket?.remoteAddress || "unknown-guest");
+
+      if (dbUser) {
+        if (dbUser.tier !== "premium") {
+          const now = new Date();
+          const lastBuild = dbUser.lastBuildDate ? new Date(dbUser.lastBuildDate) : new Date(0);
+          const isNewMonth = lastBuild.getMonth() !== now.getMonth() || lastBuild.getFullYear() !== now.getFullYear();
+          const currentBuilds = isNewMonth ? 0 : (dbUser.monthlyBuilds || 0);
+          if (currentBuilds >= 5) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_FREE" });
+        }
+      } else {
+        const existingGuest = await db.select().from(guestUsage).where(eq(guestUsage.ip, ip)).limit(1);
+        if (existingGuest.length > 0 && existingGuest[0].builds >= 1) throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED_GUEST" });
+      }
+
       const context = getScoutingContext();
       
-      // 👉 THE ULTIMATE FC 26 SCOUT PROMPT (Restored to your exact specifications)
+      // 👉 RESTORED SCRIPT INTERPRETER / ARCHETYPE RULES COMPLETELY BOUND TO CONTEXT
       const systemPrompt = `You are the ultimate FC 26 Scout and Attribute Optimizer.
 Your job is to create a Phase 1 Scouting Blueprint based STRICTLY on this JSON context data:
 ${context}
@@ -100,7 +129,20 @@ You must return this Blueprint STRICTLY as JSON matching the requested schema. D
   calculateStats: publicProcedure
     .input(z.object({ blueprint: BlueprintSchema, apBudget: z.number().int().min(1).max(999999) }))
     .mutation(async ({ input }) => {
-      const result = runMathEngine(input.blueprint as any, input.apBudget);
+      const engineBlueprint: ScoutingBlueprint = {
+        archetype: input.blueprint.archetype,
+        position: input.blueprint.position,
+        playstylePlus: input.blueprint.playstylePlus,
+        playstyles: input.blueprint.playstyles,
+        specialisation: input.blueprint.specialisation,
+        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus,
+        specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
+        coreAttributes: input.blueprint.coreAttributes,
+        secondaryAttributes: input.blueprint.secondaryAttributes,
+        tertiaryAttributes: input.blueprint.tertiaryAttributes,
+      };
+
+      const result = runMathEngine(engineBlueprint, input.apBudget);
       let customSlots = 0;
       let signatureUpgrades = 0;
 
@@ -110,7 +152,10 @@ You must return this Blueprint STRICTLY as JSON matching the requested schema. D
         const lines = progContent.trim().split("\n");
         for (let i = 1; i < lines.length; i++) {
           const p = lines[i].split(",");
-          if (input.apBudget >= Number(p[1])) { customSlots = Number(p[3]); signatureUpgrades = Number(p[2]); }
+          if (input.apBudget >= Number(p[1])) {
+            customSlots = Number(p[3]);
+            signatureUpgrades = Number(p[2]);
+          }
         }
       } catch (e) { console.error("Progression error:", e); }
 
