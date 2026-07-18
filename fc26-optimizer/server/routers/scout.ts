@@ -62,7 +62,7 @@ export const scoutRouter = router({
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
-      // 👉 Updated Prompt: Forces the exact JSON structure your schema needs
+      // 👉 Updated Prompt: Shows exactly how to format specialisationMinAttrs
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -84,14 +84,16 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   ],
   "specialisation": "",
   "specialisationPlaystylePlus": "",
-  "specialisationMinAttrs": [],
+  "specialisationMinAttrs": [
+    {"attr": "AttributeName", "val": 85}
+  ],
   "coreAttributes": ["Attr1", "Attr2"],
   "secondaryAttributes": ["Attr3", "Attr4"],
   "tertiaryAttributes": ["Attr5", "Attr6"],
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange.`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
