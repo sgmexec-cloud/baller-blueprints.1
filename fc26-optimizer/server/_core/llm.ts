@@ -78,7 +78,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   const { messages, tools, toolChoice, tool_choice } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-001",
     messages: messages.map(normalizeMessage),
   };
 
