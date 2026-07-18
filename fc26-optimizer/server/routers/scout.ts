@@ -48,8 +48,6 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // ... (Auth/Guest Limit logic remains unchanged) ...
-
       // STAGE 1: Chief Scout Prose
       const stage1Response = await invokeLLM({
         messages: [
@@ -63,7 +61,37 @@ export const scoutRouter = router({
 
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
-      const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:\n${context}\n\nRULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Output ONLY raw JSON.`;
+      
+      // 👉 Updated Prompt: Forces the exact JSON structure your schema needs
+      const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
+${context}
+
+Your output MUST be a single raw JSON object that strictly matches this exact structure:
+{
+  "scoutSummary": "Write a brief 2-3 sentence summary of the player's scouting report here.",
+  "archetype": "The matched archetype name",
+  "position": "The matched position",
+  "heightRange": "e.g. 175cm - 185cm",
+  "weightRange": "e.g. 70kg - 80kg",
+  "playstylePlus": ["Style1", "Style2", "Style3", "Style4"],
+  "playstyles": [
+    {
+      "name": "StyleName",
+      "requirements": [
+        {"attr": "AttributeName", "val": 80}
+      ]
+    }
+  ],
+  "specialisation": "",
+  "specialisationPlaystylePlus": "",
+  "specialisationMinAttrs": [],
+  "coreAttributes": ["Attr1", "Attr2"],
+  "secondaryAttributes": ["Attr3", "Attr4"],
+  "tertiaryAttributes": ["Attr5", "Attr6"],
+  "reasoning": "Brief explanation of choices"
+}
+
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange.`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -75,10 +103,10 @@ export const scoutRouter = router({
       const rawContent = stage2Response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
 
-      // 👉 Defensive JSON Cleaning: Strips out markdown fences if Gemini includes them
+      // Defensive JSON Cleaning
       let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
-      if (cleanedJson.startsWith("```")) {
-        cleanedJson = cleanedJson.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      if (cleanedJson.startsWith("\`\`\`")) {
+        cleanedJson = cleanedJson.replace(/^\`\`\`(?:json)?/i, "").replace(/\`\`\`$/, "").trim();
       }
 
       const parsed = JSON.parse(cleanedJson);
