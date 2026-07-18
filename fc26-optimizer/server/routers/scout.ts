@@ -50,33 +50,38 @@ export const scoutRouter = router({
       
       // ... (Auth/Guest Limit logic remains unchanged) ...
 
-      // STAGE 1: Use the heavy model for high-quality scouting prose
+      // STAGE 1: Chief Scout Prose
       const stage1Response = await invokeLLM({
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
           { role: "user", content: `Player Identity: ${input.playerIdentity}` }
-        ],
-        modelOverride: "llama-3.3-70b-versatile"
+        ]
       } as any);
 
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      // STAGE 2: Use the fast model for strict JSON translation
+      // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
-      const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:\n${context}\n\nRULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars.`;
+      const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:\n${context}\n\nRULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Output ONLY raw JSON.`;
 
       const stage2Response = await invokeLLM({
         messages: [
           { role: "system", content: stage2SystemPrompt }, 
           { role: "user", content: `Translate this report into JSON:\n\n${hiddenScoutReport}` }
-        ],
-        modelOverride: "llama-3.1-8b-instant"
+        ]
       } as any);
 
       const rawContent = stage2Response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
-      const parsed = JSON.parse(typeof rawContent === "string" ? rawContent : JSON.stringify(rawContent));
+
+      // 👉 Defensive JSON Cleaning: Strips out markdown fences if Gemini includes them
+      let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
+      if (cleanedJson.startsWith("```")) {
+        cleanedJson = cleanedJson.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+      }
+
+      const parsed = JSON.parse(cleanedJson);
       return BlueprintSchema.parse(parsed);
     }),
 
