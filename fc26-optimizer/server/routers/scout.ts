@@ -39,7 +39,6 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-// 👉 UPGRADED: Forces the scout to state limitations and ignore fame bias
 const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). You MUST highlight the player's stylistic limitations—if they are slow, lack agility, rarely use skill moves, or have poor passing range, state it clearly. Do not over-inflate abilities just because a player is famous. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate, realistic attributes and PlayStyles.`;
 
 export const scoutRouter = router({
@@ -63,7 +62,6 @@ export const scoutRouter = router({
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
-      // 👉 UPGRADED: Forces strict mapping of Skill Moves and Weak Foot
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -94,7 +92,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill Moves strictly to their real-life reliance on flair (e.g., Target Men and traditional CBs should be 2 or 3 Star Skill Moves, not 5). Map Weak Foot strictly to historical accuracy. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill Moves strictly to their real-life reliance on flair (e.g., Target Men and traditional CBs should be 2 or 3 Star Skill Moves, not 5). Map Weak Foot strictly to historical accuracy. Do NOT include 'SkillMoves' or 'WeakFoot' in your core, secondary, or tertiary attribute arrays UNLESS the player is historically famous for 5-star skills (e.g., Ronaldinho) or a perfect weak foot. Leave them completely out of the arrays for traditional target men or physical players. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -113,6 +111,11 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill 
       }
 
       const parsed = JSON.parse(cleanedJson);
+      
+      // 👉 NEW: Print the raw AI JSON straight to your Render server logs!
+      console.log("🤖 RAW GEMINI JSON OUTPUT:");
+      console.log(JSON.stringify(parsed, null, 2));
+
       return BlueprintSchema.parse(parsed);
     }),
 
