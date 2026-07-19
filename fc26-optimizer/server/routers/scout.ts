@@ -141,7 +141,7 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         }
       } catch (e) { console.error("Progression error:", e); }
 
-      const engineBlueprint: ScoutingBlueprint = {
+            const engineBlueprint: ScoutingBlueprint = {
         archetype: input.blueprint.archetype,
         position: input.blueprint.position,
         playstylePlus: input.blueprint.playstylePlus,
@@ -152,6 +152,9 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         coreAttributes: input.blueprint.coreAttributes,
         secondaryAttributes: input.blueprint.secondaryAttributes,
         tertiaryAttributes: input.blueprint.tertiaryAttributes,
+        // 👇 ADD THESE TWO LINES
+        skillMoves: input.blueprint.skillMoves,
+        weakFoot: input.blueprint.weakFoot,
       };
 
       const result = runMathEngine(engineBlueprint, input.apBudget, customSlots);
