@@ -41,8 +41,12 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-// 👉 UPGRADED: Forced Peak Era evaluation and Signature Weapon rule
-const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. If a player changed positions during their career (e.g., starting as a defender but peaking as a winger), you MUST evaluate them based solely on their most famous, highest-performing attacking role. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations. Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait (e.g., cutting inside for long shots, bending free kicks). Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
+// 👉 UPGRADED: Forces Tactical Role and enforces limitations
+const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. 
+If a player changed positions during their career, you MUST evaluate them based solely on their most famous, highest-performing role. 
+CRITICAL: You must explicitly define their 'Tactical Role' (e.g. Inverted Winger, Ball-Winning Midfielder, Target Man) to anchor the evaluation. 
+Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations and weaknesses—what are they notoriously bad at? 
+Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
 export const scoutRouter = router({
   generateReport: publicProcedure
@@ -51,7 +55,6 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // STAGE 1: Chief Scout Prose
       const stage1Response = await invokeLLM({
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
@@ -62,10 +65,9 @@ export const scoutRouter = router({
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
-      // 👉 UPGRADED: Added CRITICAL ARCHETYPE RULE to stop defender archetypes on attackers
+      // 👉 UPGRADED: Strict constraints on array lengths for Primary, Secondary, and Tertiary attributes
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -89,19 +91,22 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   ],
   "specialisation": "",
   "specialisationPlaystylePlus": "",
-  "specialisationMinAttrs": [
-    {"attr": "AttributeName", "val": 85}
-  ],
+  "specialisationMinAttrs": [],
   "coreAttributes": ["Attr1", "Attr2"],
   "secondaryAttributes": ["Attr3", "Attr4"],
   "tertiaryAttributes": ["Attr5", "Attr6"],
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. 
-CRITICAL ARCHETYPE RULE: The chosen archetype MUST match the player's peak position. Do not assign defender archetypes to legendary attackers. 
-CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. 
-SIGNATURE WEAPON RULE: Identify the player's 'Signature Weapon' from the scout report (e.g., LongShots, FKAccuracy, HeadingAccuracy) and FORCE that specific attribute into the 'coreAttributes' array so it receives maximum points. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. 
+CRITICAL ARCHETYPE RULE: The chosen archetype MUST match the player's peak position. 
+CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. 
+ATTRIBUTE DISTRIBUTION RULE: You MUST categorise the 29 standard attributes based on the player's Tactical Role:
+- 'coreAttributes': Exactly 5 to 7 elite attributes that define their identity and Signature Weapon.
+- 'secondaryAttributes': Exactly 8 to 10 strong attributes that support their style.
+- 'tertiaryAttributes': Exactly 8 to 10 average, nice-to-have attributes.
+- INTENTIONAL WEAKNESSES: Any attribute not included in these three arrays will be left raw. Leave their genuine weaknesses out of the arrays entirely.
+Output ONLY raw JSON.`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -113,7 +118,6 @@ SIGNATURE WEAPON RULE: Identify the player's 'Signature Weapon' from the scout r
       const rawContent = stage2Response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
 
-      // Defensive JSON Cleaning
       let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
       if (cleanedJson.startsWith("```")) {
         cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
