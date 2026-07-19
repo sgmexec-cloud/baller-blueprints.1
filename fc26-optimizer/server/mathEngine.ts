@@ -39,6 +39,9 @@ export interface ScoutingBlueprint {
   coreAttributes: string[];
   secondaryAttributes: string[];
   tertiaryAttributes: string[];
+  // 👇 Added to pass the AI ratings from Stage 2
+  skillMoves?: number;
+  weakFoot?: number;
 }
 
 // ── Normalise attribute name to match ALL_ARCHETYPES keys ────────────────────
@@ -87,7 +90,7 @@ function isCBOrST(position?: string): boolean {
 export function runMathEngine(
   blueprint: ScoutingBlueprint,
   apBudget: number,
-  customSlots: number = 0 // 👉 New Parameter!
+  customSlots: number = 0
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
 
@@ -169,11 +172,9 @@ export function runMathEngine(
   }
 
   // ── EA RULE: Custom Slots & CSV Lookup ───────────────────────────────────
-  // Slice the AI's playstyle list to ONLY include the allowed Custom Slots
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
   
   for (const ps of activePlaystyles) {
-    // Look up the exact stats directly from the CSV so the AI can never make a mistake
     const realReqs = PLAYSTYLES.find((p) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
     
     if (realReqs) {
@@ -190,9 +191,11 @@ export function runMathEngine(
     }
   }
 
-  // 4. Upgrade SkillMoves and WeakFoot to target (aim for max 5)
-  upgradeToMin("SkillMoves", 5);
-  upgradeToMin("WeakFoot", 5);
+  // 4. Upgrade SkillMoves and WeakFoot to target (respect blueprint targets or fallback to 5)
+  const targetSkillMoves = blueprint.skillMoves ?? 5;
+  const targetWeakFoot = blueprint.weakFoot ?? 5;
+  upgradeToMin("SkillMoves", targetSkillMoves);
+  upgradeToMin("WeakFoot", targetWeakFoot);
 
   // ── RULE 2: Animation Lock ───────────────────────────────────────────────
   // If position is Defender/CDM, force StandingTackle to exactly 85 before Core loops
@@ -201,12 +204,10 @@ export function runMathEngine(
   }
 
   // ── RULE 1: 95 Hard Cap ──────────────────────────────────────────────────
-  // Helper to upgrade group with hard cap at 95
   function upgradeGroupLowestFirstWithCap(attrs: string[], hardCap: number): void {
     let progress = true;
     while (progress && remainingAP > 0) {
       progress = false;
-      // Find the attribute with the lowest current value that can still be upgraded
       const candidates = attrs
         .map((a) => ({ attr: a, matched: matchAttr(a, attrNames) }))
         .filter(({ matched }) => matched !== null)
@@ -234,20 +235,17 @@ export function runMathEngine(
   // 6. Secondary attributes with 95 hard cap
   upgradeGroupLowestFirstWithCap(blueprint.secondaryAttributes, 95);
 
-  // 7. Tertiary — cheapest first until budget is exactly 0 (respecting hard cap for core/secondary)
+  // 7. Tertiary — cheapest first until budget is exactly 0
   if (remainingAP > 0) {
-    // Final pass: spend remaining AP on tertiary-only attributes (core/secondary already capped at 95)
     const tertiarySet = new Set(blueprint.tertiaryAttributes.map((a) => normAttr(a)));
 
     let progress = true;
     while (progress && remainingAP > 0) {
       progress = false;
-      // Find cheapest next upgrade across tertiary attributes only
       const options: Array<{ matched: string; cost: number }> = [];
       for (const matched of attrNames) {
         const s = stats[matched];
         if (!s || s.current >= s.max) continue;
-        // Only consider tertiary attributes in this final pass
         if (!tertiarySet.has(normAttr(matched))) continue;
         const attrKey = normAttr(matched);
         const cost = getUpgradeCost(archKey, attrKey, s.current);
@@ -255,7 +253,6 @@ export function runMathEngine(
           options.push({ matched, cost });
         }
       }
-      // Sort by cost ascending (cheapest first) to maximise budget usage
       options.sort((a, b) => a.cost - b.cost);
       if (options.length > 0) {
         const { matched } = options[0];
