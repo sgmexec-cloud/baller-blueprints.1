@@ -88,6 +88,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
 }
 
 RULES:
+- PLAYSTYLES: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 10 to 12 items in 'playstyles'. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
 - 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
 - Attribute distribution: Exactly 5-7 core, 8-10 secondary, 8-10 tertiary attributes.
 - Output ONLY raw JSON.`;
