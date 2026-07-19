@@ -577,9 +577,15 @@ export default function Home() {
 
         {playerCard && !calcMutation.isPending && (
           <div ref={cardRef} className="animate-fade-up mb-6">
-            <PlayerCard result={playerCard} apBudget={apBudget} archetype={blueprint?.archetype ?? ""} />
+            <PlayerCard 
+              result={playerCard} 
+              apBudget={apBudget} 
+              archetype={blueprint?.archetype ?? ""} 
+              level={level} 
+            />
             
             <button
+
               onClick={handleDownloadImage}
               disabled={isExporting}
               className="mt-4 w-full py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2"
