@@ -110,8 +110,8 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
 
       // Defensive JSON Cleaning
       let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
-      if (cleanedJson.startsWith("\`\`\`")) {
-        cleanedJson = cleanedJson.replace(/^\`\`\`(?:json)?/i, "").replace(/\`\`\`$/, "").trim();
+      if (cleanedJson.startsWith("```")) {
+        cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
       }
 
       const parsed = JSON.parse(cleanedJson);
