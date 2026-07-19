@@ -26,19 +26,37 @@ const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: strin
 
 const PlayStyleBadge = ({ name }: { name: string }) => {
   const isPlus = name.includes('+');
-  const cleanName = name.replace('+', '');
-  const fileName = cleanName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+  
+  // 1. Clean the name: remove '+', handle common "squashed" names 
+  // 2. Add spaces before capital letters (like FirstTouch -> First Touch) so they map to kebab-case
+  let cleanName = name.replace('+', '').replace(/([a-z])([A-Z])/g, '$1 $2');
+  
+  // 3. Convert to kebab-case (e.g., "First Touch" -> "first-touch")
+  const fileName = cleanName
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+
   const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${isPlus ? 'bg-amber-900/20 border-amber-500/50' : 'bg-slate-800 border-slate-700'}`}>
-      <img src={imagePath} alt={name} className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.src = '/icons/playstyles/fallback.png'; }} />
+      <img 
+        src={imagePath} 
+        alt={name} 
+        className="w-4 h-4 object-contain"
+        onError={(e) => { 
+            // Debugging tip: Log which file failed in the browser console
+            console.error(`Failed to load: ${imagePath}`);
+            e.currentTarget.src = '/icons/playstyles/fallback.png'; 
+        }} 
+      />
       <span className={`text-[10px] font-bold uppercase tracking-wider ${isPlus ? 'text-amber-200' : 'text-slate-300'}`}>
-        {isPlus ? `★ ${name}` : name}
+        {isPlus ? `★ ${name.replace('+', '')}` : name}
       </span>
     </div>
   );
 };
+
 
 function StatBar({ val, max, color }: { val: number; max: number; color: string }) {
   const pct = Math.min(100, (val / Math.max(max, 1)) * 100);
