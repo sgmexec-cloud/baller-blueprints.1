@@ -104,7 +104,7 @@ function HeroHeader() {
               cursor: isCheckoutLoading ? "not-allowed" : "pointer"
             }}
           >
-            {isCheckoutLoading ? "Redirecting to checkout..." : "👑 Unlock Premium Features & VIP Blueprints"}
+            {isCheckoutLoading ? "Redirecting..." : "👑 Unlock Premium & VIP"}
           </button>
         </div>
       )}
@@ -270,7 +270,8 @@ export default function Home() {
 
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
 
-  const apBudget = progressionData ? progressionData[level]?.apAvailable : 0;
+  // 👉 SAFETY FIX: Added '?? 0' so apBudget is never undefined
+  const apBudget = progressionData?.[level]?.apAvailable ?? 0;
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -423,12 +424,7 @@ export default function Home() {
 
         {blueprint && !scoutMutation.isPending && (
           <div ref={reportRef} className="animate-fade-up mb-6">
-            {/* ========================================= */}
-            {/* PHASE 1: SCOUTING BLUEPRINT (CLEAN UI)    */}
-            {/* ========================================= */}
             <div className="rounded-xl border border-green-900/40 bg-black/40 overflow-hidden mb-6">
-              
-              {/* HEADER: Archetype, Height, Weight */}
               <div className="p-4 border-b border-green-900/30 flex justify-between items-end" style={{ background: "linear-gradient(to bottom, rgba(20,83,45,0.1), transparent)" }}>
                 <div>
                   <div className="text-[10px] font-bold text-green-500 tracking-widest uppercase mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
@@ -444,27 +440,22 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* CHIEF SCOUT'S VERDICT */}
               {blueprint.scoutSummary && (
                 <div className="p-4">
                   <div className="rounded-xl border border-green-900/30 bg-green-950/20 p-5 relative overflow-hidden">
-                    {/* Subtle background glow */}
                     <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-10 pointer-events-none bg-green-500" />
-                    
                     <div className="flex items-center gap-2 mb-3 relative z-10">
                       <span className="text-base">📋</span>
                       <h3 className="text-[11px] font-bold text-green-500 uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         Chief Scout's Verdict
                       </h3>
                     </div>
-                    
                     <p className="text-[13px] sm:text-sm leading-relaxed text-gray-300 relative z-10" style={{ fontFamily: "'Inter', sans-serif" }}>
                       {blueprint.scoutSummary}
                     </p>
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         )}
@@ -585,7 +576,6 @@ export default function Home() {
             />
             
             <button
-
               onClick={handleDownloadImage}
               disabled={isExporting}
               className="mt-4 w-full py-3 rounded-lg text-sm font-bold tracking-widest uppercase transition-all duration-200 flex items-center justify-center gap-2"
