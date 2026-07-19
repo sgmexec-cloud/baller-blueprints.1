@@ -11,6 +11,7 @@ interface Props {
   };
   apBudget: number;
   archetype: string;
+  level: number; // 👉 NEW: Added level to props
 }
 
 const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: string; icon: string }> = {
@@ -81,15 +82,23 @@ function CategoryBlock({ name, stats }: { name: string; stats: StatResult[] }) {
   );
 }
 
-export default function PlayerCard({ result, apBudget, archetype }: Props) {
+export default function PlayerCard({ result, apBudget, archetype, level }: Props) {
   const efficiency = Math.round((result.totalApSpent / apBudget) * 100);
   const remaining = apBudget - result.totalApSpent;
 
   return (
     <div className="rounded-xl border overflow-hidden p-4" style={{ background: "oklch(0.10 0.015 240)", borderColor: "oklch(0.78 0.18 85 / 0.25)" }}>
-      {/* RESTORED HEADER WITH UI GRID */}
+      {/* HEADER WITH LEVEL BADGE */}
       <div className="border-b pb-4 mb-4" style={{ borderColor: "oklch(0.78 0.18 85 / 0.2)" }}>
-        <div className="text-xs tracking-widest uppercase mb-0.5" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
+        
+        {/* 👉 NEW: Flex container spreading the title and the Level badge */}
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-xs tracking-widest uppercase" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
+          <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "oklch(0.75 0.22 142 / 0.1)", color: "oklch(0.75 0.22 142)", borderColor: "oklch(0.75 0.22 142 / 0.3)", fontFamily: "'Rajdhani', sans-serif" }}>
+            Level {level}
+          </div>
+        </div>
+        
         <div className="text-xl font-black mb-3" style={{ fontFamily: "'Orbitron', sans-serif", color: "oklch(0.95 0.01 240)" }}>{archetype.toUpperCase()} BUILD</div>
         
         <div className="grid grid-cols-3 gap-2">
