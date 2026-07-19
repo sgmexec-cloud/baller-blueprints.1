@@ -27,32 +27,22 @@ const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: strin
 const PlayStyleBadge = ({ name }: { name: string }) => {
   const isPlus = name.includes('+');
   
-  // 1. Clean the name
   let cleanName = name.replace('+', '');
-  
-  // 2. Special handle for 'Gamechanger' to ensure it becomes 'Game Changer'
   if (cleanName.toLowerCase() === 'gamechanger') {
     cleanName = 'Game Changer';
   }
   
-  // 3. Add spaces before capital letters, then convert to kebab-case
-  const fileName = cleanName
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .toLowerCase()
-    .replace(/\s+/g, '-');
-
+  const fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/\s+/g, '-');
   const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
   return (
     <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${isPlus ? 'bg-amber-900/20 border-amber-500/50' : 'bg-slate-800 border-slate-700'}`}>
       <img 
         src={imagePath} 
-        alt={name} 
+        alt="" 
+        aria-hidden="true"
         className="w-4 h-4 object-contain"
-        onError={(e) => { 
-            console.error(`Failed to load: ${imagePath}`);
-            e.currentTarget.src = '/icons/playstyles/fallback.png'; 
-        }} 
+        onError={(e) => { e.currentTarget.src = '/icons/playstyles/fallback.png'; }} 
       />
       <span className={`text-[10px] font-bold uppercase tracking-wider ${isPlus ? 'text-amber-200' : 'text-slate-300'}`}>
         {isPlus ? `★ ${cleanName}` : name}
@@ -93,9 +83,28 @@ function CategoryBlock({ name, stats }: { name: string; stats: StatResult[] }) {
 
 export default function PlayerCard({ result, apBudget, archetype }: Props) {
   const efficiency = Math.round((result.totalApSpent / apBudget) * 100);
+  const remaining = apBudget - result.totalApSpent;
+
   return (
     <div className="rounded-xl border overflow-hidden p-4" style={{ background: "oklch(0.10 0.015 240)", borderColor: "oklch(0.78 0.18 85 / 0.25)" }}>
-      <div className="text-xl font-black mb-4" style={{ fontFamily: "'Orbitron', sans-serif", color: "oklch(0.95 0.01 240)" }}>{archetype.toUpperCase()} BUILD</div>
+      {/* RESTORED HEADER WITH UI GRID */}
+      <div className="border-b pb-4 mb-4" style={{ borderColor: "oklch(0.78 0.18 85 / 0.2)" }}>
+        <div className="text-xs tracking-widest uppercase mb-0.5" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
+        <div className="text-xl font-black mb-3" style={{ fontFamily: "'Orbitron', sans-serif", color: "oklch(0.95 0.01 240)" }}>{archetype.toUpperCase()} BUILD</div>
+        
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Budget", value: apBudget.toLocaleString(), color: "oklch(0.65 0.01 240)" },
+            { label: "Spent", value: result.totalApSpent.toLocaleString(), color: "oklch(0.75 0.22 142)" },
+            { label: "Efficiency", value: `${efficiency}%`, color: remaining === 0 ? "oklch(0.75 0.22 142)" : "oklch(0.78 0.18 85)" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-lg p-2 text-center border" style={{ background: "oklch(0.13 0.015 240)", borderColor: "oklch(0.20 0.02 240)" }}>
+              <div className="text-xs tracking-wider uppercase mb-0.5" style={{ color: "oklch(0.45 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>{label}</div>
+              <div className="text-base font-black" style={{ color, fontFamily: "'Orbitron', sans-serif" }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
       
       <div className="mt-4">
         {["Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality", "Skill Moves", "Weak Foot"].map((cat) => {
