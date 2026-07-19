@@ -11,7 +11,7 @@ interface Props {
   };
   apBudget: number;
   archetype: string;
-  level: number; // 👉 NEW: Added level to props
+  level: number;
 }
 
 const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: string; icon: string }> = {
@@ -25,7 +25,8 @@ const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: strin
   "Weak Foot": { color: "oklch(0.65 0.20 230)", bg: "oklch(0.65 0.20 230 / 0.06)", border: "oklch(0.65 0.20 230 / 0.2)", icon: "◆" },
 };
 
-const PlayStyleBadge = ({ name }: { name: string }) => {
+// 👉 UPDATED: Stacks icon on top of text, removes background/border, increases icon size
+const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boolean }) => {
   const isPlus = name.includes('+');
   
   let cleanName = name.replace('+', '');
@@ -36,17 +37,20 @@ const PlayStyleBadge = ({ name }: { name: string }) => {
   const fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/\s+/g, '-');
   const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
+  // Use gold color if it's a signature or a plus playstyle, otherwise use white/gray
+  const textColor = isSignature || isPlus ? 'text-amber-200' : 'text-slate-200';
+
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${isPlus ? 'bg-amber-900/20 border-amber-500/50' : 'bg-slate-800 border-slate-700'}`}>
+    <div className="flex flex-col items-center justify-center gap-2 p-1">
       <img 
         src={imagePath} 
         alt="" 
         aria-hidden="true"
-        className="w-4 h-4 object-contain"
+        className="w-14 h-14 object-contain drop-shadow-lg" // Increased size & added drop shadow
         onError={(e) => { e.currentTarget.src = '/icons/playstyles/fallback.png'; }} 
       />
-      <span className={`text-[10px] font-bold uppercase tracking-wider ${isPlus ? 'text-amber-200' : 'text-slate-300'}`}>
-        {isPlus ? `★ ${cleanName}` : name}
+      <span className={`text-[9px] font-bold uppercase tracking-widest text-center ${textColor}`}>
+        ☆ {cleanName}
       </span>
     </div>
   );
@@ -91,7 +95,6 @@ export default function PlayerCard({ result, apBudget, archetype, level }: Props
       {/* HEADER WITH LEVEL BADGE */}
       <div className="border-b pb-4 mb-4" style={{ borderColor: "oklch(0.78 0.18 85 / 0.2)" }}>
         
-        {/* 👉 NEW: Flex container spreading the title and the Level badge */}
         <div className="flex justify-between items-center mb-1">
           <div className="text-xs tracking-widest uppercase" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
           <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "oklch(0.75 0.22 142 / 0.1)", color: "oklch(0.75 0.22 142)", borderColor: "oklch(0.75 0.22 142 / 0.3)", fontFamily: "'Rajdhani', sans-serif" }}>
@@ -123,12 +126,41 @@ export default function PlayerCard({ result, apBudget, archetype, level }: Props
         })}
       </div>
 
-      <div className="mt-4 border-t border-slate-700 pt-4 pb-2">
-        <h3 className="text-xs font-bold text-green-400 uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Recommended PlayStyle Loadout</h3>
-        {!result.playstyles ? <p className="text-[10px] text-gray-500 italic">Calculating...</p> : (
-          <div className="grid grid-cols-2 gap-2">
-            {result.playstyles.signatures.map((sig, i) => <PlayStyleBadge key={`sig-${i}`} name={sig} />)}
-            {result.playstyles.standard.map((ps, i) => <PlayStyleBadge key={`std-${i}`} name={ps} />)}
+      {/* 👉 NEW PLAYSTYLES LAYOUT */}
+      <div className="mt-8 border-t border-slate-700/50 pt-8 pb-4">
+        {!result.playstyles ? (
+          <p className="text-[10px] text-gray-500 italic text-center">Calculating Playstyles...</p>
+        ) : (
+          <div className="flex flex-col gap-8">
+            
+            {/* SIGNATURE PLAYSTYLES (2 columns) */}
+            {result.playstyles.signatures.length > 0 && (
+              <div>
+                <h2 className="text-xl font-black text-center text-amber-200 uppercase tracking-widest mb-6" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  Signature Playstyles
+                </h2>
+                <div className="grid grid-cols-2 gap-y-6 gap-x-2">
+                  {result.playstyles.signatures.map((sig, i) => (
+                    <PlayStyleBadge key={`sig-${i}`} name={sig} isSignature={true} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* STANDARD PLAYSTYLES (3 columns) */}
+            {result.playstyles.standard.length > 0 && (
+              <div>
+                <h2 className="text-xl font-black text-center text-slate-200 uppercase tracking-widest mb-6" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  Playstyles
+                </h2>
+                <div className="grid grid-cols-3 gap-y-6 gap-x-2">
+                  {result.playstyles.standard.map((ps, i) => (
+                    <PlayStyleBadge key={`std-${i}`} name={ps} isSignature={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
