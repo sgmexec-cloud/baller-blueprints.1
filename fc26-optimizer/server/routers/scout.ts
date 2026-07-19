@@ -26,6 +26,8 @@ const BlueprintSchema = z.object({
   position: z.string().optional(),
   heightRange: z.string(),
   weightRange: z.string(),
+  skillMoves: z.number().int().min(1).max(5),
+  weakFoot: z.number().int().min(1).max(5),
   playstylePlus: z.array(z.string()),
   playstyles: z.array(PlaystyleSchema),
   specialisation: z.string().optional(),
@@ -72,6 +74,8 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "position": "The matched position",
   "heightRange": "e.g. 175cm - 185cm",
   "weightRange": "e.g. 70kg - 80kg",
+  "skillMoves": 3,
+  "weakFoot": 4,
   "playstylePlus": ["Style1", "Style2", "Style3", "Style4"],
   "playstyles": [
     {
@@ -92,7 +96,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill Moves strictly to their real-life reliance on flair (e.g., Target Men and traditional CBs should be 2 or 3 Star Skill Moves, not 5). Map Weak Foot strictly to historical accuracy. Do NOT include 'SkillMoves' or 'WeakFoot' in your core, secondary, or tertiary attribute arrays UNLESS the player is historically famous for 5-star skills (e.g., Ronaldinho) or a perfect weak foot. Leave them completely out of the arrays for traditional target men or physical players. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, and weightRange. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism (e.g., Target Men usually have 2 or 3 Skill Moves). Do NOT include 'SkillMoves' or 'WeakFoot' inside the core, secondary, or tertiary attribute arrays. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -112,7 +116,6 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill 
 
       const parsed = JSON.parse(cleanedJson);
       
-      // 👉 NEW: Print the raw AI JSON straight to your Render server logs!
       console.log("🤖 RAW GEMINI JSON OUTPUT:");
       console.log(JSON.stringify(parsed, null, 2));
 
@@ -166,6 +169,8 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Map Skill 
       return {
         ...result,
         scoutSummary: input.blueprint.scoutSummary,
+        suggestedSkillMoves: input.blueprint.skillMoves,
+        suggestedWeakFoot: input.blueprint.weakFoot,
         playstyles: {
           signatures: resolvedSignatures,
           standard: standardPlaystyles,
