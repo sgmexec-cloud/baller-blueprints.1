@@ -41,7 +41,8 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). You MUST highlight the player's stylistic limitations—if they are slow, lack agility, rarely use skill moves, or have poor passing range, state it clearly. Do not over-inflate abilities just because a player is famous. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate, realistic attributes and PlayStyles.`;
+// 👉 UPGRADED: Forced the scout to identify the Signature Weapon
+const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). You MUST highlight the player's stylistic limitations—if they are slow, lack agility, rarely use skill moves, or have poor passing range, state it clearly. Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait (e.g., cutting inside for long shots, bending free kicks, bullet headers) if they have one. Do not over-inflate abilities just because a player is famous. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate, realistic attributes and PlayStyles.`;
 
 export const scoutRouter = router({
   generateReport: publicProcedure
@@ -64,7 +65,7 @@ export const scoutRouter = router({
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
-      // 👉 UPGRADED: Added the strict EA FC duplication rule to the prompt
+      // 👉 UPGRADED: Added the 'Signature Weapon' lock to the RULES
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -97,7 +98,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. SIGNATURE WEAPON RULE: Identify the player's 'Signature Weapon' from the scout report (e.g., LongShots, FKAccuracy, HeadingAccuracy) and FORCE that specific attribute into the 'coreAttributes' array so it receives maximum points. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -165,14 +166,12 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         input.blueprint.specialisationPlaystylePlus
       );
 
-      // 👉 THE SAFETY NET: Aggressively strips out standard playstyles that match a signature playstyle
       const standardPlaystyles = input.blueprint.playstyles
         .map(ps => ps.name)
         .filter(ps => {
-          // Clean the '+' off the signature to check for a pure name match
           return !resolvedSignatures.some(sig => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
         })
-        .slice(0, customSlots); // Slices ONLY after duplicates are stripped
+        .slice(0, customSlots); 
       
       return {
         ...result,
