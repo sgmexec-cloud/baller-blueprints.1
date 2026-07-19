@@ -64,6 +64,7 @@ export const scoutRouter = router({
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
+      // 👉 UPGRADED: Added the strict EA FC duplication rule to the prompt
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -96,7 +97,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism (e.g., Target Men usually have 2 or 3 Skill Moves). Do NOT include 'SkillMoves' or 'WeakFoot' inside the core, secondary, or tertiary attribute arrays. Output ONLY raw JSON without markdown formatting. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
@@ -141,7 +142,7 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         }
       } catch (e) { console.error("Progression error:", e); }
 
-            const engineBlueprint: ScoutingBlueprint = {
+      const engineBlueprint: ScoutingBlueprint = {
         archetype: input.blueprint.archetype,
         position: input.blueprint.position,
         playstylePlus: input.blueprint.playstylePlus,
@@ -152,7 +153,6 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         coreAttributes: input.blueprint.coreAttributes,
         secondaryAttributes: input.blueprint.secondaryAttributes,
         tertiaryAttributes: input.blueprint.tertiaryAttributes,
-        // 👇 ADD THESE TWO LINES
         skillMoves: input.blueprint.skillMoves,
         weakFoot: input.blueprint.weakFoot,
       };
@@ -165,9 +165,14 @@ RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skil
         input.blueprint.specialisationPlaystylePlus
       );
 
+      // 👉 THE SAFETY NET: Aggressively strips out standard playstyles that match a signature playstyle
       const standardPlaystyles = input.blueprint.playstyles
-        .slice(0, customSlots)
-        .map(ps => ps.name);
+        .map(ps => ps.name)
+        .filter(ps => {
+          // Clean the '+' off the signature to check for a pure name match
+          return !resolvedSignatures.some(sig => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
+        })
+        .slice(0, customSlots); // Slices ONLY after duplicates are stripped
       
       return {
         ...result,
