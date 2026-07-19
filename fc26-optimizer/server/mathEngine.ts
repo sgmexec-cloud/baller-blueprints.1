@@ -112,18 +112,22 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     let progress = true;
     while (progress && bucketSpent < budgetLimit) {
       progress = false;
+      
+      // FIX: Added '&& stats[m!].current < stats[m!].max' to prevent infinite loops on capped stats
       const candidates = attrs
         .map(a => matchAttr(a, attrNames))
-        .filter(m => m !== null && stats[m!].current < hardCap)
+        .filter(m => m !== null && stats[m!].current < Math.min(hardCap, stats[m!].max))
         .sort((a, b) => stats[a!].current - stats[b!].current);
       
       for (const matched of candidates) {
         const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
-          upgradeOne(matched!, hardCap);
-          bucketSpent += cost;
-          progress = true;
-          break;
+          const success = upgradeOne(matched!, hardCap);
+          if (success) { // FIX: Only progress if the upgrade actually happened
+            bucketSpent += cost;
+            progress = true;
+            break;
+          }
         }
       }
     }
@@ -137,15 +141,20 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
   let progress = true;
   while (progress && remainingAP > 0) {
     progress = false;
-    const allAttrNames = attrNames.filter(a => stats[a].current < 80);
+    
+    // FIX: Only consider stats that haven't hit their CSV maximum OR the 80 threshold
+    const allAttrNames = attrNames.filter(a => stats[a].current < 80 && stats[a].current < stats[a].max);
+    
     const options = allAttrNames
       .map(matched => ({ matched, cost: getUpgradeCost(archKey, normAttr(matched), stats[matched].current) }))
       .filter(o => o.cost <= remainingAP)
       .sort((a, b) => a.cost - b.cost);
 
     if (options.length > 0) {
-      upgradeOne(options[0].matched, 80);
-      progress = true;
+      const success = upgradeOne(options[0].matched, 80);
+      if (success) { // FIX: Break loop if upgrade fails
+        progress = true;
+      }
     }
   }
 
