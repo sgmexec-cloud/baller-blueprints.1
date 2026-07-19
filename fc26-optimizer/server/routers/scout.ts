@@ -41,8 +41,8 @@ const BlueprintSchema = z.object({
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
 
-// 👉 UPGRADED: Forced the scout to identify the Signature Weapon
-const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). You MUST highlight the player's stylistic limitations—if they are slow, lack agility, rarely use skill moves, or have poor passing range, state it clearly. Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait (e.g., cutting inside for long shots, bending free kicks, bullet headers) if they have one. Do not over-inflate abilities just because a player is famous. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate, realistic attributes and PlayStyles.`;
+// 👉 UPGRADED: Forced Peak Era evaluation and Signature Weapon rule
+const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. If a player changed positions during their career (e.g., starting as a defender but peaking as a winger), you MUST evaluate them based solely on their most famous, highest-performing attacking role. Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations. Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait (e.g., cutting inside for long shots, bending free kicks). Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
 export const scoutRouter = router({
   generateReport: publicProcedure
@@ -65,7 +65,7 @@ export const scoutRouter = router({
       // STAGE 2: Data Analyst Translation
       const context = getScoutingContext();
       
-      // 👉 UPGRADED: Added the 'Signature Weapon' lock to the RULES
+      // 👉 UPGRADED: Added CRITICAL ARCHETYPE RULE to stop defender archetypes on attackers
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -98,7 +98,10 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "reasoning": "Brief explanation of choices"
 }
 
-RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. SIGNATURE WEAPON RULE: Identify the player's 'Signature Weapon' from the scout report (e.g., LongShots, FKAccuracy, HeadingAccuracy) and FORCE that specific attribute into the 'coreAttributes' array so it receives maximum points. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
+RULES: 4 Playstyle+, 9 Standard Playstyles, define Attribute Pillars. Rate 'skillMoves' and 'weakFoot' as integers between 1 and 5 based strictly on historical realism. Do NOT include 'SkillMoves' or 'WeakFoot' inside the attribute arrays. 
+CRITICAL ARCHETYPE RULE: The chosen archetype MUST match the player's peak position. Do not assign defender archetypes to legendary attackers. 
+CRITICAL EA RULE: Standard PlayStyles CANNOT duplicate the Signature PlayStyles of the chosen Archetype. Check the context for the Archetype's signatures and ensure none are in your standard 'playstyles' array. 
+SIGNATURE WEAPON RULE: Identify the player's 'Signature Weapon' from the scout report (e.g., LongShots, FKAccuracy, HeadingAccuracy) and FORCE that specific attribute into the 'coreAttributes' array so it receives maximum points. Output ONLY raw JSON. You MUST include scoutSummary, heightRange, weightRange, skillMoves, and weakFoot. If no specialisation applies, leave specialisationMinAttrs as an empty array [].`;
 
       const stage2Response = await invokeLLM({
         messages: [
