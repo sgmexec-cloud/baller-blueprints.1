@@ -27,12 +27,17 @@ const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: strin
 const PlayStyleBadge = ({ name }: { name: string }) => {
   const isPlus = name.includes('+');
   
-  // 1. Clean the name: remove '+', handle common "squashed" names 
-  // 2. Add spaces before capital letters (like FirstTouch -> First Touch) so they map to kebab-case
-  let cleanName = name.replace('+', '').replace(/([a-z])([A-Z])/g, '$1 $2');
+  // 1. Clean the name
+  let cleanName = name.replace('+', '');
   
-  // 3. Convert to kebab-case (e.g., "First Touch" -> "first-touch")
+  // 2. Special handle for 'Gamechanger' to ensure it becomes 'Game Changer'
+  if (cleanName.toLowerCase() === 'gamechanger') {
+    cleanName = 'Game Changer';
+  }
+  
+  // 3. Add spaces before capital letters, then convert to kebab-case
   const fileName = cleanName
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
     .toLowerCase()
     .replace(/\s+/g, '-');
 
@@ -45,18 +50,16 @@ const PlayStyleBadge = ({ name }: { name: string }) => {
         alt={name} 
         className="w-4 h-4 object-contain"
         onError={(e) => { 
-            // Debugging tip: Log which file failed in the browser console
             console.error(`Failed to load: ${imagePath}`);
             e.currentTarget.src = '/icons/playstyles/fallback.png'; 
         }} 
       />
       <span className={`text-[10px] font-bold uppercase tracking-wider ${isPlus ? 'text-amber-200' : 'text-slate-300'}`}>
-        {isPlus ? `★ ${name.replace('+', '')}` : name}
+        {isPlus ? `★ ${cleanName}` : name}
       </span>
     </div>
   );
 };
-
 
 function StatBar({ val, max, color }: { val: number; max: number; color: string }) {
   const pct = Math.min(100, (val / Math.max(max, 1)) * 100);
