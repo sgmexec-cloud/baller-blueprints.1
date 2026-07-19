@@ -126,7 +126,62 @@ RULES:
   calculateStats: publicProcedure
     .input(z.object({ blueprint: BlueprintSchema, apBudget: z.number().int().min(1).max(999999) }))
     .mutation(async ({ input }) => {
-      // ... (Rest of your calculateStats logic remains the same)
-      return {}; // You should already have this fully implemented in your existing file!
+      let customSlots = 0;
+      let signatureUpgrades = 0;
+
+      try {
+        const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
+        const progContent = await fs.readFile(progPath, "utf-8");
+        const lines = progContent.trim().split("\n");
+        for (let i = 1; i < lines.length; i++) {
+          const p = lines[i].split(",");
+          if (input.apBudget >= Number(p[1])) {
+            signatureUpgrades = Number(p[2]);
+            customSlots = Number(p[3]);      
+          }
+        }
+      } catch (e) { console.error("Progression error:", e); }
+
+      const engineBlueprint: ScoutingBlueprint = {
+        archetype: input.blueprint.archetype,
+        position: input.blueprint.position,
+        playstylePlus: input.blueprint.playstylePlus,
+        playstyles: input.blueprint.playstyles,
+        specialisation: input.blueprint.specialisation,
+        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus,
+        specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
+        coreAttributes: input.blueprint.coreAttributes,
+        secondaryAttributes: input.blueprint.secondaryAttributes,
+        tertiaryAttributes: input.blueprint.tertiaryAttributes,
+        skillMoves: input.blueprint.skillMoves,
+        weakFoot: input.blueprint.weakFoot,
+      };
+
+      const result = runMathEngine(engineBlueprint, input.apBudget, customSlots);
+
+      const resolvedSignatures = resolveSignaturePlaystyles(
+        input.blueprint.archetype,
+        signatureUpgrades,
+        input.blueprint.specialisationPlaystylePlus
+      );
+
+      const standardPlaystyles = input.blueprint.playstyles
+        .map(ps => ps.name)
+        .filter(ps => {
+          return !resolvedSignatures.some(sig => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
+        })
+        .slice(0, customSlots); 
+      
+      return {
+        ...result,
+        scoutSummary: input.blueprint.scoutSummary,
+        suggestedSkillMoves: input.blueprint.skillMoves,
+        suggestedWeakFoot: input.blueprint.weakFoot,
+        playstyles: {
+          signatures: resolvedSignatures,
+          standard: standardPlaystyles,
+          specialisation: input.blueprint.specialisation || null
+        }
+      };
     }),
 });
