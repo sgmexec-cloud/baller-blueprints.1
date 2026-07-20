@@ -69,10 +69,11 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
       color: textColor,
     }}>
       <div style={{ width: "24px", height: "24px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <img 
+                <img 
           src={imagePath} 
           alt="" 
-          crossOrigin="anonymous"
+          loading="eager"
+          decoding="sync"
           style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
           onError={(e) => { e.currentTarget.style.display = 'none'; }} 
         />
