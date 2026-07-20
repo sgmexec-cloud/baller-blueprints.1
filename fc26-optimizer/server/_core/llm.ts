@@ -79,7 +79,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   const payload: Record<string, unknown> = {
     // 👉 Updated to use the active model verified from your list
-    model: "gemini-3.5-flash",
+        model: "gemini-3.1-flash-lite",
     messages: messages.map(normalizeMessage),
   };
 
