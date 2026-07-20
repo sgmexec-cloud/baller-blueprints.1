@@ -96,12 +96,7 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     if (realReqs) {
       if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
       if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
-      if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10)); // 👈 I accidentally deleted this line in the last update!
-    }
-  }
-  if (blueprint.specialisationMinAttrs) blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
-  upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
-  upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
+      if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10));
     }
   }
   if (blueprint.specialisationMinAttrs) blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
