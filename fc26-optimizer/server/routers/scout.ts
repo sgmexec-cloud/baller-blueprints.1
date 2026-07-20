@@ -90,7 +90,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
 RULES:
 - PLAYSTYLES: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 10 to 12 items in 'playstyles'. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
 - 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
-- Attribute distribution: Exactly 5-7 core, 8-10 secondary, 8-10 tertiary attributes.
+- ATTRIBUTES: Select ONLY the attributes that genuinely define this player. 4-6 core, 5-7 secondary, and 4-6 tertiary attributes. DO NOT include attributes that contradict the player's real-life weaknesses (e.g., omit tackling/interceptions for pure attackers). Unlisted stats will remain at their base values.
 - Output ONLY raw JSON.`;
 
       const stage2Response = await invokeLLM({
