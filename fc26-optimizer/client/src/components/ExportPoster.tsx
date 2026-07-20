@@ -50,7 +50,8 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
   if (cleanName.toLowerCase() === 'deadball') cleanName = 'Dead Ball';
 
-  const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const imagePath = `${baseUrl}/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
   const borderColor = isGold ? "#b45309" : "#1e3a8a"; 
   const bgColor = isGold ? "#291304" : "#0a1121";
