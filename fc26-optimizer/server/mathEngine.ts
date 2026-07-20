@@ -133,26 +133,38 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     }
   }
 
-  // 👉 UPDATED CAPS: Let the strengths drain the AP budget!
-  fillBucket(blueprint.coreAttributes, primaryBudget, 99);
-  fillBucket(blueprint.secondaryAttributes, secondaryBudget, 95);
-  fillBucket(blueprint.tertiaryAttributes, remainingAP, 90); 
+  // 👉 UPDATED CAPS: Slightly lower initial caps to force the budget to spread wider across the stats
+  fillBucket(blueprint.coreAttributes, primaryBudget, 95);
+  fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
+  fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. Efficiency Pass
+  // 3. Identity Bonus Pass (Replaces the Efficiency Pass)
+  // Instead of rescuing bad stats, re-invest all leftover AP strictly into the player's identity stats.
   let progress = true;
   while (progress && remainingAP > 0) {
     progress = false;
     
-    // 👉 NERFED LEFTOVER CAP: Weaknesses now stop at 75
-    const allAttrNames = attrNames.filter(a => stats[a].current < 75 && stats[a].current < stats[a].max);
-    
-    const options = allAttrNames
-      .map(matched => ({ matched, cost: getUpgradeCost(archKey, normAttr(matched), stats[matched].current) }))
-      .filter(o => o.cost <= remainingAP)
-      .sort((a, b) => a.cost - b.cost);
+    // Group all preferred attributes with their "absolute" maximums for the bonus round
+    const bonusCandidates = [
+      ...blueprint.coreAttributes.map(a => ({ attr: a, cap: 99 })),
+      ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: 95 })),
+      ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: 90 }))
+    ];
+
+    const options = bonusCandidates
+      .map(c => {
+        const matched = matchAttr(c.attr, attrNames);
+        if (!matched) return null;
+        const s = stats[matched];
+        // Ensure it hasn't hit the bonus cap or the hard CSV cap
+        if (s.current >= c.cap || s.current >= s.max) return null;
+        return { matched, cost: getUpgradeCost(archKey, normAttr(matched), s.current), cap: c.cap };
+      })
+      .filter((o): o is { matched: string; cost: number; cap: number } => o !== null && o.cost <= remainingAP)
+      .sort((a, b) => a.cost - b.cost); // Upgrade the cheapest valid option to spread bonus AP evenly
 
     if (options.length > 0) {
-      const success = upgradeOne(options[0].matched, 75);
+      const success = upgradeOne(options[0].matched, options[0].cap);
       if (success) {
         progress = true;
       }
