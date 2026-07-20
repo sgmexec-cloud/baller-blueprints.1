@@ -113,7 +113,6 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     while (progress && bucketSpent < budgetLimit) {
       progress = false;
       
-      // FIX: Added '&& stats[m!].current < stats[m!].max' to prevent infinite loops on capped stats
       const candidates = attrs
         .map(a => matchAttr(a, attrNames))
         .filter(m => m !== null && stats[m!].current < Math.min(hardCap, stats[m!].max))
@@ -123,7 +122,7 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
         const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, hardCap);
-          if (success) { // FIX: Only progress if the upgrade actually happened
+          if (success) {
             bucketSpent += cost;
             progress = true;
             break;
@@ -133,17 +132,18 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     }
   }
 
-  fillBucket(blueprint.coreAttributes, primaryBudget, 95);
-  fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
-  fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
+  // 👉 UPDATED CAPS: Let the strengths drain the AP budget!
+  fillBucket(blueprint.coreAttributes, primaryBudget, 99);
+  fillBucket(blueprint.secondaryAttributes, secondaryBudget, 95);
+  fillBucket(blueprint.tertiaryAttributes, remainingAP, 90); 
 
   // 3. Efficiency Pass
   let progress = true;
   while (progress && remainingAP > 0) {
     progress = false;
     
-    // FIX: Only consider stats that haven't hit their CSV maximum OR the 80 threshold
-    const allAttrNames = attrNames.filter(a => stats[a].current < 80 && stats[a].current < stats[a].max);
+    // 👉 NERFED LEFTOVER CAP: Weaknesses now stop at 75
+    const allAttrNames = attrNames.filter(a => stats[a].current < 75 && stats[a].current < stats[a].max);
     
     const options = allAttrNames
       .map(matched => ({ matched, cost: getUpgradeCost(archKey, normAttr(matched), stats[matched].current) }))
@@ -151,8 +151,8 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
       .sort((a, b) => a.cost - b.cost);
 
     if (options.length > 0) {
-      const success = upgradeOne(options[0].matched, 80);
-      if (success) { // FIX: Break loop if upgrade fails
+      const success = upgradeOne(options[0].matched, 75);
+      if (success) {
         progress = true;
       }
     }
