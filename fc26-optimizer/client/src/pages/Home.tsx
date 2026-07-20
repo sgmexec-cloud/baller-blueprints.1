@@ -332,7 +332,7 @@ export default function Home() {
     try {
       const dataUrl = await toPng(node, { 
         quality: 1.0, 
-        pixelRatio: 2, 
+        pixelRatio: 1, 
         backgroundColor: '#000000' 
       });
       const link = document.createElement("a");
