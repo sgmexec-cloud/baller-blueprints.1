@@ -1,170 +1,201 @@
+import React from "react";
+import type { MathEngineResult, StatResult } from "../../../server/mathEngine";
 import type { Blueprint } from "../../../server/routers/scout";
-import type { MathEngineResult } from "../../../server/mathEngine";
 
 interface Props {
   blueprint: Blueprint;
-  result: MathEngineResult;
+  result: MathEngineResult & {
+    playstyles?: {
+      signatures: string[];
+      standard: string[];
+      specialisation: string | null;
+    };
+  };
   apBudget: number;
 }
 
-// EA FC 26 Standard Category Mapping
-const CATEGORIES = {
-  PACE: { color: "#22c55e", attrs: ["Acceleration", "SprintSpeed"] },
-  SHOOTING: { color: "#ef4444", attrs: ["AttackPositioning", "Finishing", "ShotPower", "LongShots", "Volleys", "Penalties"] },
-  PASSING: { color: "#3b82f6", attrs: ["Vision", "Crossing", "FKAccuracy", "ShortPassing", "LongPassing", "Curve"] },
-  DRIBBLING: { color: "#eab308", attrs: ["Agility", "Balance", "Reactions", "BallControl", "Dribbling", "Composure"] },
-  DEFENDING: { color: "#a855f7", attrs: ["Interceptions", "HeadingAccuracy", "DefAwareness", "StandingTackle", "SlidingTackle"] },
-  PHYSICALITY: { color: "#f97316", attrs: ["Jumping", "Stamina", "Strength", "Aggression"] },
-  TRAITS: { color: "#06b6d4", attrs: ["Skill Moves", "Weak foot"] },
+const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
+  Pace: { color: "#22c55e", icon: "⚡" },
+  Shooting: { color: "#ef4444", icon: "🎯" },
+  Passing: { color: "#3b82f6", icon: "🔵" },
+  Dribbling: { color: "#eab308", icon: "✦" },
+  Defending: { color: "#a855f7", icon: "🛡" },
+  Physicality: { color: "#f97316", icon: "💪" },
+  "Skill Moves": { color: "#ec4899", icon: "★" },
+  "Weak Foot": { color: "#06b6d4", icon: "◆" },
+};
+
+const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boolean }) => {
+  if (!name) return null;
+  const isPlus = name.includes('+');
+  const isGold = isSignature || isPlus;
+  
+  let cleanName = name.replace('+', '');
+  if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
+  
+  const fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
+  const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
+
+  // Styling based on 1000042132.jpg
+  const borderColor = isGold ? "#b45309" : "#1e3a8a"; // Amber vs Slate Blue
+  const bgColor = isGold ? "#291304" : "#0a1121";
+  const textColor = isGold ? "#fcd34d" : "#93c5fd";
+  const iconColor = isGold ? "#fbbf24" : "#ffffff";
+
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: "12px",
+      padding: "12px 16px",
+      borderRadius: "8px",
+      border: `1px solid ${borderColor}`,
+      backgroundColor: bgColor,
+      color: textColor,
+    }}>
+      <div style={{ width: "24px", height: "24px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <img 
+          src={imagePath} 
+          alt="" 
+          style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.5))" }}
+          onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+        />
+      </div>
+      <span style={{ fontSize: "16px", color: iconColor }}>
+        {isGold ? '★' : '◆'}
+      </span>
+      <span style={{ fontSize: "14px", fontWeight: "bold", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Rajdhani', sans-serif" }}>
+        {cleanName}{isPlus ? '+' : ''}
+      </span>
+    </div>
+  );
 };
 
 export default function ExportPoster({ blueprint, result, apBudget }: Props) {
-  const stats = (result as any).stats || result;
-
-  // Bulletproof Stat Finder
-  const getStat = (targetAttr: string) => {
-    const target = targetAttr.toLowerCase().replace(/\s/g, '');
-    if (Array.isArray(stats)) {
-      return stats.find((s: any) => {
-         const name = (s.name || s.attribute || s.attr || "").toLowerCase().replace(/\s/g, '');
-         return name === target;
-      });
-    } else {
-      const key = Object.keys(stats).find(k => k.toLowerCase().replace(/\s/g, '') === target);
-      return key ? stats[key] : undefined;
-    }
-  };
-
-  // Safely calculate the totals ourselves just in case
-  let calculatedSpent = 0;
-  if (Array.isArray(stats)) {
-    stats.forEach((stat: any) => { if (typeof stat.apSpent === 'number') calculatedSpent += stat.apSpent; });
-  } else {
-    Object.values(stats).forEach((stat: any) => { if (stat && typeof stat.apSpent === 'number') calculatedSpent += stat.apSpent; });
-  }
-
-  const finalSpent = (result as any).summary?.totalApSpent ?? calculatedSpent;
-  const finalEfficiency = (result as any).summary?.efficiency ?? (apBudget > 0 ? (finalSpent / apBudget) * 100 : 0);
+  const safeBudget = typeof apBudget === 'number' ? apBudget : 0;
+  const safeSpent = typeof result?.totalApSpent === 'number' ? result.totalApSpent : 0;
+  const efficiency = safeBudget > 0 ? (safeSpent / safeBudget) * 100 : 0;
+  
+  const allPlaystyles = [
+    ...(result?.playstyles?.signatures?.map(name => ({ name, isSignature: true })) || []),
+    ...(result?.playstyles?.standard?.map(name => ({ name, isSignature: false })) || [])
+  ];
 
   return (
     <div
       id="export-poster"
       style={{
         width: "1080px",
-        height: "1350px", // Strict 4:5 Aspect Ratio for Social Media
+        height: "1350px", // Strict 4:5 Aspect Ratio for Instagram/Socials
         boxSizing: "border-box", 
         backgroundColor: "#050505",
         color: "#ffffff",
-        fontFamily: "system-ui, sans-serif",
-        padding: "40px", 
+        fontFamily: "'Inter', sans-serif",
+        padding: "48px", 
         display: "flex",
         flexDirection: "column",
-        justifyContent: "space-between", 
         position: "relative",
+        overflow: "hidden"
       }}
     >
+      {/* Background Neon Glow (Hex based for html-to-image compatibility) */}
+      <div style={{ position: "absolute", top: "-100px", left: "50%", transform: "translateX(-50%)", width: "800px", height: "400px", background: "#d946ef", opacity: 0.15, filter: "blur(120px)", pointerEvents: "none" }} />
+
       {/* Header Panel */}
-      <div style={{ display: "flex", justifyContent: "space-between", backgroundColor: "#111", padding: "24px 30px", borderRadius: "16px", border: "1px solid #333" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(17, 17, 17, 0.8)", padding: "24px 32px", borderRadius: "16px", border: "1px solid #333", zIndex: 10, marginBottom: "32px" }}>
         <div>
-          <h2 style={{ margin: 0, color: "#aaa", fontSize: "20px", letterSpacing: "4px", textTransform: "uppercase" }}>Final Player Card</h2>
-          <h1 style={{ margin: "8px 0 0 0", fontSize: "42px", color: "#fff", textTransform: "uppercase", letterSpacing: "2px" }}>{blueprint.archetype} BUILD</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
+            <img src="/clubdna-logo.png" alt="ClubDNA" style={{ height: "32px", objectFit: "contain" }} />
+            <div style={{ width: "1px", height: "20px", backgroundColor: "#333" }} />
+            <h2 style={{ margin: 0, color: "#d946ef", fontSize: "14px", letterSpacing: "4px", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>
+              Final Player Card
+            </h2>
+          </div>
+          <h1 style={{ margin: 0, fontSize: "42px", color: "#fff", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Orbitron', sans-serif", fontWeight: 900 }}>
+            {blueprint.archetype} BUILD
+          </h1>
         </div>
-        <div style={{ display: "flex", gap: "40px", textAlign: "right" }}>
-          <div>
-            <div style={{ color: "#aaa", fontSize: "16px", letterSpacing: "2px" }}>BUDGET</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", color: "#fff" }}>{apBudget.toLocaleString()}</div>
+        <div style={{ display: "flex", gap: "40px", textAlign: "center" }}>
+          <div style={{ backgroundColor: "#111", padding: "12px 24px", borderRadius: "12px", border: "1px solid #222" }}>
+            <div style={{ color: "#6b7280", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Budget</div>
+            <div style={{ fontSize: "28px", fontWeight: "900", color: "#fff", fontFamily: "'Orbitron', sans-serif" }}>{safeBudget.toLocaleString()}</div>
           </div>
-          <div>
-            <div style={{ color: "#aaa", fontSize: "16px", letterSpacing: "2px" }}>SPENT</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", color: "#22c55e" }}>{finalSpent.toLocaleString()}</div>
+          <div style={{ backgroundColor: "#111", padding: "12px 24px", borderRadius: "12px", border: "1px solid #222" }}>
+            <div style={{ color: "#6b7280", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Spent</div>
+            <div style={{ fontSize: "28px", fontWeight: "900", color: "#22c55e", fontFamily: "'Orbitron', sans-serif" }}>{safeSpent.toLocaleString()}</div>
           </div>
-          <div>
-            <div style={{ color: "#aaa", fontSize: "16px", letterSpacing: "2px" }}>EFFICIENCY</div>
-            <div style={{ fontSize: "32px", fontWeight: "bold", color: "#eab308" }}>{finalEfficiency.toFixed(1)}%</div>
+          <div style={{ backgroundColor: "#111", padding: "12px 24px", borderRadius: "12px", border: "1px solid #222" }}>
+            <div style={{ color: "#6b7280", fontSize: "12px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Efficiency</div>
+            <div style={{ fontSize: "28px", fontWeight: "900", color: "#eab308", fontFamily: "'Orbitron', sans-serif" }}>{Math.round(efficiency)}%</div>
           </div>
         </div>
       </div>
 
-      {/* Attributes Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px" }}>
-        {Object.entries(CATEGORIES).map(([catName, catData]) => {
-          const activeAttrs = catData.attrs.filter((attr) => getStat(attr));
-          if (activeAttrs.length === 0) return null;
+      {/* Attributes Grid - Dynamic mapping based on MathEngineResult */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "24px", zIndex: 10, flexGrow: 1 }}>
+        {["Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality", "Skill Moves", "Weak Foot"].map((catName) => {
+          const stats = result?.byCategory?.[catName];
+          if (!stats || stats.length === 0) return null;
+          const cfg = CATEGORY_CONFIG[catName] || { color: "#888", icon: "◉" };
 
           return (
-            <div key={catName} style={{ backgroundColor: "#111", padding: "16px", borderRadius: "12px", border: `1px solid #222` }}>
-              <h3 style={{ margin: "0 0 12px 0", color: catData.color, fontSize: "18px", letterSpacing: "2px", fontWeight: "bold" }}>{catName}</h3>
-              {activeAttrs.map((attr) => {
-                const stat = getStat(attr);
-                if (!stat) return null;
-                
-                const finalStatValue = stat.total ?? stat.value ?? stat.final ?? stat.finalValue ?? stat.rating ?? 0;
-                const widthPct = Math.min(100, Math.max(0, (finalStatValue / 99) * 100));
-                
-                return (
-                  <div key={attr} style={{ marginBottom: "10px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "15px", marginBottom: "4px" }}>
-                      <span style={{ color: "#ccc", fontWeight: "500" }}>{attr}</span>
-                      <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                        <span style={{ color: catData.color, fontSize: "11px", fontWeight: "bold" }}>+{stat.apSpent || 0} AP</span>
-                        <span style={{ fontWeight: "900", fontSize: "16px", width: "24px", textAlign: "right", color: finalStatValue >= 90 ? catData.color : "#fff" }}>
-                          {finalStatValue}
-                        </span>
+            <div key={catName} style={{ backgroundColor: "rgba(17, 17, 17, 0.6)", padding: "20px", borderRadius: "16px", border: `1px solid rgba(255,255,255,0.05)` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                <span style={{ fontSize: "20px" }}>{cfg.icon}</span>
+                <h3 style={{ margin: 0, color: cfg.color, fontSize: "16px", letterSpacing: "2px", fontWeight: "bold", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif" }}>
+                  {catName}
+                </h3>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {stats.map((stat: StatResult) => {
+                  const pct = Math.min(100, Math.max(0, (stat.final / Math.max(stat.max, 1)) * 100));
+                  
+                  return (
+                    <div key={stat.attribute}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <span style={{ color: "#9ca3af", fontSize: "14px", fontWeight: "500" }}>{stat.attribute}</span>
+                        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                          {stat.apSpent > 0 && (
+                            <span style={{ color: cfg.color, fontSize: "12px", fontWeight: "bold", backgroundColor: `${cfg.color}15`, padding: "2px 6px", borderRadius: "4px" }}>
+                              +{stat.apSpent} AP
+                            </span>
+                          )}
+                          <span style={{ fontWeight: "900", fontSize: "18px", width: "28px", textAlign: "right", color: stat.final >= 90 ? cfg.color : "#fff", fontFamily: "'Orbitron', sans-serif" }}>
+                            {stat.final}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ width: "100%", height: "6px", backgroundColor: "#222", borderRadius: "3px", overflow: "hidden" }}>
+                        <div style={{ width: `${pct}%`, height: "100%", backgroundColor: cfg.color }} />
                       </div>
                     </div>
-                    {/* Progress Bar */}
-                    <div style={{ width: "100%", height: "5px", backgroundColor: "#333", borderRadius: "3px", overflow: "hidden" }}>
-                      <div style={{ width: `${widthPct}%`, height: "100%", backgroundColor: catData.color }} />
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* PlayStyles Section */}
-      <div style={{ backgroundColor: "#111", padding: "24px 30px", borderRadius: "16px", border: "1px solid #333" }}>
-        <div style={{ display: "flex", gap: "40px" }}>
-          {/* PlayStyle+ */}
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: "#fbbf24", margin: "0 0 12px 0", letterSpacing: "2px", fontWeight: "bold", fontSize: "16px" }}>★ PLAYSTYLE+</h3>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {blueprint.playstylePlus.map((ps) => (
-                <div key={ps} style={{ backgroundColor: "#382c0a", color: "#fbbf24", padding: "6px 14px", borderRadius: "8px", border: "1px solid #785a0c", fontSize: "16px", fontWeight: "bold" }}>
-                  {ps}
-                </div>
-              ))}
-              {blueprint.specialisationPlaystylePlus && (
-                <div style={{ backgroundColor: "#2e1065", color: "#d8b4fe", padding: "6px 14px", borderRadius: "8px", border: "1px solid #6b21a8", fontSize: "16px", fontWeight: "bold" }}>
-                  {blueprint.specialisationPlaystylePlus} (Spec)
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Standard PlayStyles */}
-          <div style={{ flex: 2 }}>
-            <h3 style={{ color: "#3b82f6", margin: "0 0 12px 0", letterSpacing: "2px", fontWeight: "bold", fontSize: "16px" }}>STANDARD PLAYSTYLES</h3>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-              {blueprint.playstyles.map((ps) => (
-                <div key={ps.name} style={{ backgroundColor: "#0f172a", color: "#93c5fd", padding: "6px 14px", borderRadius: "8px", border: "1px solid #1e3a8a", fontSize: "15px", fontWeight: "500" }}>
-                  {ps.name}
-                </div>
-              ))}
-            </div>
+      {/* PlayStyles Section (Matches 1000042132.jpg) */}
+      {allPlaystyles.length > 0 && (
+        <div style={{ zIndex: 10, marginTop: "24px", paddingTop: "24px", borderTop: "1px solid #333" }}>
+          <h3 style={{ color: "#22c55e", margin: "0 0 16px 0", letterSpacing: "3px", fontWeight: "bold", fontSize: "14px", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif" }}>
+            Recommended Playstyle Loadout
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
+            {allPlaystyles.map((ps, i) => (
+              <PlayStyleBadge key={`ps-${i}`} name={ps.name} isSignature={ps.isSignature} />
+            ))}
           </div>
         </div>
-      </div>
+      )}
       
-      {/* Watermark */}
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
-        <img 
-          src="/clubdna-logo.png" 
-          alt="ClubDNA" 
-          style={{ height: "60px", objectFit: "contain" }} 
-        />
+      {/* Footer Branding */}
+      <div style={{ zIndex: 10, marginTop: "32px", display: "flex", justifyContent: "space-between", alignItems: "center", color: "#6b7280", fontFamily: "'Rajdhani', sans-serif", fontSize: "12px", textTransform: "uppercase", letterSpacing: "2px", fontWeight: "bold" }}>
+        <span>Generated by ClubDNA Engine</span>
+        <span>clubdna.io</span>
       </div>
     </div>
   );
