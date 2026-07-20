@@ -120,7 +120,7 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(17, 17, 17, 0.8)", padding: "24px 32px", borderRadius: "16px", border: "1px solid #333", zIndex: 10, marginBottom: "32px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-            <img src="/clubdna-logo.png" crossOrigin="anonymous" alt="ClubDNA" style={{ height: "32px", objectFit: "contain" }} />
+                        <img src="/clubdna-logo.png" alt="ClubDNA" loading="eager" decoding="sync" style={{ height: "32px", objectFit: "contain" }} />
             <div style={{ width: "1px", height: "20px", backgroundColor: "#333" }} />
             <h2 style={{ margin: 0, color: "#d946ef", fontSize: "14px", letterSpacing: "4px", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>
               Final Player Card
