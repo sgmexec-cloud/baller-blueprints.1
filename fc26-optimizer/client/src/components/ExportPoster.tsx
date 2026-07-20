@@ -21,55 +21,47 @@ const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
   Dribbling: { color: "#eab308", icon: "✦" },
   Defending: { color: "#a855f7", icon: "🛡" },
   Physicality: { color: "#f97316", icon: "💪" },
-  "Skill Moves": { color: "#ec4899", icon: "★" },
-  "Weak Foot": { color: "#06b6d4", icon: "◆" },
 };
 
 export default function ExportPoster({ blueprint, result, apBudget }: Props) {
   const safeBudget = typeof apBudget === 'number' ? apBudget : 0;
   const safeSpent = typeof result?.totalApSpent === 'number' ? result.totalApSpent : 0;
-  const allPlaystyles = [
-    ...(result?.playstyles?.signatures?.map(name => ({ name, isSignature: true })) || []),
-    ...(result?.playstyles?.standard?.map(name => ({ name, isSignature: false })) || [])
-  ];
-
+  
   return (
     <div
       id="export-poster"
       style={{
         width: "1080px",
-        backgroundColor: "#000000",
+        backgroundColor: "#050505",
         color: "#ffffff",
         padding: "48px",
-        fontFamily: "sans-serif"
+        fontFamily: "'Inter', sans-serif",
+        position: "relative",
+        overflow: "hidden"
       }}
     >
-      {/* Header */}
-      <h1 style={{ fontSize: "40px", marginBottom: "20px" }}>{blueprint.archetype} BUILD</h1>
-      <p>Budget: {safeBudget} | Spent: {safeSpent}</p>
+      {/* Safe Background Glow */}
+      <div style={{ position: "absolute", top: "-200px", left: "50%", transform: "translateX(-50%)", width: "1000px", height: "600px", background: "radial-gradient(circle, rgba(217, 70, 239, 0.15) 0%, rgba(5, 5, 5, 0) 70%)", pointerEvents: "none" }} />
 
-      {/* Grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "40px" }}>
-        {["Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality"].map((catName) => {
+      <h1 style={{ fontSize: "42px", fontWeight: 900, textTransform: "uppercase" }}>{blueprint.archetype} BUILD</h1>
+      <p style={{ color: "#6b7280" }}>Budget: {safeBudget.toLocaleString()} AP | Spent: {safeSpent.toLocaleString()} AP</p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginTop: "40px" }}>
+        {Object.entries(CATEGORY_CONFIG).map(([catName, cfg]) => {
           const stats = result?.byCategory?.[catName];
           if (!stats) return null;
           return (
-            <div key={catName} style={{ border: "1px solid #333", padding: "10px" }}>
-              <h2 style={{ color: CATEGORY_CONFIG[catName].color }}>{catName}</h2>
+            <div key={catName} style={{ backgroundColor: "rgba(17, 17, 17, 0.8)", padding: "20px", borderRadius: "16px", border: "1px solid rgba(255,255,255,0.05)" }}>
+              <h2 style={{ color: cfg.color, fontSize: "16px", textTransform: "uppercase" }}>{cfg.icon} {catName}</h2>
               {stats.map((s: StatResult) => (
-                <div key={s.attribute}>{s.attribute}: {s.final}</div>
+                <div key={s.attribute} style={{ display: "flex", justifyContent: "space-between", margin: "8px 0" }}>
+                  <span>{s.attribute}</span>
+                  <span style={{ fontWeight: "bold" }}>{s.final}</span>
+                </div>
               ))}
             </div>
           );
         })}
-      </div>
-
-      {/* Playstyles (Text only for Isolation Test) */}
-      <div style={{ marginTop: "40px" }}>
-        <h3>Playstyles</h3>
-        {allPlaystyles.map((ps, i) => (
-          <div key={i}>{ps.name}</div>
-        ))}
       </div>
     </div>
   );
