@@ -33,18 +33,24 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   let cleanName = name.replace('+', '').trim();
   let fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
 
+  // 👉 The Ultimate Override Map
   const OVERRIDES: Record<string, string> = {
     "dead-ball": "deadball",
+    "deadball": "deadball",
+    "gamechanger": "game-changer",
     "game-changer": "game-changer",
     "aerial-fortress": "aerial",
+    "aerial": "aerial"
   };
 
   if (OVERRIDES[fileName]) {
     fileName = OVERRIDES[fileName];
   }
 
-  if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
-  if (cleanName.toLowerCase() === 'deadball') cleanName = 'Dead Ball';
+  // Force clean formatting for the UI text label
+  const rawName = cleanName.replace(/\s+/g, '').toLowerCase();
+  if (rawName === 'gamechanger') cleanName = 'Game Changer';
+  if (rawName === 'deadball') cleanName = 'Dead Ball';
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const imagePath = `${baseUrl}/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
