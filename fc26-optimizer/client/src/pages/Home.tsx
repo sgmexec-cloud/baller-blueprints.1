@@ -333,7 +333,9 @@ export default function Home() {
       const dataUrl = await toPng(node, { 
         quality: 1.0, 
         pixelRatio: 1, 
-        backgroundColor: '#000000' 
+        backgroundColor: '#000000',
+        cacheBust: true,
+        imagePlaceholder: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" 
       });
       const link = document.createElement("a");
       link.download = `${blueprint.archetype}-FC26-Build.png`;
