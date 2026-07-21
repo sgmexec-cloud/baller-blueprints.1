@@ -297,17 +297,19 @@ export default function Home() {
     },
   });
 
-  const handleScout = () => {
-    if (!playerIdentity.trim()) return;
-    setBlueprint(null);
-    setPlayerCard(null);
-    setPhase(1);
-    scoutMutation.mutate({ playerIdentity: playerIdentity.trim() });
-  };
-
-  const handleCalculate = () => {
+    const handleCalculate = () => {
     if (!blueprint || apBudget <= 0) return;
-    calcMutation.mutate({ blueprint, apBudget });
+
+    // Grab the exact slots unlocked for their current level
+    const sigSlots = progressionData?.[level]?.signatureUpgrades ?? 2;
+    const stdSlots = progressionData?.[level]?.customSlots ?? 6;
+
+    calcMutation.mutate({ 
+      blueprint, 
+      apBudget,
+      signatureSlots: sigSlots, // <-- New addition
+      standardSlots: stdSlots   // <-- New addition
+    });
   };
 
   const handleReset = () => {
