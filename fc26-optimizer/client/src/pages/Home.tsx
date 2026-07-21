@@ -256,7 +256,7 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [playerIdentity, setPlayerIdentity] = useState("");
-  const [forcedArchetype, setForcedArchetype] = useState<string>(""); // 👉 Added state for forced archetype
+  const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
   const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
@@ -267,7 +267,7 @@ export default function Home() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
-  const { data: archetypesList } = trpc.build.getArchetypes.useQuery(); // 👉 Fetch available archetypes from backend
+  const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
 
@@ -299,7 +299,6 @@ export default function Home() {
     },
   });
 
-  // 👉 Updated handleScout wrapper function to pass forcedArchetype
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
     scoutMutation.mutate({ 
@@ -415,7 +414,6 @@ export default function Home() {
               disabled={scoutMutation.isPending}
             />
 
-            {/* 👉 Optional Forced Archetype Dropdown Selection */}
             <div className="mb-4">
               <label 
                 className="block text-xs font-medium mb-1.5" 
@@ -429,11 +427,15 @@ export default function Home() {
                 className="input-gaming w-full text-white appearance-none bg-black/40 text-xs py-2 px-3 rounded-lg"
               >
                 <option value="">✨ Let AI Choose Best Match</option>
-                {archetypesList?.map((arch) => (
-                  <option key={arch} value={arch}>
-                    {arch}
-                  </option>
-                ))}
+                {archetypesList && archetypesList.length > 0 ? (
+                  archetypesList.map((arch) => (
+                    <option key={arch} value={arch}>
+                      {arch}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>Loading archetypes...</option>
+                )}
               </select>
             </div>
 
