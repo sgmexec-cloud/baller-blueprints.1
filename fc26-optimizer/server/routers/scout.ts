@@ -47,7 +47,10 @@ Explicitly identify the player's 'Signature Weapon'—their most iconic, tradema
 
 export const scoutRouter = router({
   generateReport: publicProcedure
-    .input(z.object({ playerIdentity: z.string().min(1).max(500) }))
+    .input(z.object({ 
+      playerIdentity: z.string().min(1).max(500),
+      forcedArchetype: z.string().optional() // 👉 Added to support forced archetype selection
+    }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
@@ -64,6 +67,11 @@ export const scoutRouter = router({
 
       const context = getScoutingContext();
       
+      // 👉 Dynamic constraint rule for the forced archetype
+      const archetypeRule = input.forcedArchetype 
+        ? `CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}". Do NOT choose or invent a different archetype.`
+        : `Choose the most accurate archetype from the context.`;
+
       const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
 ${context}
 
@@ -88,7 +96,8 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
 }
 
 RULES:
-- PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. The MOST iconic and essential playstyles for this specific player MUST be placed at the very beginning of the array. The engine slices this list based on level progression, so the first 6 items are the most critical. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
+- ARCHETYPE: ${archetypeRule}
+- PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. The MOST iconic and essential playstyles for this specific player MUST be placed at the very beginning of the array. The engine slices this list based on level progression, so the first items are the most critical. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
 - 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
 - ATTRIBUTES: Select ONLY the attributes that genuinely define this player. 4-6 core, 5-7 secondary, and 4-6 tertiary attributes. DO NOT include attributes that contradict the player's real-life weaknesses (e.g., omit tackling/interceptions for pure attackers). Unlisted stats will remain at their base values.
 - Output ONLY raw JSON.`;
