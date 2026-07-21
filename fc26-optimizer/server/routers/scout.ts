@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { getScoutingContext } from "../csvLoader";
+import { getScoutingContext, ALL_ARCHETYPES } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -46,6 +46,17 @@ Describe observable football qualities (First Touch, Scanning, Decision Making, 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
 export const scoutRouter = router({
+  // 👉 Added endpoint to supply unique archetypes directly to the frontend dropdown
+  getArchetypes: publicProcedure.query(async () => {
+    try {
+      const uniqueArchetypes = Array.from(new Set(ALL_ARCHETYPES.map(row => row.Archetype.trim())));
+      return uniqueArchetypes.sort();
+    } catch (e) {
+      console.error("Failed to load archetypes:", e);
+      return [];
+    }
+  }),
+
   generateReport: publicProcedure
     .input(z.object({ 
       playerIdentity: z.string().min(1).max(500),
@@ -117,7 +128,6 @@ RULES:
 
       const parsed = JSON.parse(cleanedJson);
 
-      // Defensive Mapping: Ensure specialisationMinAttrs is an array of objects
       if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
         parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
           if (typeof item === 'string') {
