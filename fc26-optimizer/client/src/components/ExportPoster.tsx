@@ -30,12 +30,9 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   const isPlus = name.includes('+');
   const isGold = isSignature || isPlus;
   
-  let cleanName = name.replace('+', '');
-  
-  // Auto-hyphenate what the AI gives us (e.g. "DeadBall" -> "dead-ball")
+  let cleanName = name.replace('+', '').trim();
   let fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
 
-  // OVERRIDES: Map AI names to your exact file names to prevent 404 crashes
   const OVERRIDES: Record<string, string> = {
     "dead-ball": "deadball",
     "game-changer": "gamechanger",
@@ -46,7 +43,6 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
     fileName = OVERRIDES[fileName];
   }
 
-  // Restore the space for the text label
   if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
   if (cleanName.toLowerCase() === 'deadball') cleanName = 'Dead Ball';
 
@@ -78,7 +74,6 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
           style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
           onError={(e) => { 
             e.currentTarget.style.display = 'none';
-            // Force the broken image URL to become a safe transparent pixel
             e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
           }} 
         />
@@ -132,7 +127,6 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
               decoding="sync" 
               style={{ height: "32px", objectFit: "contain" }} 
               onError={(e) => { 
-                // Force the broken logo URL to become a safe transparent pixel
                 e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
               }}
             />
