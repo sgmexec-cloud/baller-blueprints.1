@@ -256,6 +256,7 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [playerIdentity, setPlayerIdentity] = useState("");
+  const [forcedArchetype, setForcedArchetype] = useState<string>(""); // 👉 Added state for forced archetype
   const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
@@ -266,6 +267,7 @@ export default function Home() {
   const cardRef = useRef<HTMLDivElement>(null);
 
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
+  const { data: archetypesList } = trpc.build.getArchetypes.useQuery(); // 👉 Fetch available archetypes from backend
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
 
@@ -297,10 +299,13 @@ export default function Home() {
     },
   });
 
-  // 👉 Added handleScout wrapper function to fix the reference error
+  // 👉 Updated handleScout wrapper function to pass forcedArchetype
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
-    scoutMutation.mutate({ playerIdentity });
+    scoutMutation.mutate({ 
+      playerIdentity, 
+      forcedArchetype: forcedArchetype || undefined 
+    });
   };
 
   const handleCalculate = () => {
@@ -322,6 +327,7 @@ export default function Home() {
     setPlayerCard(null);
     setPhase(1);
     setPlayerIdentity("");
+    setForcedArchetype("");
     setLevel(1);
   };
 
@@ -408,6 +414,28 @@ export default function Home() {
               }}
               disabled={scoutMutation.isPending}
             />
+
+            {/* 👉 Optional Forced Archetype Dropdown Selection */}
+            <div className="mb-4">
+              <label 
+                className="block text-xs font-medium mb-1.5" 
+                style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.75 0.01 240)" }}
+              >
+                Force Archetype <span className="text-gray-500">(Optional)</span>
+              </label>
+              <select
+                value={forcedArchetype}
+                onChange={(e) => setForcedArchetype(e.target.value)}
+                className="input-gaming w-full text-white appearance-none bg-black/40 text-xs py-2 px-3 rounded-lg"
+              >
+                <option value="">✨ Let AI Choose Best Match</option>
+                {archetypesList?.map((arch) => (
+                  <option key={arch} value={arch}>
+                    {arch}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               className="btn-neon w-full py-3 rounded-lg text-sm"
