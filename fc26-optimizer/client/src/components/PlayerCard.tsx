@@ -29,12 +29,27 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   if (!name) return null;
   const isPlus = name.includes('+');
   
-  let cleanName = name.replace('+', '');
-  if (cleanName.toLowerCase() === 'gamechanger') {
-    cleanName = 'Game Changer';
-  }
+  // 👉 Added .trim() to kill ghost spaces from the AI
+  let cleanName = name.replace('+', '').trim();
   
-  const fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/\s+/g, '-');
+  // Auto-hyphenate what the AI gives us (e.g. "DeadBall" -> "dead-ball")
+  let fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
+
+  // 👉 OVERRIDES: Map AI names to your exact file names
+  const OVERRIDES: Record<string, string> = {
+    "dead-ball": "deadball",
+    "game-changer": "gamechanger",
+    "aerial-fortress": "aerial",
+  };
+
+  if (OVERRIDES[fileName]) {
+    fileName = OVERRIDES[fileName];
+  }
+
+  // Restore the space for the text label on the UI
+  if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
+  if (cleanName.toLowerCase() === 'deadball') cleanName = 'Dead Ball';
+
   const imagePath = `/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
   const textColor = isSignature || isPlus ? 'text-amber-200' : 'text-slate-200';
