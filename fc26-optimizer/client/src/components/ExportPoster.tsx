@@ -50,7 +50,7 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   if (cleanName.toLowerCase() === 'gamechanger') cleanName = 'Game Changer';
   if (cleanName.toLowerCase() === 'deadball') cleanName = 'Dead Ball';
 
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const imagePath = `${baseUrl}/icons/playstyles/${fileName}${isPlus ? '-plus' : ''}.png`;
 
   const borderColor = isGold ? "#b45309" : "#1e3a8a"; 
@@ -70,13 +70,17 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
       color: textColor,
     }}>
       <div style={{ width: "24px", height: "24px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <img 
+        <img 
           src={imagePath} 
           alt="" 
           loading="eager"
           decoding="sync"
           style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-          onError={(e) => { e.currentTarget.style.display = 'none'; }} 
+          onError={(e) => { 
+            e.currentTarget.style.display = 'none';
+            // Force the broken image URL to become a safe transparent pixel
+            e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+          }} 
         />
       </div>
       <span style={{ fontSize: "16px", color: iconColor }}>
@@ -121,7 +125,17 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "rgba(17, 17, 17, 0.8)", padding: "24px 32px", borderRadius: "16px", border: "1px solid #333", zIndex: 10, marginBottom: "32px" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-                          <img src={`${typeof window !== 'undefined' ? window.location.origin : ''}/clubdna-logo.png`} alt="ClubDNA" loading="eager" decoding="sync" style={{ height: "32px", objectFit: "contain" }} />
+            <img 
+              src={`${typeof window !== 'undefined' ? window.location.origin : ''}/clubdna-logo.png`} 
+              alt="ClubDNA" 
+              loading="eager" 
+              decoding="sync" 
+              style={{ height: "32px", objectFit: "contain" }} 
+              onError={(e) => { 
+                // Force the broken logo URL to become a safe transparent pixel
+                e.currentTarget.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+              }}
+            />
             <div style={{ width: "1px", height: "20px", backgroundColor: "#333" }} />
             <h2 style={{ margin: 0, color: "#d946ef", fontSize: "14px", letterSpacing: "4px", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>
               Final Player Card
