@@ -297,18 +297,23 @@ export default function Home() {
     },
   });
 
-    const handleCalculate = () => {
+  // 👉 Added handleScout wrapper function to fix the reference error
+  const handleScout = () => {
+    if (!playerIdentity.trim() || scoutMutation.isPending) return;
+    scoutMutation.mutate({ playerIdentity });
+  };
+
+  const handleCalculate = () => {
     if (!blueprint || apBudget <= 0) return;
 
-    // Grab the exact slots unlocked for their current level
     const sigSlots = progressionData?.[level]?.signatureUpgrades ?? 2;
     const stdSlots = progressionData?.[level]?.customSlots ?? 6;
 
     calcMutation.mutate({ 
       blueprint, 
       apBudget,
-      signatureSlots: sigSlots, // <-- New addition
-      standardSlots: stdSlots   // <-- New addition
+      signatureSlots: sigSlots,
+      standardSlots: stdSlots
     });
   };
 
@@ -321,7 +326,6 @@ export default function Home() {
   };
 
   const handleDownloadImage = async () => {
-    // 👉 SAFETY CHECK ADDED: Ensure data is fully loaded before attempting export
     if (!playerCard || !blueprint) {
       alert("Please wait for the calculation to finish before downloading.");
       return;
