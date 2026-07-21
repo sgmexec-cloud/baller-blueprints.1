@@ -35,7 +35,7 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
 
   const OVERRIDES: Record<string, string> = {
     "dead-ball": "deadball",
-    "game-changer": "gamechanger",
+    "game-changer": "game-changer",
     "aerial-fortress": "aerial",
   };
 
