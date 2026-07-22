@@ -1,7 +1,8 @@
 import { pgTable, serial, varchar, text, timestamp, pgEnum, integer } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin"]);
-export const tierEnum = pgEnum("tier", ["free", "premium"]);
+// 👉 Added "vip" so it matches the logic in your scout.ts file
+export const tierEnum = pgEnum("tier", ["free", "premium", "vip"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
