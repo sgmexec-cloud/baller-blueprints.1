@@ -8,7 +8,7 @@ import { getDb } from "../db";
 import fs from "fs/promises";
 import path from "path";
 import { eq, sql } from "drizzle-orm";
-import { users } from "../drizzle/schema"; // Ensure this path matches your schema location
+import { users } from "../../drizzle/schema"; // Ensure this path matches your schema location
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
