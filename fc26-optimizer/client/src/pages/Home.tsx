@@ -84,12 +84,31 @@ function HeroHeader() {
     }
   });
 
-  const isCheckoutLoading = (checkoutMutation as any).isLoading || (checkoutMutation as any).isPending;
+  const isCheckoutLoading = checkoutMutation.isPending;
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip";
+
+  // 👉 Dynamically figure out labels based on your new tier structure
+  let tierLabel = "Guest";
+  let buildsLeftText = "2 Free Builds";
+  
+  if (user) {
+    if (user.tier === "vip") {
+      tierLabel = "💎 VIP Member";
+      buildsLeftText = "Unlimited Builds";
+    } else if (user.tier === "premium") {
+      tierLabel = "👑 Premium Member";
+      buildsLeftText = `${Math.max(0, 100 - (user.monthlyBuilds || 0))} / 100 Builds Left`;
+    } else {
+      // Default logged in user (Member)
+      tierLabel = "👤 Free Member";
+      buildsLeftText = `${Math.max(0, 5 - (user.monthlyBuilds || 0))} / 5 Free Builds`;
+    }
+  }
 
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
       
-      {user?.tier !== "premium" && (
+      {!isPremiumOrVIP && (
         <div className="absolute top-4 right-4 z-20">
           <button
             onClick={() => checkoutMutation.mutate()}
@@ -104,7 +123,7 @@ function HeroHeader() {
               cursor: isCheckoutLoading ? "not-allowed" : "pointer"
             }}
           >
-            {isCheckoutLoading ? "Redirecting..." : "👑 Unlock Premium & VIP"}
+            {isCheckoutLoading ? "Redirecting..." : "👑 Upgrade to Premium"}
           </button>
         </div>
       )}
@@ -155,12 +174,12 @@ function HeroHeader() {
               <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
                 {user.name}
               </p>
-              <p className="text-xs font-medium" style={{ color: user.tier === "premium" ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
-                {user.tier === "premium" ? "👑 Premium Member" : `${Math.max(0, 5 - (user.monthlyBuilds || 0))} Free Builds Left`}
+              <p className="text-xs font-medium" style={{ color: isPremiumOrVIP ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
+                {tierLabel} • {buildsLeftText}
               </p>
             </div>
             <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
-              {user.tier === "premium" && (
+              {isPremiumOrVIP && (
                 <a 
                   href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
                   target="_blank" 
@@ -266,10 +285,20 @@ export default function Home() {
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const { data: user } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
+  const checkoutMutation = trpc.stripe.createCheckout.useMutation({
+    onSuccess: (data) => {
+      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+    }
+  });
+
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
+  
+  // 👉 Check if they have access to the Premium features
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -301,9 +330,13 @@ export default function Home() {
 
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
+    
+    // Safety check: if somehow a free user manipulated the state, nullify it here before sending to backend
+    const secureForcedArchetype = isPremiumOrVIP ? forcedArchetype : undefined;
+
     scoutMutation.mutate({ 
       playerIdentity, 
-      forcedArchetype: forcedArchetype || undefined 
+      forcedArchetype: secureForcedArchetype || undefined 
     });
   };
 
@@ -414,29 +447,48 @@ export default function Home() {
               disabled={scoutMutation.isPending}
             />
 
-            <div className="mb-4">
-              <label 
-                className="block text-xs font-medium mb-1.5" 
-                style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.75 0.01 240)" }}
-              >
-                Force Archetype <span className="text-gray-500">(Optional)</span>
-              </label>
-              <select
-                value={forcedArchetype}
-                onChange={(e) => setForcedArchetype(e.target.value)}
-                className="input-gaming w-full text-white appearance-none bg-black/40 text-xs py-2 px-3 rounded-lg"
-              >
-                <option value="">✨ Let AI Choose Best Match</option>
-                {archetypesList && archetypesList.length > 0 ? (
-                  archetypesList.map((arch) => (
-                    <option key={arch} value={arch}>
-                      {arch}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>Loading archetypes...</option>
+            {/* 👉 Gated Archetype Section */}
+            <div className="mb-4 relative">
+              <div className="flex justify-between items-center mb-1.5">
+                <label 
+                  className="block text-xs font-medium" 
+                  style={{ fontFamily: "'Rajdhani', sans-serif", color: isPremiumOrVIP ? "oklch(0.75 0.01 240)" : "oklch(0.40 0.01 240)" }}
+                >
+                  Force Archetype <span className="text-gray-500">(Optional)</span>
+                </label>
+                {!isPremiumOrVIP && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                    Premium Feature
+                  </span>
                 )}
-              </select>
+              </div>
+
+              {isPremiumOrVIP ? (
+                <select
+                  value={forcedArchetype}
+                  onChange={(e) => setForcedArchetype(e.target.value)}
+                  className="input-gaming w-full text-white appearance-none bg-black/40 text-xs py-2 px-3 rounded-lg"
+                >
+                  <option value="">✨ Let AI Choose Best Match</option>
+                  {archetypesList && archetypesList.length > 0 ? (
+                    archetypesList.map((arch) => (
+                      <option key={arch} value={arch}>
+                        {arch}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="" disabled>Loading archetypes...</option>
+                  )}
+                </select>
+              ) : (
+                <div 
+                  onClick={() => checkoutMutation.mutate()}
+                  className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
+                >
+                  <span>✨ Let AI Choose Best Match (Locked)</span>
+                  <span className="text-yellow-500/70">🔒</span>
+                </div>
+              )}
             </div>
 
             <button
