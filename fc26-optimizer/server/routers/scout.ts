@@ -7,6 +7,8 @@ import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
 import path from "path";
+import { eq, sql } from "drizzle-orm";
+import { users } from "../drizzle/schema"; // Ensure this path matches your schema location
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
@@ -62,10 +64,41 @@ export const scoutRouter = router({
       playerIdentity: z.string().min(1).max(500),
       forcedArchetype: z.string().optional() // 👉 Added to support forced archetype selection
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
+      // --- GATEKEEPER / RATE LIMITING LOGIC START ---
+      const userId = ctx.user?.id;
+      let buildLimit = 2; // Guest default
+      let currentUser = null;
+
+      if (userId) {
+        const [dbUser] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        currentUser = dbUser;
+
+        if (currentUser) {
+          if (currentUser.tier === "vip") buildLimit = Infinity;
+          else if (currentUser.tier === "premium") buildLimit = 100;
+          else buildLimit = 5; // Free Member
+        }
+      }
+
+      const currentBuilds = currentUser?.monthlyBuilds || 0;
+
+      if (currentBuilds >= buildLimit) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "LIMIT_REACHED",
+        });
+      }
+      // --- GATEKEEPER / RATE LIMITING LOGIC END ---
+
       const stage1Response = await invokeLLM({
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
@@ -139,6 +172,17 @@ RULES:
       } else {
         parsed.specialisationMinAttrs = [];
       }
+
+      // --- INCREMENT BUILD COUNT START ---
+      if (currentUser && currentUser.tier !== "vip") {
+        await db
+          .update(users)
+          .set({
+            monthlyBuilds: sql`${users.monthlyBuilds} + 1`,
+          })
+          .where(eq(users.id, currentUser.id));
+      }
+      // --- INCREMENT BUILD COUNT END ---
 
       return BlueprintSchema.parse(parsed);
     }),
