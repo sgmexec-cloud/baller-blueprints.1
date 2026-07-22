@@ -1,8 +1,8 @@
 import { pgTable, serial, varchar, text, timestamp, pgEnum, integer } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin"]);
-// 👉 Added "vip" so it matches the logic in your scout.ts file
-export const tierEnum = pgEnum("tier", ["free", "premium", "vip"]);
+// 👉 Added "owner" and "vip" tiers to support your personal unlimited tier and capped paid tiers
+export const tierEnum = pgEnum("tier", ["free", "premium", "vip", "owner"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
