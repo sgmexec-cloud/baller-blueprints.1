@@ -85,14 +85,17 @@ function HeroHeader() {
   });
 
   const isCheckoutLoading = checkoutMutation.isPending;
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip";
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
 
-  // 👉 Dynamically figure out labels based on your new tier structure
+  // 👉 Dynamically figure out labels including the owner tier
   let tierLabel = "Guest";
   let buildsLeftText = "2 Free Builds";
   
   if (user) {
-    if (user.tier === "vip") {
+    if (user.tier === "owner") {
+      tierLabel = "🛡️ Owner Member";
+      buildsLeftText = "Unlimited Builds";
+    } else if (user.tier === "vip") {
       tierLabel = "💎 VIP Member";
       buildsLeftText = "Unlimited Builds";
     } else if (user.tier === "premium") {
@@ -179,7 +182,7 @@ function HeroHeader() {
               </p>
             </div>
             <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
-              {isPremiumOrVIP && (
+              {isPremiumOrVIP && user.tier !== "owner" && (
                 <a 
                   href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
                   target="_blank" 
@@ -297,8 +300,8 @@ export default function Home() {
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  // 👉 Check if they have access to the Premium features
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip";
+  // 👉 Check if they have access to the Premium features including owner
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
