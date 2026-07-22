@@ -83,7 +83,8 @@ export const scoutRouter = router({
         currentUser = dbUser;
 
         if (currentUser) {
-          if (currentUser.tier === "vip") buildLimit = Infinity;
+          if (currentUser.tier === "owner") buildLimit = Infinity; // 👉 Owner tier has unlimited builds
+          else if (currentUser.tier === "vip") buildLimit = 500;   // 👉 VIP tier has a protected cap
           else if (currentUser.tier === "premium") buildLimit = 100;
           else buildLimit = 5; // Free Member
         }
@@ -174,7 +175,8 @@ RULES:
       }
 
       // --- INCREMENT BUILD COUNT START ---
-      if (currentUser && currentUser.tier !== "vip") {
+      // 👉 Exclude both "owner" and "vip" from monthly build tracking increments
+      if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         await db
           .update(users)
           .set({
