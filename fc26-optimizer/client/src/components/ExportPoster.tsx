@@ -12,6 +12,8 @@ interface Props {
     };
   };
   apBudget: number;
+  // 👉 NEW: Added level to properly display it on the export
+  level: number; 
 }
 
 const CATEGORY_CONFIG: Record<string, { color: string; icon: string }> = {
@@ -92,9 +94,10 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   );
 };
 
-export default function ExportPoster({ blueprint, result, apBudget }: Props) {
+export default function ExportPoster({ blueprint, result, apBudget, level }: Props) {
   const safeBudget = typeof apBudget === 'number' ? apBudget : 0;
   const safeSpent = typeof result?.totalApSpent === 'number' ? result.totalApSpent : 0;
+  const safeLevel = typeof level === 'number' ? level : 1;
   const efficiency = safeBudget > 0 ? (safeSpent / safeBudget) * 100 : 0;
   
   const allPlaystyles = [
@@ -142,17 +145,28 @@ export default function ExportPoster({ blueprint, result, apBudget }: Props) {
           <h1 style={{ margin: 0, fontSize: "36px", color: "#fff", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Orbitron', sans-serif", fontWeight: 900 }}>
             {blueprint.archetype} BUILD
           </h1>
+          {/* 👉 NEW: Physical properties locked in below the build title */}
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "8px", fontSize: "14px", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>
+            <span>{blueprint.heightRange}</span>
+            <span style={{ color: "#4b5563" }}>|</span>
+            <span>{blueprint.weightRange}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "32px", textAlign: "center" }}>
-          <div style={{ backgroundColor: "#111", padding: "10px 20px", borderRadius: "10px", border: "1px solid #222" }}>
+        <div style={{ display: "flex", gap: "16px", textAlign: "center" }}>
+          {/* 👉 NEW: Added Level stat block seamlessly next to the others */}
+          <div style={{ backgroundColor: "#111", padding: "10px 16px", borderRadius: "10px", border: "1px solid #222" }}>
+            <div style={{ color: "#6b7280", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Level</div>
+            <div style={{ fontSize: "24px", fontWeight: "900", color: "#d946ef", fontFamily: "'Orbitron', sans-serif" }}>{safeLevel}</div>
+          </div>
+          <div style={{ backgroundColor: "#111", padding: "10px 16px", borderRadius: "10px", border: "1px solid #222" }}>
             <div style={{ color: "#6b7280", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Budget</div>
             <div style={{ fontSize: "24px", fontWeight: "900", color: "#fff", fontFamily: "'Orbitron', sans-serif" }}>{safeBudget.toLocaleString()}</div>
           </div>
-          <div style={{ backgroundColor: "#111", padding: "10px 20px", borderRadius: "10px", border: "1px solid #222" }}>
+          <div style={{ backgroundColor: "#111", padding: "10px 16px", borderRadius: "10px", border: "1px solid #222" }}>
             <div style={{ color: "#6b7280", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Spent</div>
             <div style={{ fontSize: "24px", fontWeight: "900", color: "#22c55e", fontFamily: "'Orbitron', sans-serif" }}>{safeSpent.toLocaleString()}</div>
           </div>
-          <div style={{ backgroundColor: "#111", padding: "10px 20px", borderRadius: "10px", border: "1px solid #222" }}>
+          <div style={{ backgroundColor: "#111", padding: "10px 16px", borderRadius: "10px", border: "1px solid #222" }}>
             <div style={{ color: "#6b7280", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Efficiency</div>
             <div style={{ fontSize: "24px", fontWeight: "900", color: "#eab308", fontFamily: "'Orbitron', sans-serif" }}>{Math.round(efficiency)}%</div>
           </div>
