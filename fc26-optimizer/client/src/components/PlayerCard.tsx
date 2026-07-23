@@ -12,6 +12,11 @@ interface Props {
   apBudget: number;
   archetype: string;
   level: number;
+  // 👉 NEW: Added blueprint to extract height and weight
+  blueprint?: {
+    heightRange: string;
+    weightRange: string;
+  };
 }
 
 const CATEGORY_CONFIG: Record<string, { color: string; bg: string; border: string; icon: string }> = {
@@ -100,7 +105,7 @@ function CategoryBlock({ name, stats }: { name: string; stats: StatResult[] }) {
   );
 }
 
-export default function PlayerCard({ result, apBudget, archetype, level }: Props) {
+export default function PlayerCard({ result, apBudget, archetype, level, blueprint }: Props) {
   const safeBudget = typeof apBudget === 'number' ? apBudget : 0;
   const safeSpent = typeof result?.totalApSpent === 'number' ? result.totalApSpent : 0;
   const safeLevel = typeof level === 'number' ? level : 1;
@@ -114,8 +119,17 @@ export default function PlayerCard({ result, apBudget, archetype, level }: Props
       <div className="border-b pb-4 mb-4" style={{ borderColor: "oklch(0.78 0.18 85 / 0.2)" }}>
         <div className="flex justify-between items-center mb-1">
           <div className="text-xs tracking-widest uppercase" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
-          <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "oklch(0.75 0.22 142 / 0.1)", color: "oklch(0.75 0.22 142)", borderColor: "oklch(0.75 0.22 142 / 0.3)", fontFamily: "'Rajdhani', sans-serif" }}>
-            Level {safeLevel}
+          
+          {/* 👉 NEW: Render Height & Weight and Level Side-by-Side */}
+          <div className="flex gap-2 items-center">
+            {blueprint && (
+              <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "rgba(255, 255, 255, 0.05)", color: "oklch(0.65 0.01 240)", borderColor: "rgba(255, 255, 255, 0.1)", fontFamily: "'Rajdhani', sans-serif" }}>
+                {blueprint.heightRange} | {blueprint.weightRange}
+              </div>
+            )}
+            <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "oklch(0.75 0.22 142 / 0.1)", color: "oklch(0.75 0.22 142)", borderColor: "oklch(0.75 0.22 142 / 0.3)", fontFamily: "'Rajdhani', sans-serif" }}>
+              Level {safeLevel}
+            </div>
           </div>
         </div>
         <div className="text-xl font-black mb-3" style={{ fontFamily: "'Orbitron', sans-serif", color: "oklch(0.95 0.01 240)" }}>{safeArchetype.toUpperCase()} BUILD</div>
