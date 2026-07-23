@@ -88,22 +88,22 @@ function HeroHeader() {
   const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
 
   // 👉 Dynamically figure out labels including the owner tier
-  let tierLabel = "Guest";
+  let tierLabel = "👤 Guest";
   let buildsLeftText = "2 Free Builds";
   
   if (user) {
     if (user.tier === "owner") {
-      tierLabel = "🛡️ Owner Member";
+      tierLabel = "👑 Owner";
       buildsLeftText = "Unlimited Builds";
     } else if (user.tier === "vip") {
       tierLabel = "💎 VIP Member";
       buildsLeftText = "Unlimited Builds";
     } else if (user.tier === "premium") {
-      tierLabel = "👑 Premium Member";
+      tierLabel = "🏅 Premium Member";
       buildsLeftText = `${Math.max(0, 100 - (user.monthlyBuilds || 0))} / 100 Builds Left`;
     } else {
       // Default logged in user (Member)
-      tierLabel = "👤 Free Member";
+      tierLabel = "⚽️ Free Member";
       buildsLeftText = `${Math.max(0, 5 - (user.monthlyBuilds || 0))} / 5 Free Builds`;
     }
   }
@@ -126,7 +126,7 @@ function HeroHeader() {
               cursor: isCheckoutLoading ? "not-allowed" : "pointer"
             }}
           >
-            {isCheckoutLoading ? "Redirecting..." : "👑 Upgrade to Premium"}
+            {isCheckoutLoading ? "Redirecting..." : "🏅 Upgrade to Premium"}
           </button>
         </div>
       )}
@@ -400,7 +400,8 @@ export default function Home() {
     <div className="min-h-screen relative overflow-hidden">
       {blueprint && playerCard && (
         <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
-          <ExportPoster blueprint={blueprint} result={playerCard} apBudget={apBudget} />
+          {/* 👉 NEW: level is now passed down to ExportPoster */}
+          <ExportPoster blueprint={blueprint} result={playerCard} apBudget={apBudget} level={level} />
         </div>
       )}
 
@@ -663,11 +664,13 @@ export default function Home() {
 
         {playerCard && !calcMutation.isPending && (
           <div ref={cardRef} className="animate-fade-up mb-6">
+            {/* 👉 NEW: blueprint is now passed down to PlayerCard */}
             <PlayerCard 
               result={playerCard} 
               apBudget={apBudget} 
               archetype={blueprint?.archetype ?? ""} 
               level={level} 
+              blueprint={blueprint} 
             />
             
             <button
