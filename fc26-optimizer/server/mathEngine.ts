@@ -178,14 +178,14 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
       .map(attr => {
         const s = stats[attr];
         // We cap spillover stats at 75 so they don't overtake the player's core identity stats
-        if (s.current >= 75 || s.current >= s.max) return null; 
+        if (s.current >= 83 || s.current >= s.max) return null; 
         return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current) };
       })
       .filter((o): o is { attr: string; cost: number } => o !== null && o.cost <= remainingAP)
       .sort((a, b) => a.cost - b.cost); // Pick the absolute cheapest upgrade available
       
     if (spilloverOptions.length > 0) {
-      const success = upgradeOne(spilloverOptions[0].attr, 75);
+      const success = upgradeOne(spilloverOptions[0].attr, 83);
       if (success) {
         spilloverProgress = true;
       }
