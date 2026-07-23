@@ -133,18 +133,15 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     }
   }
 
-  // 👉 UPDATED CAPS: Slightly lower initial caps to force the budget to spread wider across the stats
   fillBucket(blueprint.coreAttributes, primaryBudget, 95);
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. Identity Bonus Pass (Replaces the Efficiency Pass)
-  // Instead of rescuing bad stats, re-invest all leftover AP strictly into the player's identity stats.
+  // 3. Identity Bonus Pass
   let progress = true;
   while (progress && remainingAP > 0) {
     progress = false;
     
-    // Group all preferred attributes with their "absolute" maximums for the bonus round
     const bonusCandidates = [
       ...blueprint.coreAttributes.map(a => ({ attr: a, cap: 99 })),
       ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: 95 })),
@@ -156,17 +153,41 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
         const matched = matchAttr(c.attr, attrNames);
         if (!matched) return null;
         const s = stats[matched];
-        // Ensure it hasn't hit the bonus cap or the hard CSV cap
         if (s.current >= c.cap || s.current >= s.max) return null;
         return { matched, cost: getUpgradeCost(archKey, normAttr(matched), s.current), cap: c.cap };
       })
       .filter((o): o is { matched: string; cost: number; cap: number } => o !== null && o.cost <= remainingAP)
-      .sort((a, b) => a.cost - b.cost); // Upgrade the cheapest valid option to spread bonus AP evenly
+      .sort((a, b) => a.cost - b.cost); 
 
     if (options.length > 0) {
       const success = upgradeOne(options[0].matched, options[0].cap);
       if (success) {
         progress = true;
+      }
+    }
+  }
+
+  // 👉 4. NEW: Hero Spillover Pass (Forces 99-100% Efficiency)
+  // If AP is STILL left over because identity stats hit their ceilings, 
+  // spend it on literally anything else available to maximize the build.
+  let spilloverProgress = true;
+  while (spilloverProgress && remainingAP > 0) {
+    spilloverProgress = false;
+    
+    const spilloverOptions = attrNames
+      .map(attr => {
+        const s = stats[attr];
+        // We cap spillover stats at 75 so they don't overtake the player's core identity stats
+        if (s.current >= 75 || s.current >= s.max) return null; 
+        return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current) };
+      })
+      .filter((o): o is { attr: string; cost: number } => o !== null && o.cost <= remainingAP)
+      .sort((a, b) => a.cost - b.cost); // Pick the absolute cheapest upgrade available
+      
+    if (spilloverOptions.length > 0) {
+      const success = upgradeOne(spilloverOptions[0].attr, 75);
+      if (success) {
+        spilloverProgress = true;
       }
     }
   }
