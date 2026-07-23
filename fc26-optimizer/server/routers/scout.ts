@@ -125,8 +125,8 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "scoutSummary": "...",
   "archetype": "...",
   "position": "...",
-  "heightRange": "...",
-  "weightRange": "...",
+  "heightRange": "178cm",
+  "weightRange": "72kg",
   "skillMoves": 3,
   "weakFoot": 4,
   "playstylePlus": ["Style1", "Style2", "Style3", "Style4"],
@@ -142,6 +142,7 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
 
 RULES:
 - ARCHETYPE: ${archetypeRule}
+- HEIGHT & WEIGHT: You MUST provide an EXACT, definitive height (e.g., "178cm" or "5'10\"") and an EXACT weight (e.g., "72kg" or "158 lbs") perfectly suited for this specific archetype's profile. DO NOT provide ranges.
 - PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. The MOST iconic and essential playstyles for this specific player MUST be placed at the very beginning of the array. The engine slices this list based on level progression, so the first items are the most critical. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
 - 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
 - ATTRIBUTES: Select ONLY the attributes that genuinely define this player. 4-6 core, 5-7 secondary, and 4-6 tertiary attributes. DO NOT include attributes that contradict the player's real-life weaknesses (e.g., omit tackling/interceptions for pure attackers). Unlisted stats will remain at their base values.
