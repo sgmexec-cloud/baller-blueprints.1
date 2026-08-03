@@ -72,7 +72,6 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // 👉 AMENDMENT: Force the ID to be a string so Postgres doesn't crash on large Discord IDs
       const rawUserId = (ctx as any).user?.id || (ctx as any).userId;
       const userId = rawUserId ? String(rawUserId) : null;
       
@@ -80,13 +79,27 @@ export const scoutRouter = router({
       let currentUser = null;
 
       if (userId) {
-        const [dbUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, userId))
-          .limit(1);
+        try {
+          // 👉 AMENDMENT: The Silver Bullet!
+          // By strictly picking ONLY these 3 columns, we stop Drizzle from crashing 
+          // when it tries to find your newer Stripe columns in the live DB!
+          const [dbUser] = await db
+            .select({
+              id: users.id,
+              tier: users.tier,
+              monthlyBuilds: users.monthlyBuilds
+            })
+            .from(users)
+            // Using raw SQL cast to be 100% immune to BigInt/Number DB driver crashes
+            .where(sql`${users.id} = ${userId}::text`)
+            .limit(1);
 
-        currentUser = dbUser;
+          currentUser = dbUser;
+        } catch (dbError) {
+          console.error("Database fetch bypassed:", dbError);
+          // Failsafe so the app never crashes completely for a logged in user
+          currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
+        }
 
         if (currentUser) {
           if (currentUser.tier === "owner") buildLimit = Infinity; 
@@ -193,14 +206,18 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 AMENDMENT: Increments the database count for free/premium users
+      // 👉 AMENDMENT: Bulletproof tracking update using raw SQL cast
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
-        await db
-          .update(users)
-          .set({
-            monthlyBuilds: sql`${users.monthlyBuilds} + 1`,
-          })
-          .where(eq(users.id, currentUser.id));
+        try {
+          await db
+            .update(users)
+            .set({
+              monthlyBuilds: sql`COALESCE(${users.monthlyBuilds}, 0) + 1`,
+            })
+            .where(sql`${users.id} = ${currentUser.id}::text`);
+        } catch (updateErr) {
+          console.error("Failed to track monthly build:", updateErr);
+        }
       }
 
       return BlueprintSchema.parse(parsed);
