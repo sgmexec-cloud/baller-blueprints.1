@@ -1,7 +1,3 @@
-This is perfect. Your gatekeeper logic is already solid, but we need to inject the **Custom Scout Filters** and the **AI Model Routing** (Pro vs Fast) from your Phase 2 To-Do list directly into this file.
-I have rewritten the file to include these amendments. Look for the // 👉 AMENDMENT comments to see exactly what changed.
-### Copy and paste this to replace your entire scout.ts file:
-```typescript
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
@@ -272,5 +268,3 @@ ${filterRules.join("\n")}
       };
     }),
 });
-
-```
