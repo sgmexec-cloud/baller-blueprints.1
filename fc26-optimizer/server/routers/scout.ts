@@ -62,7 +62,6 @@ export const scoutRouter = router({
     .input(z.object({ 
       playerIdentity: z.string().min(1).max(500),
       forcedArchetype: z.string().optional(),
-      // 👉 AMENDMENT: Added Custom Filters from your Phase 2 To-Do List
       customHeight: z.string().optional(),
       customWeight: z.string().optional(),
       customSkillMoves: z.number().int().min(1).max(5).optional(),
@@ -73,8 +72,10 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // 👉 AMENDMENT: Safe fallback in case user ID is stored differently across your contexts
-      const userId = (ctx as any).user?.id || (ctx as any).userId;
+      // 👉 AMENDMENT: Force the ID to be a string so Postgres doesn't crash on large Discord IDs
+      const rawUserId = (ctx as any).user?.id || (ctx as any).userId;
+      const userId = rawUserId ? String(rawUserId) : null;
+      
       let buildLimit = 2; // Guest default
       let currentUser = null;
 
@@ -90,7 +91,7 @@ export const scoutRouter = router({
         if (currentUser) {
           if (currentUser.tier === "owner") buildLimit = Infinity; 
           else if (currentUser.tier === "vip") buildLimit = 500;   
-          else if (currentUser.tier === "premium_plus") buildLimit = 250; // Added your premium_plus tier just in case
+          else if (currentUser.tier === "premium_plus") buildLimit = 250;
           else if (currentUser.tier === "premium") buildLimit = 100;
           else buildLimit = 5; 
         }
@@ -105,12 +106,11 @@ export const scoutRouter = router({
         });
       }
 
-      // 👉 AMENDMENT: Dynamic AI Model Routing based on subscription tier
       const isProTier = currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus";
       const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
 
       const stage1Response = await invokeLLM({
-        model: aiModel, // 👈 Passes the correct model to your LLM function
+        model: aiModel,
         messages: [
           { role: "system", content: CHIEF_SCOUT_PROMPT },
           { role: "user", content: `Player Identity: ${input.playerIdentity}` }
@@ -122,7 +122,6 @@ export const scoutRouter = router({
 
       const context = getScoutingContext();
       
-      // 👉 AMENDMENT: Dynamically build the strict rules based on the user's custom filters
       const filterRules: string[] = [];
       if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
       else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
@@ -167,7 +166,7 @@ ${filterRules.join("\n")}
 - Output ONLY raw JSON.`;
 
       const stage2Response = await invokeLLM({
-        model: aiModel, // 👈 Passes the correct model again
+        model: aiModel,
         messages: [
           { role: "system", content: stage2SystemPrompt }, 
           { role: "user", content: `Translate this report into JSON:\n\n${hiddenScoutReport}` }
@@ -194,6 +193,7 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
+      // 👉 AMENDMENT: Increments the database count for free/premium users
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         await db
           .update(users)
