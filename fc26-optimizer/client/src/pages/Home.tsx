@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react"; // 👉 ADDED useEffect here
 import { trpc } from "@/lib/trpc";
 import { toPng } from "html-to-image";
 import PlayerCard from "@/components/PlayerCard";
@@ -285,12 +285,24 @@ export default function Home() {
   const [phase, setPhase] = useState<1 | 2>(1);
   const [isExporting, setIsExporting] = useState(false);
 
+  // 👉 ADDED: State to track guest builds locally
+  const [guestBuildCount, setGuestBuildCount] = useState(0);
+
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const { data: user } = trpc.auth.getMe.useQuery();
+  // 👉 UPDATED: Grab isLoading to make sure we don't accidentally treat a loading user as a guest
+  const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
+
+  // 👉 ADDED: Read local storage when the page loads
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      const storedCount = parseInt(localStorage.getItem("guest_builds") || "0", 10);
+      setGuestBuildCount(storedCount);
+    }
+  }, [user, isUserLoading]);
 
   const checkoutMutation = trpc.stripe.createCheckout.useMutation({
     onSuccess: (data) => {
@@ -331,12 +343,36 @@ export default function Home() {
     },
   });
 
+  // 👉 UPDATED: handleScout now physically blocks guests before hitting your backend
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
     
+    const isGuest = !user;
+
+    // 🛑 1. Block guests if they hit 2 builds
+    if (isGuest && guestBuildCount >= 2) {
+      alert("Guest limit reached! Please click 'Login with Discord' at the top of the page to get 5 free builds.");
+      return; // Stops the function immediately
+    }
+
+    // 🛑 2. Block free members if they hit 5 builds and nudge them to upgrade
+    if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
+      alert("Free limit reached! Redirecting you to upgrade...");
+      checkoutMutation.mutate(); 
+      return; 
+    }
+
+    // ✅ 3. If they are a guest and under the limit, tick the local counter up by 1
+    if (isGuest) {
+      const newCount = guestBuildCount + 1;
+      localStorage.setItem("guest_builds", newCount.toString());
+      setGuestBuildCount(newCount);
+    }
+
     // Safety check: if somehow a free user manipulated the state, nullify it here before sending to backend
     const secureForcedArchetype = isPremiumOrVIP ? forcedArchetype : undefined;
 
+    // Finally, run the mutation to the backend
     scoutMutation.mutate({ 
       playerIdentity, 
       forcedArchetype: secureForcedArchetype || undefined 
@@ -425,12 +461,21 @@ export default function Home() {
                   : "none",
             }}
           >
-            <div className="flex items-center gap-2 mb-3">
-              <div
-                className="w-1 h-5 rounded-full"
-                style={{ background: "oklch(0.75 0.22 142)" }}
-              />
-              <span className="section-label">Phase 1 — Scouting</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-1 h-5 rounded-full"
+                  style={{ background: "oklch(0.75 0.22 142)" }}
+                />
+                <span className="section-label">Phase 1 — Scouting</span>
+              </div>
+              
+              {/* 👉 ADDED: Optional UI counter to show guests exactly how many builds they have left */}
+              {!user && !isUserLoading && (
+                <div className="text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 text-gray-400">
+                  Guest Builds: <span className="text-white">{Math.max(0, 2 - guestBuildCount)}</span> / 2
+                </div>
+              )}
             </div>
 
             <label
