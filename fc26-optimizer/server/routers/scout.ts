@@ -72,14 +72,15 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      const rawUserId = (ctx as any).user?.id || (ctx as any).userId;
-      const userId = rawUserId ? String(rawUserId) : null;
+      // 👉 FIX: We no longer cast to String. We let Drizzle match the exact DB type.
+      const userId = (ctx as any).user?.id || (ctx as any).userId;
       
-      let buildLimit = 2; // Guest fallback limit (handled primarily on frontend localStorage)
+      let buildLimit = 2; // Guest fallback
       let currentUser = null;
 
       if (userId) {
         try {
+          // 👉 Safely ask for only 3 columns using standard Drizzle match
           const [dbUser] = await db
             .select({
               id: users.id,
@@ -87,13 +88,12 @@ export const scoutRouter = router({
               monthlyBuilds: users.monthlyBuilds
             })
             .from(users)
-            .where(sql`${users.id} = ${userId}::text`)
+            .where(eq(users.id, userId))
             .limit(1);
 
           currentUser = dbUser;
         } catch (dbError) {
           console.error("Database fetch bypassed:", dbError);
-          currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
         }
 
         if (currentUser) {
@@ -107,7 +107,7 @@ export const scoutRouter = router({
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      // 👉 Strict gatekeeper block for free/tier limits
+      // 👉 Stop them if they hit the limit
       if (currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -202,9 +202,7 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 AMENDMENT: The Final Fix!
-      // We use the raw, uncorrupted 'userId' string from the token 
-      // instead of 'currentUser.id' to avoid JS large number precision loss!
+      // 👉 FIX: We track the update perfectly using standard Drizzle match
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         try {
           await db
@@ -212,7 +210,7 @@ ${filterRules.join("\n")}
             .set({
               monthlyBuilds: currentBuilds + 1, 
             })
-            .where(sql`${users.id} = ${userId}::text`); // 👈 Safe string match
+            .where(eq(users.id, userId));
         } catch (updateErr) {
           console.error("Failed to track monthly build:", updateErr);
         }
