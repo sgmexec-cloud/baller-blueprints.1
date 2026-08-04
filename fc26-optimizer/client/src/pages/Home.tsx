@@ -44,7 +44,7 @@ function Spinner({ label }: { label: string }) {
   );
 }
 
-// ── Hero header ────────────────────────────────.──────────────────────────────
+// ── Hero header ────────────────────────────────────────────────────────────────
 function HeroHeader() {
   const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
     retry: false,
@@ -75,13 +75,13 @@ function HeroHeader() {
       buildsLeftText = "Unlimited Builds";
     } else if (user.tier === "vip") {
       tierLabel = "💎 VIP Member";
-      buildsLeftText = "Unlimited Builds";
-    } else if (user.tier === "premium_plus") {
-      tierLabel = "🚀 Premium Plus";
-      buildsLeftText = `${Math.max(0, 250 - (user.monthlyBuilds || 0))} / 250 Builds Left`;
-    } else if (user.tier === "premium") {
-      tierLabel = "🏅 Premium Member";
       buildsLeftText = `${Math.max(0, 100 - (user.monthlyBuilds || 0))} / 100 Builds Left`;
+    } else if (user.tier === "premium_plus") {
+      tierLabel = "🌟 Premium+ Member";
+      buildsLeftText = `${Math.max(0, 50 - (user.monthlyBuilds || 0))} / 50 Builds Left`;
+    } else if (user.tier === "premium") {
+      tierLabel = "⭐️ Premium Member";
+      buildsLeftText = `${Math.max(0, 50 - (user.monthlyBuilds || 0))} / 50 Builds Left`;
     } else {
       tierLabel = "⚽️ Free Member";
       buildsLeftText = `${Math.max(0, 5 - (user.monthlyBuilds || 0))} / 5 Free Builds`;
@@ -93,7 +93,7 @@ function HeroHeader() {
       {/* Pricing Modal Overlay */}
       {showPricingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="bg-zinc-900 border border-green-500/30 rounded-2xl max-w-md w-full p-6 text-left relative shadow-2xl">
+          <div className="bg-zinc-900 border border-green-500/30 rounded-2xl max-w-md w-full p-6 text-left relative shadow-2xl max-h-[90vh] overflow-y-auto">
             <button 
               onClick={() => setShowPricingModal(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white text-lg font-bold"
@@ -115,10 +115,12 @@ function HeroHeader() {
                 className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
               >
                 <div>
-                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🏅 Premium</div>
-                  <div className="text-[11px] text-gray-400">100 Monthly Builds • GPT-4o-mini &amp; 4o</div>
+                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>⭐️ Premium Member</div>
+                  <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    Get 50 AI-generated player builds per month and high-res player card exports.
+                  </div>
                 </div>
-                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
                   Select
                 </div>
               </div>
@@ -129,10 +131,12 @@ function HeroHeader() {
                 className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
               >
                 <div>
-                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🚀 Premium Plus</div>
-                  <div className="text-[11px] text-gray-400">250 Monthly Builds • Priority Processing</div>
+                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🌟 Premium+ Member</div>
+                  <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    Get everything in Premium, plus unlock Forced Archetypes and Custom Scout Filters. Includes 50 builds per month.
+                  </div>
                 </div>
-                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
                   Select
                 </div>
               </div>
@@ -144,9 +148,11 @@ function HeroHeader() {
               >
                 <div>
                   <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>💎 VIP Member</div>
-                  <div className="text-[11px] text-gray-400">500 Monthly Builds • Ultimate Access</div>
+                  <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                    Everything in Premium+, but powered by a superior AI engine for unmatched accuracy. Includes 100 builds per month.
+                  </div>
                 </div>
-                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
                   Select
                 </div>
               </div>
@@ -232,7 +238,7 @@ function HeroHeader() {
                   fontFamily: "'Rajdhani', sans-serif",
                 }}
               >
-                <span className="text-base">🏅</span> Choose Upgrade Plan
+                <span className="text-base">⭐️</span> Choose Upgrade Plan
               </button>
             )}
           </div>
