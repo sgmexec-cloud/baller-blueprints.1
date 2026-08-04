@@ -183,7 +183,7 @@ function HeroHeader() {
             {/* Sleek full-width upgrade banner placed directly under profile */}
             {!isPremiumOrVIP && (
               <button
-                onClick={() => checkoutMutation.mutate()}
+                onClick={() => checkoutMutation.mutate({ tier: "premium" })} // 👉 FIX: Explicitly send the tier
                 disabled={isCheckoutLoading}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
                 style={{
@@ -336,7 +336,6 @@ export default function Home() {
       }, 100);
     },
     onError: (error) => {
-      // 👉 ACCURATE MESSAGING: Explicitly says "100 monthly builds"
       if (error.message.includes("LIMIT_REACHED")) {
         alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
       } else {
@@ -365,7 +364,6 @@ export default function Home() {
       return;
     }
 
-    // 👉 ACCURATE MESSAGING
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
       alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
       return;
@@ -534,7 +532,7 @@ export default function Home() {
                 </select>
               ) : (
                 <div 
-                  onClick={() => checkoutMutation.mutate()}
+                  onClick={() => checkoutMutation.mutate({ tier: "premium" })} // 👉 FIX: Explicitly send the tier here too!
                   className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
                 >
                   <span>✨ Let AI Choose Best Match (Locked)</span>
