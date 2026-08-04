@@ -64,7 +64,11 @@ function HeroHeader() {
   });
 
   const isCheckoutLoading = checkoutMutation.isPending;
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  
+  // 👉 Logic controllers for what the user can see and do
+  const isPaidTier = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  const canUpgrade = !user || user.tier === "free" || user.tier === "premium" || user.tier === "premium_plus";
 
   let tierLabel = "👤 Guest";
   let buildsLeftText = "2 Free Builds";
@@ -109,39 +113,44 @@ function HeroHeader() {
             </p>
 
             <div className="space-y-3 mb-6">
-              {/* Premium Tier */}
-              <div 
-                onClick={() => checkoutMutation.mutate({ tier: "premium" })}
-                className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>⭐️ Premium Member</div>
-                  <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                    Get 50 AI-generated player builds per month and high-res player card exports.
+              
+              {/* Premium Tier - Only show if Free or Guest */}
+              {(!user || user.tier === "free") && (
+                <div 
+                  onClick={() => checkoutMutation.mutate({ tier: "premium" })}
+                  className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>⭐️ Premium Member</div>
+                    <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                      Get 50 AI-generated player builds per month and high-res player card exports.
+                    </div>
+                  </div>
+                  <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
+                    Select
                   </div>
                 </div>
-                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
-                  Select
-                </div>
-              </div>
+              )}
 
-              {/* Premium Plus Tier */}
-              <div 
-                onClick={() => checkoutMutation.mutate({ tier: "premium_plus" })}
-                className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
-              >
-                <div>
-                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🌟 Premium+ Member</div>
-                  <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                    Get everything in Premium, plus unlock Forced Archetypes and Custom Scout Filters. Includes 50 builds per month.
+              {/* Premium Plus Tier - Show if Free, Guest, or Premium */}
+              {(!user || user.tier === "free" || user.tier === "premium") && (
+                <div 
+                  onClick={() => checkoutMutation.mutate({ tier: "premium_plus" })}
+                  className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
+                >
+                  <div>
+                    <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🌟 Premium+ Member</div>
+                    <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
+                      Get everything in Premium, plus unlock Forced Archetypes and Custom Scout Filters. Includes 50 builds per month.
+                    </div>
+                  </div>
+                  <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
+                    Select
                   </div>
                 </div>
-                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
-                  Select
-                </div>
-              </div>
+              )}
 
-              {/* VIP Tier */}
+              {/* VIP Tier - Always show as long as modal is open (VIPs can't open modal anyway) */}
               <div 
                 onClick={() => checkoutMutation.mutate({ tier: "vip" })}
                 className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
@@ -202,13 +211,13 @@ function HeroHeader() {
                   <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
                     {user.name}
                   </p>
-                  <p className="text-xs font-medium" style={{ color: isPremiumOrVIP ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
+                  <p className="text-xs font-medium" style={{ color: isPaidTier ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
                     {tierLabel} • {buildsLeftText}
                   </p>
                 </div>
               </div>
               <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
-                {isPremiumOrVIP && user.tier !== "owner" && (
+                {isPaidTier && user.tier !== "owner" && (
                   <a 
                     href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
                     target="_blank" 
@@ -225,8 +234,8 @@ function HeroHeader() {
               </div>
             </div>
 
-            {/* Upgrade Button triggers the pricing modal */}
-            {!isPremiumOrVIP && (
+            {/* 👉 Dynamic Upgrade Button */}
+            {canUpgrade && (
               <button
                 onClick={() => setShowPricingModal(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
@@ -238,7 +247,7 @@ function HeroHeader() {
                   fontFamily: "'Rajdhani', sans-serif",
                 }}
               >
-                <span className="text-base">⭐️</span> Choose Upgrade Plan
+                <span className="text-base">⭐️</span> Upgrade Plan
               </button>
             )}
           </div>
@@ -355,7 +364,9 @@ export default function Home() {
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  // Checking permissions for the logic functions below
+  const isPaidTier = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -370,21 +381,12 @@ export default function Home() {
     },
     onError: (error) => {
       if (error.message.includes("LIMIT_REACHED")) {
-        alert("Free limit reached (5/5)! Please tap the 'Choose Upgrade Plan' button under your profile to view subscription options.");
+        alert("Build limit reached! Please upgrade your plan to unlock more monthly builds.");
       } else {
         alert(`Scouting failed: ${error.message}`);
       }
       console.error("Scout Error:", error);
     }
-  });
-
-  const calcMutation = trpc.scout.calculateStats.useMutation({
-    onSuccess: (data) => {
-      setPlayerCard(data);
-      setTimeout(() => {
-        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 100);
-    },
   });
 
   const handleScout = () => {
@@ -398,7 +400,7 @@ export default function Home() {
     }
 
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
-      alert("Free limit reached (5/5)! Please tap the 'Choose Upgrade Plan' button under your profile to view subscription options.");
+      alert("Free limit reached (5/5)! Please tap 'Upgrade Plan' under your profile.");
       return;
     }
 
@@ -408,7 +410,8 @@ export default function Home() {
       setGuestBuildCount(newCount);
     }
 
-    const secureForcedArchetype = isPremiumOrVIP ? forcedArchetype : undefined;
+    // Only pass forcedArchetype if they have permission
+    const secureForcedArchetype = canForceArchetype ? forcedArchetype : undefined;
 
     scoutMutation.mutate({ 
       playerIdentity, 
@@ -535,18 +538,19 @@ export default function Home() {
               <div className="flex justify-between items-center mb-1.5">
                 <label 
                   className="block text-xs font-medium" 
-                  style={{ fontFamily: "'Rajdhani', sans-serif", color: isPremiumOrVIP ? "oklch(0.75 0.01 240)" : "oklch(0.40 0.01 240)" }}
+                  style={{ fontFamily: "'Rajdhani', sans-serif", color: canForceArchetype ? "oklch(0.75 0.01 240)" : "oklch(0.40 0.01 240)" }}
                 >
                   Force Archetype <span className="text-gray-500">(Optional)</span>
                 </label>
-                {!isPremiumOrVIP && (
+                {!canForceArchetype && (
                   <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
-                    Premium Feature
+                    Premium+ Feature
                   </span>
                 )}
               </div>
 
-              {isPremiumOrVIP ? (
+              {/* 👉 Restricts dropdown based on Premium+ or VIP status */}
+              {canForceArchetype ? (
                 <select
                   value={forcedArchetype}
                   onChange={(e) => setForcedArchetype(e.target.value)}
@@ -565,10 +569,13 @@ export default function Home() {
                 </select>
               ) : (
                 <div 
-                  onClick={() => checkoutMutation.mutate({ tier: "premium" })}
+                  onClick={() => {
+                    const upgradeBtn = document.querySelector('button:has(span.text-base)');
+                    if (upgradeBtn) (upgradeBtn as HTMLButtonElement).click();
+                  }}
                   className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
                 >
-                  <span>✨ Let AI Choose Best Match (Locked)</span>
+                  <span>✨ Let AI Choose Best Match (Premium+ Required)</span>
                   <span className="text-yellow-500/70">🔒</span>
                 </div>
               )}
