@@ -108,27 +108,6 @@ function HeroHeader() {
 
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
-      
-      {!isPremiumOrVIP && (
-        <div className="absolute top-4 right-4 z-20">
-          <button
-            onClick={() => checkoutMutation.mutate()}
-            disabled={isCheckoutLoading}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs tracking-wider uppercase transition-all duration-200 hover:scale-110 hover:shadow-lg"
-            style={{
-              background: "linear-gradient(135deg, oklch(0.78 0.18 85) 0%, oklch(0.75 0.22 142) 100%)",
-              color: "oklch(0.08 0.01 240)",
-              boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.4), inset 0 1px 2px oklch(0.95 0.01 240 / 0.2)",
-              fontFamily: "'Rajdhani', sans-serif",
-              border: "none",
-              cursor: isCheckoutLoading ? "not-allowed" : "pointer"
-            }}
-          >
-            {isCheckoutLoading ? "Redirecting..." : "🏅 Upgrade to Premium"}
-          </button>
-        </div>
-      )}
-
       <div
         className="absolute inset-0 opacity-5"
         style={{
@@ -158,43 +137,77 @@ function HeroHeader() {
         {isLoading ? (
           <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
         ) : user ? (
-          <div className="flex items-center gap-4 bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
-            {user.avatar ? (
-              <img 
-                src={user.avatar} 
-                alt={`${user.name}'s avatar`} 
-                className="w-10 h-10 rounded-full shadow-lg object-cover border border-white/20"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg border border-white/20"
-                   style={{ backgroundColor: "#5865F2", color: "#fff" }}>
-                {user.name?.charAt(0).toUpperCase() || "?"}
+          <div className="flex flex-col items-center gap-3 w-full max-w-sm">
+            {/* User Profile Card */}
+            <div className="flex items-center justify-between w-full bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
+              <div className="flex items-center gap-4">
+                {user.avatar ? (
+                  <img 
+                    src={user.avatar} 
+                    alt={`${user.name}'s avatar`} 
+                    className="w-10 h-10 rounded-full shadow-lg object-cover border border-white/20"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg border border-white/20"
+                       style={{ backgroundColor: "#5865F2", color: "#fff" }}>
+                    {user.name?.charAt(0).toUpperCase() || "?"}
+                  </div>
+                )}
+                <div className="text-left">
+                  <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
+                    {user.name}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: isPremiumOrVIP ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
+                    {tierLabel} • {buildsLeftText}
+                  </p>
+                </div>
               </div>
-            )}
-            <div className="text-left">
-              <p className="font-bold text-white" style={{ fontFamily: "'Rajdhani', sans-serif", fontSize: "1.1rem" }}>
-                {user.name}
-              </p>
-              <p className="text-xs font-medium" style={{ color: isPremiumOrVIP ? "oklch(0.78 0.18 85)" : "oklch(0.55 0.01 240)" }}>
-                {tierLabel} • {buildsLeftText}
-              </p>
-            </div>
-            <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
-              {isPremiumOrVIP && user.tier !== "owner" && (
-                <a 
-                  href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="text-[10px] font-bold uppercase tracking-wider transition-colors hover:opacity-80"
-                  style={{ color: "oklch(0.78 0.18 85)" }}
-                >
-                  Manage Sub
+              <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
+                {isPremiumOrVIP && user.tier !== "owner" && (
+                  <a 
+                    href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="text-[10px] font-bold uppercase tracking-wider transition-colors hover:opacity-80"
+                    style={{ color: "oklch(0.78 0.18 85)" }}
+                  >
+                    Manage Sub
+                  </a>
+                )}
+                <a href="/api/auth/logout" className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
+                  Logout
                 </a>
-              )}
-              <a href="/api/auth/logout" className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider transition-colors">
-                Logout
-              </a>
+              </div>
             </div>
+
+            {/* 👉 NEW: Sleek full-width upgrade banner placed directly under profile */}
+            {!isPremiumOrVIP && (
+              <button
+                onClick={() => checkoutMutation.mutate()}
+                disabled={isCheckoutLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
+                style={{
+                  background: "linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)", // Sleek dark green glass
+                  color: "oklch(0.75 0.22 142)", // Neon green text
+                  border: "1px solid oklch(0.75 0.22 142 / 0.4)",
+                  boxShadow: "0 0 15px oklch(0.75 0.22 142 / 0.1)",
+                  fontFamily: "'Rajdhani', sans-serif",
+                }}
+              >
+                {isCheckoutLoading ? (
+                  <>
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
+                    </svg>
+                    Redirecting...
+                  </>
+                ) : (
+                  <>
+                    <span className="text-base">🏅</span> Upgrade to Premium
+                  </>
+                )}
+              </button>
+            )}
           </div>
         ) : (
           <a
@@ -288,7 +301,7 @@ export default function Home() {
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const utils = trpc.useUtils(); // 👉 Added utils to refresh user data instantly
+  const utils = trpc.useUtils();
 
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
@@ -316,8 +329,6 @@ export default function Home() {
       setBlueprint(data);
       setPlayerCard(null);
       setPhase(2);
-      
-      // 👉 Instantly refresh user data so the build count updates in real-time
       utils.auth.getMe.invalidate();
 
       setTimeout(() => {
@@ -325,10 +336,9 @@ export default function Home() {
       }, 100);
     },
     onError: (error) => {
-      // 👉 Catches the backend limit error and prompts upgrade/checkout immediately
+      // 👉 Updated mobile-friendly messaging directing them to the new button position
       if (error.message.includes("LIMIT_REACHED")) {
-        alert("Free build limit reached (5/5)! Redirecting you to upgrade...");
-        checkoutMutation.mutate();
+        alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock unlimited builds.");
       } else {
         alert(`Scouting failed: ${error.message}`);
       }
@@ -350,20 +360,16 @@ export default function Home() {
     
     const isGuest = !user;
 
-    // 🛑 1. Block guests if they hit 2 builds
     if (isGuest && guestBuildCount >= 2) {
       alert("Guest limit reached! Please click 'Login with Discord' at the top of the page to get 5 free builds.");
       return;
     }
 
-    // 🛑 2. Block free members locally if they hit 5 builds
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
-      alert("Free limit reached! Redirecting you to upgrade...");
-      checkoutMutation.mutate();
+      alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock unlimited builds.");
       return;
     }
 
-    // ✅ 3. If guest and under limit, increment local count
     if (isGuest) {
       const newCount = guestBuildCount + 1;
       localStorage.setItem("guest_builds", newCount.toString());
