@@ -75,14 +75,11 @@ export const scoutRouter = router({
       const rawUserId = (ctx as any).user?.id || (ctx as any).userId;
       const userId = rawUserId ? String(rawUserId) : null;
       
-      let buildLimit = 2; // Guest default
+      let buildLimit = 2; // Guest fallback limit (handled primarily on frontend localStorage)
       let currentUser = null;
 
       if (userId) {
         try {
-          // 👉 AMENDMENT: The Silver Bullet!
-          // By strictly picking ONLY these 3 columns, we stop Drizzle from crashing 
-          // when it tries to find your newer Stripe columns in the live DB!
           const [dbUser] = await db
             .select({
               id: users.id,
@@ -90,14 +87,12 @@ export const scoutRouter = router({
               monthlyBuilds: users.monthlyBuilds
             })
             .from(users)
-            // Using raw SQL cast to be 100% immune to BigInt/Number DB driver crashes
             .where(sql`${users.id} = ${userId}::text`)
             .limit(1);
 
           currentUser = dbUser;
         } catch (dbError) {
           console.error("Database fetch bypassed:", dbError);
-          // Failsafe so the app never crashes completely for a logged in user
           currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
         }
 
@@ -106,20 +101,21 @@ export const scoutRouter = router({
           else if (currentUser.tier === "vip") buildLimit = 500;   
           else if (currentUser.tier === "premium_plus") buildLimit = 250;
           else if (currentUser.tier === "premium") buildLimit = 100;
-          else buildLimit = 5; 
+          else buildLimit = 5; // Free member cap
         }
       }
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      if (currentBuilds >= buildLimit) {
+      // 👉 Strict gatekeeper block for free/tier limits
+      if (currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "LIMIT_REACHED",
         });
       }
 
-      const isProTier = currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus";
+      const isProTier = currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus" || currentUser?.tier === "premium";
       const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
 
       const stage1Response = await invokeLLM({
@@ -206,7 +202,7 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 AMENDMENT: Bulletproof tracking update using raw SQL cast
+      // Increment tracking count for limited tiers
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         try {
           await db
