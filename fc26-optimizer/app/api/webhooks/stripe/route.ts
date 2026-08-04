@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe"; // 👈 Adjust this if your stripe.ts is somewhere else
-import { db } from "@/lib/db";         // 👈 Adjust this if your Prisma file is somewhere else
+import { stripe } from "@/lib/stripe";
+import { db } from "@/lib/db";
 import Stripe from "stripe";
 
 // Helper to map the Price ID to your database Tiers
@@ -52,6 +52,7 @@ export async function POST(req: Request) {
           tier: newTier,
           stripeCustomerId: stripeCustomerId,
           stripeSubscriptionId: subscription.id,
+          monthlyBuilds: 0, // 👈 RESETS BUILD COUNTER TO 0 ON FRESH PURCHASE
         },
       });
       break;
@@ -66,7 +67,10 @@ export async function POST(req: Request) {
 
       await db.user.updateMany({
         where: { stripeCustomerId: stripeCustomerId },
-        data: { tier: newTier },
+        data: { 
+          tier: newTier,
+          monthlyBuilds: 0, // 👈 RESETS BUILD COUNTER TO 0 ON TIER UPGRADE
+        },
       });
       break;
     }
