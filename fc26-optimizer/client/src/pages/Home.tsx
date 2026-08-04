@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"; // 👉 ADDED useEffect here
+import { useState, useRef, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { toPng } from "html-to-image";
 import PlayerCard from "@/components/PlayerCard";
@@ -87,7 +87,6 @@ function HeroHeader() {
   const isCheckoutLoading = checkoutMutation.isPending;
   const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
 
-  // 👉 Dynamically figure out labels including the owner tier
   let tierLabel = "👤 Guest";
   let buildsLeftText = "2 Free Builds";
   
@@ -102,7 +101,6 @@ function HeroHeader() {
       tierLabel = "🏅 Premium Member";
       buildsLeftText = `${Math.max(0, 100 - (user.monthlyBuilds || 0))} / 100 Builds Left`;
     } else {
-      // Default logged in user (Member)
       tierLabel = "⚽️ Free Member";
       buildsLeftText = `${Math.max(0, 5 - (user.monthlyBuilds || 0))} / 5 Free Builds`;
     }
@@ -285,18 +283,17 @@ export default function Home() {
   const [phase, setPhase] = useState<1 | 2>(1);
   const [isExporting, setIsExporting] = useState(false);
 
-  // 👉 ADDED: State to track guest builds locally
   const [guestBuildCount, setGuestBuildCount] = useState(0);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
-  // 👉 UPDATED: Grab isLoading to make sure we don't accidentally treat a loading user as a guest
+  const utils = trpc.useUtils(); // 👉 Added utils to refresh user data instantly
+
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
-  // 👉 ADDED: Read local storage when the page loads
   useEffect(() => {
     if (!isUserLoading && !user) {
       const storedCount = parseInt(localStorage.getItem("guest_builds") || "0", 10);
@@ -312,7 +309,6 @@ export default function Home() {
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  // 👉 Check if they have access to the Premium features including owner
   const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
@@ -320,13 +316,19 @@ export default function Home() {
       setBlueprint(data);
       setPlayerCard(null);
       setPhase(2);
+      
+      // 👉 Instantly refresh user data so the build count updates in real-time
+      utils.auth.getMe.invalidate();
+
       setTimeout(() => {
         reportRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     },
     onError: (error) => {
+      // 👉 Catches the backend limit error and prompts upgrade/checkout immediately
       if (error.message.includes("LIMIT_REACHED")) {
-        alert("Build limit reached! Please upgrade to Premium for unlimited scouting.");
+        alert("Free build limit reached (5/5)! Redirecting you to upgrade...");
+        checkoutMutation.mutate();
       } else {
         alert(`Scouting failed: ${error.message}`);
       }
@@ -343,7 +345,6 @@ export default function Home() {
     },
   });
 
-  // 👉 UPDATED: handleScout now physically blocks guests before hitting your backend
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
     
@@ -352,27 +353,25 @@ export default function Home() {
     // 🛑 1. Block guests if they hit 2 builds
     if (isGuest && guestBuildCount >= 2) {
       alert("Guest limit reached! Please click 'Login with Discord' at the top of the page to get 5 free builds.");
-      return; // Stops the function immediately
+      return;
     }
 
-    // 🛑 2. Block free members if they hit 5 builds and nudge them to upgrade
+    // 🛑 2. Block free members locally if they hit 5 builds
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
       alert("Free limit reached! Redirecting you to upgrade...");
-      checkoutMutation.mutate(); 
-      return; 
+      checkoutMutation.mutate();
+      return;
     }
 
-    // ✅ 3. If they are a guest and under the limit, tick the local counter up by 1
+    // ✅ 3. If guest and under limit, increment local count
     if (isGuest) {
       const newCount = guestBuildCount + 1;
       localStorage.setItem("guest_builds", newCount.toString());
       setGuestBuildCount(newCount);
     }
 
-    // Safety check: if somehow a free user manipulated the state, nullify it here before sending to backend
     const secureForcedArchetype = isPremiumOrVIP ? forcedArchetype : undefined;
 
-    // Finally, run the mutation to the backend
     scoutMutation.mutate({ 
       playerIdentity, 
       forcedArchetype: secureForcedArchetype || undefined 
@@ -436,7 +435,6 @@ export default function Home() {
     <div className="min-h-screen relative overflow-hidden">
       {blueprint && playerCard && (
         <div style={{ position: "absolute", left: "-9999px", top: "-9999px" }}>
-          {/* 👉 NEW: level is now passed down to ExportPoster */}
           <ExportPoster blueprint={blueprint} result={playerCard} apBudget={apBudget} level={level} />
         </div>
       )}
@@ -470,7 +468,6 @@ export default function Home() {
                 <span className="section-label">Phase 1 — Scouting</span>
               </div>
               
-              {/* 👉 ADDED: Optional UI counter to show guests exactly how many builds they have left */}
               {!user && !isUserLoading && (
                 <div className="text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 text-gray-400">
                   Guest Builds: <span className="text-white">{Math.max(0, 2 - guestBuildCount)}</span> / 2
@@ -496,7 +493,6 @@ export default function Home() {
               disabled={scoutMutation.isPending}
             />
 
-            {/* 👉 Gated Archetype Section */}
             <div className="mb-4 relative">
               <div className="flex justify-between items-center mb-1.5">
                 <label 
@@ -709,7 +705,6 @@ export default function Home() {
 
         {playerCard && !calcMutation.isPending && (
           <div ref={cardRef} className="animate-fade-up mb-6">
-            {/* 👉 NEW: blueprint is now passed down to PlayerCard */}
             <PlayerCard 
               result={playerCard} 
               apBudget={apBudget} 
