@@ -65,7 +65,7 @@ function HeroHeader() {
 
   const isCheckoutLoading = checkoutMutation.isPending;
   
-  // 👉 Logic controllers for what the user can see and do
+  // Logic controllers
   const isPaidTier = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
   const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
   const canUpgrade = !user || user.tier === "free" || user.tier === "premium" || user.tier === "premium_plus";
@@ -114,7 +114,7 @@ function HeroHeader() {
 
             <div className="space-y-3 mb-6">
               
-              {/* Premium Tier - Only show if Free or Guest */}
+              {/* Premium Tier */}
               {(!user || user.tier === "free") && (
                 <div 
                   onClick={() => checkoutMutation.mutate({ tier: "premium" })}
@@ -132,7 +132,7 @@ function HeroHeader() {
                 </div>
               )}
 
-              {/* Premium Plus Tier - Show if Free, Guest, or Premium */}
+              {/* Premium Plus Tier */}
               {(!user || user.tier === "free" || user.tier === "premium") && (
                 <div 
                   onClick={() => checkoutMutation.mutate({ tier: "premium_plus" })}
@@ -150,7 +150,7 @@ function HeroHeader() {
                 </div>
               )}
 
-              {/* VIP Tier - Always show as long as modal is open (VIPs can't open modal anyway) */}
+              {/* VIP Tier */}
               <div 
                 onClick={() => checkoutMutation.mutate({ tier: "vip" })}
                 className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
@@ -234,7 +234,7 @@ function HeroHeader() {
               </div>
             </div>
 
-            {/* 👉 Dynamic Upgrade Button */}
+            {/* Dynamic Upgrade Button */}
             {canUpgrade && (
               <button
                 onClick={() => setShowPricingModal(true)}
@@ -356,16 +356,8 @@ export default function Home() {
     }
   }, [user, isUserLoading]);
 
-  const checkoutMutation = trpc.stripe.createCheckout.useMutation({
-    onSuccess: (data) => {
-      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
-    }
-  });
-
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  // Checking permissions for the logic functions below
-  const isPaidTier = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
   const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
@@ -389,6 +381,16 @@ export default function Home() {
     }
   });
 
+  // 👉 The Calculator Mutation has been securely restored!
+  const calcMutation = trpc.scout.calculateStats.useMutation({
+    onSuccess: (data) => {
+      setPlayerCard(data);
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    },
+  });
+
   const handleScout = () => {
     if (!playerIdentity.trim() || scoutMutation.isPending) return;
     
@@ -410,7 +412,6 @@ export default function Home() {
       setGuestBuildCount(newCount);
     }
 
-    // Only pass forcedArchetype if they have permission
     const secureForcedArchetype = canForceArchetype ? forcedArchetype : undefined;
 
     scoutMutation.mutate({ 
@@ -549,7 +550,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* 👉 Restricts dropdown based on Premium+ or VIP status */}
               {canForceArchetype ? (
                 <select
                   value={forcedArchetype}
