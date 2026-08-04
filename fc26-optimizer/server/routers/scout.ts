@@ -202,15 +202,16 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
+      // 👉 AMENDMENT: Simplified Javascript math instead of raw SQL
       // Increment tracking count for limited tiers
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         try {
           await db
             .update(users)
             .set({
-              monthlyBuilds: sql`COALESCE(${users.monthlyBuilds}, 0) + 1`,
+              monthlyBuilds: currentBuilds + 1, 
             })
-            .where(sql`${users.id} = ${currentUser.id}::text`);
+            .where(eq(users.id, String(currentUser.id)));
         } catch (updateErr) {
           console.error("Failed to track monthly build:", updateErr);
         }
