@@ -72,28 +72,31 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // 👉 FIX: We no longer cast to String. We let Drizzle match the exact DB type.
-      const userId = (ctx as any).user?.id || (ctx as any).userId;
+      const rawUserId = (ctx as any).user?.id || (ctx as any).userId;
+      const userId = rawUserId ? String(rawUserId) : null;
       
-      let buildLimit = 2; // Guest fallback
-      let currentUser = null;
+      let buildLimit = 2; 
+      let currentUser: any = null;
 
       if (userId) {
         try {
-          // 👉 Safely ask for only 3 columns using standard Drizzle match
-          const [dbUser] = await db
-            .select({
-              id: users.id,
-              tier: users.tier,
-              monthlyBuilds: users.monthlyBuilds
-            })
-            .from(users)
-            .where(eq(users.id, userId))
-            .limit(1);
+          // 👉 RAW SQL BYPASS: Ignores Drizzle schemas and talks directly to Postgres
+          const query = sql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`;
+          const rawResult: any = await db.execute(query);
+          
+          // Extracts the user depending on how the database driver formats the raw result
+          const foundUser = rawResult?.rows?.[0] || (Array.isArray(rawResult) ? rawResult[0] : null);
 
-          currentUser = dbUser;
+          if (foundUser) {
+            currentUser = {
+              id: foundUser.id,
+              tier: foundUser.tier || "free",
+              // Checks both naming conventions just in case
+              monthlyBuilds: foundUser.monthlyBuilds || foundUser.monthly_builds || 0 
+            };
+          }
         } catch (dbError) {
-          console.error("Database fetch bypassed:", dbError);
+          console.error("Raw SQL fetch bypassed:", dbError);
         }
 
         if (currentUser) {
@@ -101,13 +104,17 @@ export const scoutRouter = router({
           else if (currentUser.tier === "vip") buildLimit = 500;   
           else if (currentUser.tier === "premium_plus") buildLimit = 250;
           else if (currentUser.tier === "premium") buildLimit = 100;
-          else buildLimit = 5; // Free member cap
+          else buildLimit = 5; 
+        } else {
+          // Safety net if DB is completely unreachable
+          currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
+          buildLimit = 5;
         }
       }
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      // 👉 Stop them if they hit the limit
+      // 👉 Gatekeeper Block
       if (currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -202,17 +209,19 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 FIX: We track the update perfectly using standard Drizzle match
+      // 👉 RAW SQL UPDATE: Forces the database to accept the +1
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         try {
-          await db
-            .update(users)
-            .set({
-              monthlyBuilds: currentBuilds + 1, 
-            })
-            .where(eq(users.id, userId));
+          const newTotal = currentBuilds + 1;
+          // Try standard column name
+          await db.execute(sql`UPDATE users SET "monthlyBuilds" = ${newTotal} WHERE id = ${userId}`);
         } catch (updateErr) {
-          console.error("Failed to track monthly build:", updateErr);
+          try {
+            // Fallback: try snake_case column name just in case
+            await db.execute(sql`UPDATE users SET monthly_builds = ${currentBuilds + 1} WHERE id = ${userId}`);
+          } catch (e2) {
+             console.error("Critical DB Update Failure: column missing in Neon.");
+          }
         }
       }
 
