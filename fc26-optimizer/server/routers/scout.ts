@@ -72,29 +72,25 @@ export const scoutRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
       
-      // 👉 Catch the ID from wherever the token hid it
       const rawUserId = (ctx as any).user?.id || (ctx as any).userId || (ctx as any).user?.openId;
       const userId = rawUserId ? String(rawUserId) : null;
       
-      let buildLimit = 2; // Guest fallback
+      let buildLimit = 2; 
       let currentUser = null;
 
       if (userId) {
-        try {
-          // 👉 The Double-Net: Check BOTH id and openId to guarantee a match
-          const [dbUser] = await db
-            .select({
-              id: users.id,
-              tier: users.tier,
-              monthlyBuilds: users.monthlyBuilds
-            })
-            .from(users)
-            .where(sql`${users.id} = ${userId} OR ${users.openId} = ${userId}`)
-            .limit(1);
+        // Find user by matching id or openId safely using raw text casting
+        const userQuery = await db.execute(
+          sql`SELECT id, tier, "monthlyBuilds" FROM users WHERE id::text = ${userId} OR "openId"::text = ${userId} LIMIT 1`
+        );
+        const dbUser = (userQuery as any)?.rows?.[0] || (Array.isArray(userQuery) ? userQuery[0] : null);
 
-          currentUser = dbUser;
-        } catch (dbError) {
-          console.error("Database fetch bypassed:", dbError);
+        if (dbUser) {
+          currentUser = {
+            id: dbUser.id,
+            tier: dbUser.tier || "free",
+            monthlyBuilds: dbUser.monthlyBuilds ?? dbUser.monthly_builds ?? 0
+          };
         }
 
         if (currentUser) {
@@ -104,7 +100,6 @@ export const scoutRouter = router({
           else if (currentUser.tier === "premium") buildLimit = 100;
           else buildLimit = 5; 
         } else {
-          // Safety net
           currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
           buildLimit = 5;
         }
@@ -207,16 +202,12 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 Clean standard update, targeting the true exact internal ID we just found
+      // 👉 Bulletproof Raw SQL Update with explicit text casting
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
-        try {
-          await db
-            .update(users)
-            .set({ monthlyBuilds: currentBuilds + 1 })
-            .where(eq(users.id, currentUser.id));
-        } catch (updateErr) {
-          console.error("Failed to track monthly build:", updateErr);
-        }
+        const nextBuilds = currentBuilds + 1;
+        await db.execute(
+          sql`UPDATE users SET "monthlyBuilds" = ${nextBuilds} WHERE id::text = ${userId} OR "openId"::text = ${userId}`
+        );
       }
 
       return BlueprintSchema.parse(parsed);
