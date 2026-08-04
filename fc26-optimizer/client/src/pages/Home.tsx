@@ -180,15 +180,15 @@ function HeroHeader() {
               </div>
             </div>
 
-            {/* 👉 NEW: Sleek full-width upgrade banner placed directly under profile */}
+            {/* Sleek full-width upgrade banner placed directly under profile */}
             {!isPremiumOrVIP && (
               <button
                 onClick={() => checkoutMutation.mutate()}
                 disabled={isCheckoutLoading}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
                 style={{
-                  background: "linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)", // Sleek dark green glass
-                  color: "oklch(0.75 0.22 142)", // Neon green text
+                  background: "linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)",
+                  color: "oklch(0.75 0.22 142)", 
                   border: "1px solid oklch(0.75 0.22 142 / 0.4)",
                   boxShadow: "0 0 15px oklch(0.75 0.22 142 / 0.1)",
                   fontFamily: "'Rajdhani', sans-serif",
@@ -336,9 +336,9 @@ export default function Home() {
       }, 100);
     },
     onError: (error) => {
-      // 👉 Updated mobile-friendly messaging directing them to the new button position
+      // 👉 ACCURATE MESSAGING: Explicitly says "100 monthly builds"
       if (error.message.includes("LIMIT_REACHED")) {
-        alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock unlimited builds.");
+        alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
       } else {
         alert(`Scouting failed: ${error.message}`);
       }
@@ -365,8 +365,9 @@ export default function Home() {
       return;
     }
 
+    // 👉 ACCURATE MESSAGING
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
-      alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock unlimited builds.");
+      alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
       return;
     }
 
