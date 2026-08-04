@@ -202,8 +202,9 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 AMENDMENT: Simplified Javascript math instead of raw SQL
-      // Increment tracking count for limited tiers
+      // 👉 AMENDMENT: The Final Fix!
+      // We use the raw, uncorrupted 'userId' string from the token 
+      // instead of 'currentUser.id' to avoid JS large number precision loss!
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         try {
           await db
@@ -211,7 +212,7 @@ ${filterRules.join("\n")}
             .set({
               monthlyBuilds: currentBuilds + 1, 
             })
-            .where(eq(users.id, String(currentUser.id)));
+            .where(sql`${users.id} = ${userId}::text`); // 👈 Safe string match
         } catch (updateErr) {
           console.error("Failed to track monthly build:", updateErr);
         }
