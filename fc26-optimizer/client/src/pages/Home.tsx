@@ -39,39 +39,18 @@ function Spinner({ label }: { label: string }) {
       >
         {label}
       </p>
-
-      <a
-        href="https://www.u7buy.com/fc26/fc26-coins?referral-code=xbRz7JOo"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-6 w-full max-w-xs px-4 py-3 rounded-lg border transition-all duration-200 hover:scale-105 hover:shadow-lg"
-        style={{
-          background: "linear-gradient(135deg, oklch(0.78 0.18 85 / 0.15) 0%, oklch(0.75 0.22 142 / 0.1) 100%)",
-          borderColor: "oklch(0.78 0.18 85 / 0.4)",
-          boxShadow: "0 0 16px oklch(0.78 0.18 85 / 0.2), inset 0 1px 1px oklch(0.95 0.01 240 / 0.1)",
-        }}
-      >
-        <p
-          className="text-xs font-bold text-center tracking-wide"
-          style={{
-            fontFamily: "'Rajdhani', sans-serif",
-            color: "oklch(0.78 0.18 85)",
-          }}
-        >
-          📢 SPONSORED: Buy FC 26 Coins - Cheap, Fast &amp; Safe. Trusted 10+ Years (5% Tax Covered).
-        </p>
-      </a>
-
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
 
-// ── Hero header ────────────────────────────────────────────────────────────────
+// ── Hero header ────────────────────────────────.──────────────────────────────
 function HeroHeader() {
   const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
     retry: false,
   });
+
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const checkoutMutation = trpc.stripe.createCheckout.useMutation({
     onSuccess: (data) => {
@@ -85,7 +64,7 @@ function HeroHeader() {
   });
 
   const isCheckoutLoading = checkoutMutation.isPending;
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
 
   let tierLabel = "👤 Guest";
   let buildsLeftText = "2 Free Builds";
@@ -97,6 +76,9 @@ function HeroHeader() {
     } else if (user.tier === "vip") {
       tierLabel = "💎 VIP Member";
       buildsLeftText = "Unlimited Builds";
+    } else if (user.tier === "premium_plus") {
+      tierLabel = "🚀 Premium Plus";
+      buildsLeftText = `${Math.max(0, 250 - (user.monthlyBuilds || 0))} / 250 Builds Left`;
     } else if (user.tier === "premium") {
       tierLabel = "🏅 Premium Member";
       buildsLeftText = `${Math.max(0, 100 - (user.monthlyBuilds || 0))} / 100 Builds Left`;
@@ -108,18 +90,76 @@ function HeroHeader() {
 
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
-      <div
-        className="absolute inset-0 opacity-5"
-        style={{
-          backgroundImage:
-            "linear-gradient(oklch(0.75 0.22 142) 1px, transparent 1px), linear-gradient(90deg, oklch(0.75 0.22 142) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-32 opacity-20 blur-3xl"
-        style={{ background: "oklch(0.75 0.22 142)" }}
-      />
+      {/* Pricing Modal Overlay */}
+      {showPricingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-zinc-900 border border-green-500/30 rounded-2xl max-w-md w-full p-6 text-left relative shadow-2xl">
+            <button 
+              onClick={() => setShowPricingModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white text-lg font-bold"
+            >
+              ✕
+            </button>
+            
+            <h2 className="text-xl font-black text-white uppercase tracking-wider mb-1" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+              Choose Your Plan
+            </h2>
+            <p className="text-xs text-gray-400 mb-6 font-sans">
+              Unlock powerful AI scouting tools and higher monthly build limits.
+            </p>
+
+            <div className="space-y-3 mb-6">
+              {/* Premium Tier */}
+              <div 
+                onClick={() => checkoutMutation.mutate({ tier: "premium" })}
+                className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
+              >
+                <div>
+                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🏅 Premium</div>
+                  <div className="text-[11px] text-gray-400">100 Monthly Builds • GPT-4o-mini &amp; 4o</div>
+                </div>
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                  Select
+                </div>
+              </div>
+
+              {/* Premium Plus Tier */}
+              <div 
+                onClick={() => checkoutMutation.mutate({ tier: "premium_plus" })}
+                className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
+              >
+                <div>
+                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🚀 Premium Plus</div>
+                  <div className="text-[11px] text-gray-400">250 Monthly Builds • Priority Processing</div>
+                </div>
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                  Select
+                </div>
+              </div>
+
+              {/* VIP Tier */}
+              <div 
+                onClick={() => checkoutMutation.mutate({ tier: "vip" })}
+                className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
+              >
+                <div>
+                  <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>💎 VIP Member</div>
+                  <div className="text-[11px] text-gray-400">500 Monthly Builds • Ultimate Access</div>
+                </div>
+                <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50">
+                  Select
+                </div>
+              </div>
+            </div>
+
+            {isCheckoutLoading && (
+              <div className="text-center text-xs text-green-400 animate-pulse py-2">
+                Connecting to Stripe secure checkout...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="relative z-10 flex flex-col items-center justify-center">
         <img 
@@ -138,7 +178,6 @@ function HeroHeader() {
           <div className="w-8 h-8 rounded-full border-2 border-t-[#5865F2] border-transparent animate-spin"></div>
         ) : user ? (
           <div className="flex flex-col items-center gap-3 w-full max-w-sm">
-            {/* User Profile Card */}
             <div className="flex items-center justify-between w-full bg-black/40 border border-white/10 px-5 py-3 rounded-xl backdrop-blur-sm">
               <div className="flex items-center gap-4">
                 {user.avatar ? (
@@ -180,11 +219,10 @@ function HeroHeader() {
               </div>
             </div>
 
-            {/* Sleek full-width upgrade banner placed directly under profile */}
+            {/* Upgrade Button triggers the pricing modal */}
             {!isPremiumOrVIP && (
               <button
-                onClick={() => checkoutMutation.mutate({ tier: "premium" })} // 👉 FIX: Explicitly send the tier
-                disabled={isCheckoutLoading}
+                onClick={() => setShowPricingModal(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   background: "linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)",
@@ -194,18 +232,7 @@ function HeroHeader() {
                   fontFamily: "'Rajdhani', sans-serif",
                 }}
               >
-                {isCheckoutLoading ? (
-                  <>
-                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
-                    </svg>
-                    Redirecting...
-                  </>
-                ) : (
-                  <>
-                    <span className="text-base">🏅</span> Upgrade to Premium
-                  </>
-                )}
+                <span className="text-base">🏅</span> Choose Upgrade Plan
               </button>
             )}
           </div>
@@ -322,7 +349,7 @@ export default function Home() {
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "vip" || user?.tier === "owner";
+  const isPremiumOrVIP = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -337,7 +364,7 @@ export default function Home() {
     },
     onError: (error) => {
       if (error.message.includes("LIMIT_REACHED")) {
-        alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
+        alert("Free limit reached (5/5)! Please tap the 'Choose Upgrade Plan' button under your profile to view subscription options.");
       } else {
         alert(`Scouting failed: ${error.message}`);
       }
@@ -365,7 +392,7 @@ export default function Home() {
     }
 
     if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
-      alert("Free limit reached (5/5)! Please tap the 'Upgrade to Premium' button under your profile to unlock 100 monthly builds.");
+      alert("Free limit reached (5/5)! Please tap the 'Choose Upgrade Plan' button under your profile to view subscription options.");
       return;
     }
 
@@ -532,7 +559,7 @@ export default function Home() {
                 </select>
               ) : (
                 <div 
-                  onClick={() => checkoutMutation.mutate({ tier: "premium" })} // 👉 FIX: Explicitly send the tier here too!
+                  onClick={() => checkoutMutation.mutate({ tier: "premium" })}
                   className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
                 >
                   <span>✨ Let AI Choose Best Match (Locked)</span>
