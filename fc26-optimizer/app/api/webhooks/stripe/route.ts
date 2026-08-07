@@ -26,21 +26,26 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
   } catch (error: any) {
-    console.error("Webhook signature verification failed.", error.message);
+    console.error("❌ Webhook signature verification failed:", error.message);
     return new NextResponse(`Webhook Error: ${error.message}`, { status: 400 });
   }
 
-  const session = event.data.object as Stripe.Checkout.Session;
+  // 👉 ADDED: Log the event type so you can see it in Render logs
+  console.log(`🔔 Received Stripe Webhook Event: ${event.type}`);
 
   // 2. Handle the different subscription lifecycle events
   switch (event.type) {
     
     // 👉 TRIGGERED WHEN A USER BUYS A SUB FOR THE FIRST TIME
     case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
       const stripeCustomerId = session.customer as string;
 
-      if (!userId) break;
+      if (!userId) {
+        console.error("❌ No userId found in session metadata!");
+        break;
+      }
 
       const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
       const priceId = subscription.items.data[0].price.id;
@@ -55,6 +60,8 @@ export async function POST(req: Request) {
           monthlyBuilds: 0, // 👈 RESETS BUILD COUNTER TO 0 ON FRESH PURCHASE
         },
       });
+
+      console.log(`✅ New subscription for user ${userId} to tier: ${newTier}`);
       break;
     }
 
@@ -65,13 +72,21 @@ export async function POST(req: Request) {
       const priceId = subscription.items.data[0].price.id;
       const newTier = getTierFromPriceId(priceId);
 
-      await db.user.updateMany({
-        where: { stripeCustomerId: stripeCustomerId },
+      // 👉 ADDED: Match by stripeCustomerId OR stripeSubscriptionId so it never misses
+      const result = await db.user.updateMany({
+        where: {
+          OR: [
+            { stripeCustomerId: stripeCustomerId },
+            { stripeSubscriptionId: subscription.id },
+          ],
+        },
         data: { 
           tier: newTier,
           monthlyBuilds: 0, // 👈 RESETS BUILD COUNTER TO 0 ON TIER UPGRADE
         },
       });
+
+      console.log(`✅ Updated ${result.count} user(s) to tier: ${newTier}`);
       break;
     }
 
@@ -80,13 +95,21 @@ export async function POST(req: Request) {
       const subscription = event.data.object as Stripe.Subscription;
       const stripeCustomerId = subscription.customer as string;
 
-      await db.user.updateMany({
-        where: { stripeCustomerId: stripeCustomerId },
+      // 👉 ADDED: Match by stripeCustomerId OR stripeSubscriptionId so it never misses
+      const result = await db.user.updateMany({
+        where: {
+          OR: [
+            { stripeCustomerId: stripeCustomerId },
+            { stripeSubscriptionId: subscription.id },
+          ],
+        },
         data: {
           tier: "free",
           stripeSubscriptionId: null,
         },
       });
+
+      console.log(`🚨 Canceled subscription for ${result.count} user(s)`);
       break;
     }
   }
