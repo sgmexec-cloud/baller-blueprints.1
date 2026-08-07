@@ -10,7 +10,6 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { authRouter } from "../auth";
 
-// 👉 STRIPE WEBHOOK & DB IMPORTS
 import Stripe from "stripe";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
@@ -35,11 +34,26 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-// 👉 HELPER: Map Stripe Price ID to your Database Tier
+// 👉 UPDATED HELPER: Trims invisible spaces and logs everything
 function getTierFromPriceId(priceId: string): "premium" | "premium_plus" | "vip" | "free" {
-  if (priceId === process.env.STRIPE_PRICE_VIP) return "vip";
-  if (priceId === process.env.STRIPE_PRICE_PREMIUM_PLUS) return "premium_plus";
-  if (priceId === process.env.STRIPE_PRICE_PREMIUM) return "premium";
+  const cleanPrice = priceId.trim();
+  const envPremium = process.env.STRIPE_PRICE_PREMIUM?.trim();
+  const envPremiumPlus = process.env.STRIPE_PRICE_PREMIUM_PLUS?.trim();
+  const envVip = process.env.STRIPE_PRICE_VIP?.trim();
+
+  // Print exact matches to Render logs for debugging
+  console.log(`\n--- STRIPE PRICE DEBUG ---`);
+  console.log(`Received from Stripe: "${cleanPrice}"`);
+  console.log(`Env Premium:          "${envPremium}"`);
+  console.log(`Env Premium+:         "${envPremiumPlus}"`);
+  console.log(`Env VIP:              "${envVip}"`);
+  console.log(`--------------------------\n`);
+
+  if (cleanPrice === envVip) return "vip";
+  if (cleanPrice === envPremiumPlus) return "premium_plus";
+  if (cleanPrice === envPremium) return "premium";
+  
+  console.log(`🚨 WARNING: Price ID did not match any tier. Defaulting to free.`);
   return "free";
 }
 
@@ -47,26 +61,24 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
-  // 👉 FREE DATABASE FIX: Add columns manually on startup
   try {
     const db = await getDb();
     if (db) {
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
-      console.log("Stripe columns added to database!");
+      console.log("Stripe columns verified!");
     }
   } catch (err) {
     console.log("Notice: Columns might already exist or skipped.");
   }
   
-  // ── 1. STRIPE WEBHOOK (MUST BE BEFORE express.json) ──
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2024-06-20",
   });
 
   app.post(
     "/api/webhook",
-    express.raw({ type: "application/json" }), // Stripe needs the raw, unedited body
+    express.raw({ type: "application/json" }), 
     async (req, res) => {
       const sig = req.headers["stripe-signature"];
       let event;
@@ -82,13 +94,12 @@ async function startServer() {
         return res.status(400).send(`Webhook Error: ${err.message}`);
       }
 
-      console.log(`🔔 Received Stripe Webhook Event: ${event.type}`);
+      console.log(`🔔 Webhook Event: ${event.type}`);
 
       try {
         const db = await getDb();
         if (!db) throw new Error("Database not connected");
 
-        // 👉 1. FRESH CHECKOUT
         if (event.type === "checkout.session.completed") {
           const session = event.data.object as Stripe.Checkout.Session;
           const discordId = session.client_reference_id;
@@ -105,15 +116,14 @@ async function startServer() {
                 tier: newTier,
                 stripeCustomerId: customerId,
                 stripeSubscriptionId: subscriptionId,
-                monthlyBuilds: 0, // 👈 Resets build counter
+                monthlyBuilds: 0, 
               })
               .where(eq(users.openId, discordId));
               
-            console.log(`✅ SUCCESS: Upgraded user ${discordId} to ${newTier}!`);
+            console.log(`✅ UPGRADED user ${discordId} to ${newTier}!`);
           }
         }
 
-        // 👉 2. USER UPGRADES OR DOWNGRADES TIER
         if (event.type === "customer.subscription.updated") {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
@@ -123,14 +133,13 @@ async function startServer() {
           await db.update(users)
             .set({
               tier: newTier,
-              monthlyBuilds: 0, // 👈 Resets build counter on upgrade
+              monthlyBuilds: 0,
             })
             .where(eq(users.stripeCustomerId, customerId));
 
-          console.log(`✅ SUCCESS: Tier updated to ${newTier} for customer!`);
+          console.log(`✅ UPDATED tier to ${newTier} for customer ${customerId}!`);
         }
 
-        // 👉 3. USER CANCELS SUBSCRIPTION
         if (event.type === "customer.subscription.deleted") {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
@@ -138,7 +147,7 @@ async function startServer() {
           await db.update(users)
             .set({
               tier: "free",
-              stripeSubscriptionId: null, // Clears the sub ID
+              stripeSubscriptionId: null, 
             })
             .where(eq(users.stripeCustomerId, customerId));
 
@@ -146,15 +155,14 @@ async function startServer() {
         }
 
       } catch (error) {
-        console.error("Database update failed:", error);
+        // 👉 If the DB blocks the tier name, this will catch it!
+        console.error("❌ DATABASE ERROR IN WEBHOOK:", error);
       }
 
-      // Tell Stripe we got the message
       res.json({ received: true });
     }
   );
 
-  // ── 2. STANDARD APP CONFIGURATION ──
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   
