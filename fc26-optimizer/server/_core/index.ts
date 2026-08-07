@@ -34,26 +34,16 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-// 👉 UPDATED HELPER: Trims invisible spaces and logs everything
 function getTierFromPriceId(priceId: string): "premium" | "premium_plus" | "vip" | "free" {
   const cleanPrice = priceId.trim();
   const envPremium = process.env.STRIPE_PRICE_PREMIUM?.trim();
   const envPremiumPlus = process.env.STRIPE_PRICE_PREMIUM_PLUS?.trim();
   const envVip = process.env.STRIPE_PRICE_VIP?.trim();
 
-  // Print exact matches to Render logs for debugging
-  console.log(`\n--- STRIPE PRICE DEBUG ---`);
-  console.log(`Received from Stripe: "${cleanPrice}"`);
-  console.log(`Env Premium:          "${envPremium}"`);
-  console.log(`Env Premium+:         "${envPremiumPlus}"`);
-  console.log(`Env VIP:              "${envVip}"`);
-  console.log(`--------------------------\n`);
-
   if (cleanPrice === envVip) return "vip";
   if (cleanPrice === envPremiumPlus) return "premium_plus";
   if (cleanPrice === envPremium) return "premium";
   
-  console.log(`🚨 WARNING: Price ID did not match any tier. Defaulting to free.`);
   return "free";
 }
 
@@ -61,11 +51,22 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
+  // 👉 DATABASE FIX: Update ENUMs and Columns automatically on startup
   try {
     const db = await getDb();
     if (db) {
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
+      
+      // 👉 THE ENUM FIX: Teach the database the new tier names
+      try {
+        await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'premium_plus';`);
+        await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'vip';`);
+        console.log("✅ Database ENUMs updated successfully!");
+      } catch (enumErr) {
+        console.log("Notice: ENUMs might already exist or skipped.");
+      }
+      
       console.log("Stripe columns verified!");
     }
   } catch (err) {
@@ -155,7 +156,6 @@ async function startServer() {
         }
 
       } catch (error) {
-        // 👉 If the DB blocks the tier name, this will catch it!
         console.error("❌ DATABASE ERROR IN WEBHOOK:", error);
       }
 
