@@ -72,7 +72,7 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   );
 };
 
-// 👉 FIX: Changed denominator from `max` to strictly `99` for absolute scaling
+// Standard Bar for normal attributes
 function StatBar({ val, color }: { val: number; color: string }) {
   const pct = Math.min(100, Math.max(0, (val / 99) * 100));
   return (
@@ -82,7 +82,35 @@ function StatBar({ val, color }: { val: number; color: string }) {
   );
 }
 
+// 👉 NEW: Star rating visual component for Skill Moves and Weak Foot out of 5 max
+function StarRating({ val, color }: { val: number; color: string }) {
+  // Clamps value between 1 and 5
+  const rating = Math.min(5, Math.max(1, Math.round(val)));
+  
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((starIndex) => {
+        const isFilled = starIndex <= rating;
+        return (
+          <span 
+            key={starIndex} 
+            style={{ 
+              color: isFilled ? color : "oklch(0.30 0.01 240)", 
+              fontSize: "12px",
+              lineHeight: 1
+            }}
+          >
+            {isFilled ? "★" : "☆"}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
+  const isStarMetric = stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
+
   return (
     <div className="mb-2.5">
       <div className="flex items-center justify-between mb-1">
@@ -92,7 +120,13 @@ function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
            <span className="text-sm font-bold w-8 text-right" style={{ color: "oklch(0.95 0.01 240)" }}>{stat.final}</span>
         </div>
       </div>
-      <StatBar val={stat.final} color={catColor} />
+      
+      {/* 👉 Switches between Star rating or standard Stat Bar automatically */}
+      {isStarMetric ? (
+        <StarRating val={stat.final} color={catColor} />
+      ) : (
+        <StatBar val={stat.final} color={catColor} />
+      )}
     </div>
   );
 }
