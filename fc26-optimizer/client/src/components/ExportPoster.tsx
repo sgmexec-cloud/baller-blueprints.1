@@ -12,7 +12,6 @@ interface Props {
     };
   };
   apBudget: number;
-  // 👉 NEW: Added level to properly display it on the export
   level: number; 
 }
 
@@ -110,7 +109,7 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
       id="export-poster"
       style={{
         width: "1080px",
-        height: "1350px", // 👉 Hard-locked to exact 4:5 social media aspect ratio
+        height: "1350px",
         boxSizing: "border-box", 
         backgroundColor: "#050505",
         color: "#ffffff",
@@ -145,7 +144,6 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
           <h1 style={{ margin: 0, fontSize: "36px", color: "#fff", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Orbitron', sans-serif", fontWeight: 900 }}>
             {blueprint.archetype} BUILD
           </h1>
-          {/* 👉 NEW: Physical properties locked in below the build title */}
           <div style={{ display: "flex", gap: "12px", alignItems: "center", marginTop: "8px", fontSize: "14px", color: "#9ca3af", textTransform: "uppercase", letterSpacing: "2px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>
             <span>{blueprint.heightRange}</span>
             <span style={{ color: "#4b5563" }}>|</span>
@@ -153,7 +151,6 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
           </div>
         </div>
         <div style={{ display: "flex", gap: "16px", textAlign: "center" }}>
-          {/* 👉 NEW: Added Level stat block seamlessly next to the others */}
           <div style={{ backgroundColor: "#111", padding: "10px 16px", borderRadius: "10px", border: "1px solid #222" }}>
             <div style={{ color: "#6b7280", fontSize: "11px", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "4px", fontFamily: "'Rajdhani', sans-serif", fontWeight: "bold" }}>Level</div>
             <div style={{ fontSize: "24px", fontWeight: "900", color: "#d946ef", fontFamily: "'Orbitron', sans-serif" }}>{safeLevel}</div>
@@ -173,7 +170,6 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
         </div>
       </div>
 
-      {/* 👉 Changed to a compact 3-column layout to save massive vertical space */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px", zIndex: 10, flexGrow: 1 }}>
         {["Pace", "Shooting", "Passing", "Dribbling", "Defending", "Physicality", "Skill Moves", "Weak Foot"].map((catName) => {
           const stats = result?.byCategory?.[catName];
@@ -191,7 +187,8 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
               
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {stats.map((stat: StatResult) => {
-                  const pct = Math.min(100, Math.max(0, (stat.final / Math.max(stat.max, 1)) * 100));
+                  // 👉 FIX: Changed denominator from `stat.max` to strictly `99` for absolute scaling
+                  const pct = Math.min(100, Math.max(0, (stat.final / 99) * 100));
                   
                   return (
                     <div key={stat.attribute}>
@@ -225,7 +222,6 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
           <h3 style={{ color: "#22c55e", margin: "0 0 12px 0", letterSpacing: "3px", fontWeight: "bold", fontSize: "12px", textTransform: "uppercase", fontFamily: "'Rajdhani', sans-serif" }}>
             Recommended Playstyle Loadout
           </h3>
-          {/* 👉 Uses a 5-column grid for playstyles so Level 100 builds fit cleanly */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px" }}>
             {allPlaystyles.map((ps, i) => (
               <PlayStyleBadge key={`ps-${i}`} name={ps.name} isSignature={ps.isSignature} />
