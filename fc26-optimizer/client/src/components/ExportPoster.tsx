@@ -187,7 +187,9 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
               
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {stats.map((stat: StatResult) => {
-                  const isStarMetric = stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
+                  const isStarMetric = catName === "Skill Moves" || catName === "Weak Foot" || 
+                                       stat.attribute === "SkillMoves" || stat.attribute === "WeakFoot" ||
+                                       stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
                   const pct = Math.min(100, Math.max(0, (stat.final / 99) * 100));
                   const rating = Math.min(5, Math.max(1, Math.round(stat.final)));
                   
@@ -207,7 +209,6 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
                         </div>
                       </div>
 
-                      {/* 👉 Renders stars for export poster if Skill Moves or Weak Foot */}
                       {isStarMetric ? (
                         <div style={{ display: "flex", gap: "4px", height: "16px", alignItems: "center" }}>
                           {[1, 2, 3, 4, 5].map((starIndex) => {
@@ -216,8 +217,8 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
                               <span 
                                 key={starIndex} 
                                 style={{ 
-                                  color: isFilled ? cfg.color : "#333", 
-                                  fontSize: "12px",
+                                  color: isFilled ? cfg.color : "#444", 
+                                  fontSize: "14px",
                                   lineHeight: 1
                                 }}
                               >
