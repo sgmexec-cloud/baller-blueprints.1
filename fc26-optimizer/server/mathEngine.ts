@@ -41,7 +41,7 @@ export interface ScoutingBlueprint {
   weakFoot?: number;
 }
 
-function normAttr(s: string): string { return s.trim().toLowerCase(); }
+function normAttr(s: string): string { return s.replace(/\s+/g, '').toLowerCase(); }
 
 function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   const norm = normAttr(attrName);
@@ -53,7 +53,12 @@ function getUpgradeCost(archKey: string, attrKey: string, fromLevel: number): nu
   return COST_DICT[archKey]?.[attrKey]?.[fromLevel + 1] ?? 999999;
 }
 
-export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, customSlots: number = 0): MathEngineResult {
+export function runMathEngine(
+  blueprint: ScoutingBlueprint, 
+  apBudget: number, 
+  customSlots: number = 0,
+  preferredAttributes: string[] = [] // 👉 ADDED: Focus Attributes Array
+): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
 
@@ -69,6 +74,12 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
   }
 
   let remainingAP = apBudget;
+
+  // 👉 HELPER: Removes caps for preferred Focus Attributes so they can hit 99
+  function getHardCap(attrName: string, defaultCap: number): number {
+    const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
+    return isPreferred ? 99 : defaultCap;
+  }
 
   function upgradeOne(attr: string, hardCap: number = 99): boolean {
     const matched = matchAttr(attr, attrNames);
@@ -89,7 +100,7 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     }
   }
 
-  // 1. Initial Tax
+  // 1. Initial Tax (Playstyles & Skill Moves)
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
   for (const ps of activePlaystyles) {
     const realReqs = PLAYSTYLES.find((p) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
@@ -103,12 +114,41 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
 
+  // 👉 1.5 NEW: Focus Attributes VIP Pass
+  // Dedicate up to 25% of post-tax AP exclusively to driving up the user's selected stats
+  if (preferredAttributes.length > 0) {
+    const focusBudget = remainingAP * 0.25;
+    let focusSpent = 0;
+    let focusProgress = true;
+    
+    while (focusProgress && focusSpent < focusBudget) {
+      focusProgress = false;
+      
+      const candidates = preferredAttributes
+        .map(a => matchAttr(a, attrNames))
+        .filter(m => m !== null && stats[m!].current < Math.min(99, stats[m!].max))
+        .sort((a, b) => stats[a!].current - stats[b!].current);
+        
+      for (const matched of candidates) {
+        const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
+        if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
+          const success = upgradeOne(matched!, 99);
+          if (success) {
+            focusSpent += cost;
+            focusProgress = true;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   // 2. The 55/30/15 Bucket Logic
   const postTaxAP = remainingAP;
   const primaryBudget = postTaxAP * 0.55;
   const secondaryBudget = postTaxAP * 0.30;
   
-  function fillBucket(attrs: string[], budgetLimit: number, hardCap: number) {
+  function fillBucket(attrs: string[], budgetLimit: number, baseHardCap: number) {
     let bucketSpent = 0;
     let progress = true;
     while (progress && bucketSpent < budgetLimit) {
@@ -116,13 +156,20 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
       
       const candidates = attrs
         .map(a => matchAttr(a, attrNames))
-        .filter(m => m !== null && stats[m!].current < Math.min(hardCap, stats[m!].max))
+        .filter(m => {
+          if (!m) return false;
+          // Apply Limit Breaker cap if it's a focus attribute
+          const dynamicCap = getHardCap(m, baseHardCap);
+          return stats[m].current < Math.min(dynamicCap, stats[m].max);
+        })
         .sort((a, b) => stats[a!].current - stats[b!].current);
       
       for (const matched of candidates) {
+        const dynamicCap = getHardCap(matched!, baseHardCap);
         const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
+        
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
-          const success = upgradeOne(matched!, hardCap);
+          const success = upgradeOne(matched!, dynamicCap);
           if (success) {
             bucketSpent += cost;
             progress = true;
@@ -143,9 +190,10 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     progress = false;
     
     const bonusCandidates = [
-      ...blueprint.coreAttributes.map(a => ({ attr: a, cap: 99 })),
-      ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: 95 })),
-      ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: 90 }))
+      ...preferredAttributes.map(a => ({ attr: a, cap: 99 })), // Prioritize Focus Attributes again
+      ...blueprint.coreAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) })),
+      ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 95) })),
+      ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 90) }))
     ];
 
     const options = bonusCandidates
@@ -167,9 +215,7 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     }
   }
 
-  // 👉 4. NEW: Hero Spillover Pass (Forces 99-100% Efficiency)
-  // If AP is STILL left over because identity stats hit their ceilings, 
-  // spend it on literally anything else available to maximize the build.
+  // 4. Hero Spillover Pass (Forces 99-100% Efficiency)
   let spilloverProgress = true;
   while (spilloverProgress && remainingAP > 0) {
     spilloverProgress = false;
@@ -177,15 +223,16 @@ export function runMathEngine(blueprint: ScoutingBlueprint, apBudget: number, cu
     const spilloverOptions = attrNames
       .map(attr => {
         const s = stats[attr];
-        // We cap spillover stats at 75 so they don't overtake the player's core identity stats
-        if (s.current >= 83 || s.current >= s.max) return null; 
-        return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current) };
+        // We cap spillover stats at 83 so they don't overtake the player's core identity stats
+        const dynamicCap = getHardCap(attr, 83);
+        if (s.current >= dynamicCap || s.current >= s.max) return null; 
+        return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current), cap: dynamicCap };
       })
-      .filter((o): o is { attr: string; cost: number } => o !== null && o.cost <= remainingAP)
-      .sort((a, b) => a.cost - b.cost); // Pick the absolute cheapest upgrade available
+      .filter((o): o is { attr: string; cost: number, cap: number } => o !== null && o.cost <= remainingAP)
+      .sort((a, b) => a.cost - b.cost); 
       
     if (spilloverOptions.length > 0) {
-      const success = upgradeOne(spilloverOptions[0].attr, 83);
+      const success = upgradeOne(spilloverOptions[0].attr, spilloverOptions[0].cap);
       if (success) {
         spilloverProgress = true;
       }
