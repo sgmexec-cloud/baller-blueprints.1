@@ -187,8 +187,9 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
               
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {stats.map((stat: StatResult) => {
-                  // 👉 FIX: Changed denominator from `stat.max` to strictly `99` for absolute scaling
+                  const isStarMetric = stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
                   const pct = Math.min(100, Math.max(0, (stat.final / 99) * 100));
+                  const rating = Math.min(5, Math.max(1, Math.round(stat.final)));
                   
                   return (
                     <div key={stat.attribute}>
@@ -205,9 +206,31 @@ export default function ExportPoster({ blueprint, result, apBudget, level }: Pro
                           </span>
                         </div>
                       </div>
-                      <div style={{ width: "100%", height: "4px", backgroundColor: "#222", borderRadius: "2px", overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", backgroundColor: cfg.color }} />
-                      </div>
+
+                      {/* 👉 Renders stars for export poster if Skill Moves or Weak Foot */}
+                      {isStarMetric ? (
+                        <div style={{ display: "flex", gap: "4px", height: "16px", alignItems: "center" }}>
+                          {[1, 2, 3, 4, 5].map((starIndex) => {
+                            const isFilled = starIndex <= rating;
+                            return (
+                              <span 
+                                key={starIndex} 
+                                style={{ 
+                                  color: isFilled ? cfg.color : "#333", 
+                                  fontSize: "12px",
+                                  lineHeight: 1
+                                }}
+                              >
+                                {isFilled ? "★" : "☆"}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ width: "100%", height: "4px", backgroundColor: "#222", borderRadius: "2px", overflow: "hidden" }}>
+                          <div style={{ width: `${pct}%`, height: "100%", backgroundColor: cfg.color }} />
+                        </div>
+                      )}
                     </div>
                   );
                 })}
