@@ -12,7 +12,6 @@ interface Props {
   apBudget: number;
   archetype: string;
   level: number;
-  // 👉 NEW: Added blueprint to extract height and weight
   blueprint?: {
     heightRange: string;
     weightRange: string;
@@ -37,7 +36,6 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   let cleanName = name.replace('+', '').trim();
   let fileName = cleanName.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().replace(/\s+/g, '-');
 
-  // 👉 The Ultimate Override Map
   const OVERRIDES: Record<string, string> = {
     "dead-ball": "deadball",
     "deadball": "deadball",
@@ -51,7 +49,6 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
     fileName = OVERRIDES[fileName];
   }
 
-  // Force clean formatting for the UI text label
   const rawName = cleanName.replace(/\s+/g, '').toLowerCase();
   if (rawName === 'gamechanger') cleanName = 'Game Changer';
   if (rawName === 'deadball') cleanName = 'Dead Ball';
@@ -75,9 +72,14 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   );
 };
 
-function StatBar({ val, max, color }: { val: number; max: number; color: string }) {
-  const pct = Math.min(100, (val / Math.max(max, 1)) * 100);
-  return <div className="h-1 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.015 240)" }}><div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} /></div>;
+// 👉 FIX: Changed denominator from `max` to strictly `99` for absolute scaling
+function StatBar({ val, color }: { val: number; color: string }) {
+  const pct = Math.min(100, Math.max(0, (val / 99) * 100));
+  return (
+    <div className="h-1 rounded-full overflow-hidden" style={{ background: "oklch(0.18 0.015 240)" }}>
+      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: color }} />
+    </div>
+  );
 }
 
 function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
@@ -90,7 +92,7 @@ function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
            <span className="text-sm font-bold w-8 text-right" style={{ color: "oklch(0.95 0.01 240)" }}>{stat.final}</span>
         </div>
       </div>
-      <StatBar val={stat.final} max={stat.max} color={catColor} />
+      <StatBar val={stat.final} color={catColor} />
     </div>
   );
 }
@@ -120,7 +122,6 @@ export default function PlayerCard({ result, apBudget, archetype, level, bluepri
         <div className="flex justify-between items-center mb-1">
           <div className="text-xs tracking-widest uppercase" style={{ color: "oklch(0.78 0.18 85)", fontFamily: "'Rajdhani', sans-serif" }}>Final Player Card</div>
           
-          {/* 👉 NEW: Render Height & Weight and Level Side-by-Side */}
           <div className="flex gap-2 items-center">
             {blueprint && (
               <div className="text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider" style={{ background: "rgba(255, 255, 255, 0.05)", color: "oklch(0.65 0.01 240)", borderColor: "rgba(255, 255, 255, 0.1)", fontFamily: "'Rajdhani', sans-serif" }}>
