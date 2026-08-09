@@ -60,7 +60,7 @@ export const scoutRouter = router({
 
   generateReport: publicProcedure
     .input(z.object({ 
-      playerIdentity: z.string().min(1).max(500),
+      playerIdentity: z.string().min(1).max(1000), // Increased max length for appended attributes
       forcedArchetype: z.string().optional(),
       customHeight: z.string().optional(),
       customWeight: z.string().optional(),
@@ -79,7 +79,6 @@ export const scoutRouter = router({
       let currentUser = null;
 
       if (userId) {
-        // Find user by matching id or openId safely using raw text casting
         const userQuery = await db.execute(
           sql`SELECT id, tier, "monthlyBuilds" FROM users WHERE id::text = ${userId} OR "openId"::text = ${userId} LIMIT 1`
         );
@@ -107,7 +106,6 @@ export const scoutRouter = router({
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      // Gatekeeper block
       if (currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -202,7 +200,6 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 Bulletproof Raw SQL Update with explicit text casting
       if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         const nextBuilds = currentBuilds + 1;
         await db.execute(
@@ -214,23 +211,31 @@ ${filterRules.join("\n")}
     }),
 
   calculateStats: publicProcedure
-    .input(z.object({ blueprint: BlueprintSchema, apBudget: z.number().int().min(1).max(999999) }))
+    .input(z.object({ 
+      blueprint: BlueprintSchema, 
+      apBudget: z.number().int().min(1).max(999999),
+      signatureSlots: z.number().int().optional(),
+      standardSlots: z.number().int().optional(),
+      preferredAttributes: z.array(z.string()).optional() // 👉 ADDED: Accepts Focus Attributes
+    }))
     .mutation(async ({ input }) => {
-      let customSlots = 0;
-      let signatureUpgrades = 0;
+      let customSlots = input.standardSlots || 0;
+      let signatureUpgrades = input.signatureSlots || 0;
 
-      try {
-        const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
-        const progContent = await fs.readFile(progPath, "utf-8");
-        const lines = progContent.trim().split("\n");
-        for (let i = 1; i < lines.length; i++) {
-          const p = lines[i].split(",");
-          if (input.apBudget >= Number(p[1])) {
-            signatureUpgrades = Number(p[2]);
-            customSlots = Number(p[3]);      
+      if (!customSlots || !signatureUpgrades) {
+        try {
+          const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
+          const progContent = await fs.readFile(progPath, "utf-8");
+          const lines = progContent.trim().split("\n");
+          for (let i = 1; i < lines.length; i++) {
+            const p = lines[i].split(",");
+            if (input.apBudget >= Number(p[1])) {
+              signatureUpgrades = Number(p[2]);
+              customSlots = Number(p[3]);      
+            }
           }
-        }
-      } catch (e) { console.error("Progression error:", e); }
+        } catch (e) { console.error("Progression error:", e); }
+      }
 
       const engineBlueprint: ScoutingBlueprint = {
         archetype: input.blueprint.archetype,
@@ -247,7 +252,8 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      const result = runMathEngine(engineBlueprint, input.apBudget, customSlots);
+      // 👉 Passes the preferred attributes cleanly into the engine
+      const result = runMathEngine(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
 
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
