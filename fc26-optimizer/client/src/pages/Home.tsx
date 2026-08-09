@@ -8,7 +8,7 @@ import type { MathEngineResult } from "../../../server/mathEngine";
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 const LockIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mb-[1px]">
+  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
     <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
   </svg>
@@ -16,16 +16,17 @@ const LockIcon = () => (
 
 // ── Constants & Helpers ────────────────────────────────────────────────────────
 const ALL_ATTRIBUTES = [
-  "Sprint Speed", "Acceleration", "Finishing", "Shot Power",
-  "Long Shots", "Vision", "Crossing", "Short Passing", 
-  "Long Passing", "Agility", "Balance", "Reactions",
-  "Ball Control", "Dribbling", "Interceptions", "Def. Awareness", 
-  "Stand Tackle", "Stamina", "Strength", "Aggression"
+  "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
+  "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
+  "Short Passing", "Long Passing", "Curve", "Agility", "Balance", "Reactions",
+  "Ball Control", "Dribbling", "Composure", "Interceptions", "Heading Accuracy",
+  "Def Awareness", "Standing Tackle", "Sliding Tackle", "Jumping", "Stamina",
+  "Strength", "Aggression"
 ];
 
 type Tier = "free" | "premium" | "premium_plus" | "vip" | "owner";
 
-// ── Preferred Attributes Component ─────────────────────────────────────────────
+// ── Preferred Attributes Dropdown Component ──────────────────────────────────
 function PreferredAttributes({
   userTier,
   selectedAttributes,
@@ -45,72 +46,97 @@ function PreferredAttributes({
 
   const maxAllowed = getMaxAllowed();
 
-  const toggleAttribute = (attr: string) => {
-    if (selectedAttributes.includes(attr)) {
-      onChange(selectedAttributes.filter((a) => a !== attr));
-      return;
-    }
+  // Ensure we always have an array of exactly 3 items for the dropdowns
+  const slots = [
+    selectedAttributes[0] || "",
+    selectedAttributes[1] || "",
+    selectedAttributes[2] || ""
+  ];
 
-    if (maxAllowed === 0) {
-      onUpgradeClick();
-      return;
-    }
-
-    if (maxAllowed === 1) {
-      onChange([attr]);
-      return;
-    }
-
-    if (selectedAttributes.length >= maxAllowed) {
-      alert(`Your tier allows up to ${maxAllowed} focus attributes.`);
-      return;
-    }
-
-    onChange([...selectedAttributes, attr]);
+  const handleSelect = (index: number, value: string) => {
+    const newSlots = [...slots];
+    newSlots[index] = value;
+    // Filter out empty strings before passing back up
+    onChange(newSlots.filter((v) => v !== ""));
   };
 
   return (
     <div className="w-full mt-4 p-4 bg-black/40 rounded-xl border border-white/5">
-      <div className="flex justify-between items-end mb-3">
-        <div>
-          <h3 className="text-[13px] font-bold text-white mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-            Focus Attributes
-          </h3>
-          <p className="text-[10px] text-gray-400">
-            Tell the AI exactly which stats to prioritize.
-          </p>
-        </div>
-        
-        <div className="text-[10px] font-bold tracking-wider text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/20">
-          {selectedAttributes.length} / {maxAllowed === 0 ? "3" : maxAllowed} Selected
-        </div>
+      <div className="mb-3">
+        <h3 className="text-[13px] font-bold text-white mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+          Focus Attributes
+        </h3>
+        <p className="text-[10px] text-gray-400">
+          Tell the AI exactly which stats to prioritize.
+        </p>
       </div>
 
-      <div className="flex flex-wrap gap-1.5">
-        {ALL_ATTRIBUTES.map((attr) => {
-          const isSelected = selectedAttributes.includes(attr);
-          const isLocked = maxAllowed === 0;
+      <div className="flex flex-col gap-2.5">
+        {[0, 1, 2].map((index) => {
+          const isLocked = index >= maxAllowed;
+          let placeholder = "Select an attribute...";
+          let slotLabel = "Focus Slot";
+          
+          if (isLocked) {
+            placeholder = index === 0 ? "Premium Required to Unlock" : "Premium+ Required to Unlock";
+            slotLabel = index === 0 ? "Slot 1 (Premium)" : `Slot ${index + 1} (Premium+)`;
+          } else {
+            slotLabel = `Slot ${index + 1}`;
+          }
 
           return (
-            <button
-              key={attr}
-              type="button"
-              onClick={() => toggleAttribute(attr)}
-              className={`
-                relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200 uppercase tracking-wider
-                ${
-                  isSelected
-                    ? "bg-green-600 text-white shadow-[0_0_10px_rgba(22,163,74,0.4)] border border-green-500"
-                    : isLocked
-                    ? "bg-zinc-900/80 text-gray-500 border border-white/5 hover:bg-zinc-800 hover:text-gray-300"
-                    : "bg-zinc-900/80 text-gray-300 border border-white/5 hover:border-green-500/50 hover:bg-zinc-800"
-                }
-              `}
-              style={{ fontFamily: "'Rajdhani', sans-serif" }}
-            >
-              {isLocked && <LockIcon />}
-              {attr}
-            </button>
+            <div key={index} className="relative">
+              {/* Slot Label */}
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  {slotLabel}
+                </span>
+              </div>
+
+              {/* Native Dropdown Wrapper */}
+              <div className="relative">
+                {/* If locked, this invisible div sits on top to intercept clicks and trigger the modal */}
+                {isLocked && (
+                  <div 
+                    className="absolute inset-0 z-10 cursor-pointer" 
+                    onClick={onUpgradeClick}
+                  />
+                )}
+
+                <select
+                  value={slots[index]}
+                  onChange={(e) => handleSelect(index, e.target.value)}
+                  disabled={isLocked}
+                  className={`
+                    w-full appearance-none text-xs py-2.5 px-3 rounded-lg border transition-colors outline-none
+                    ${isLocked 
+                      ? "bg-zinc-900/80 text-gray-500 border-white/5 cursor-not-allowed" 
+                      : "bg-black/60 text-white border-white/10 focus:border-green-500"
+                    }
+                  `}
+                >
+                  <option value="" disabled>
+                    {placeholder}
+                  </option>
+                  {!isLocked && ALL_ATTRIBUTES.map((attr) => (
+                    <option key={attr} value={attr}>
+                      {attr}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Dropdown Arrow or Lock Icon */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  {isLocked ? (
+                    <span className="text-yellow-500/70"><LockIcon /></span>
+                  ) : (
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  )}
+                </div>
+              </div>
+            </div>
           );
         })}
       </div>
@@ -202,7 +228,6 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
 
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
-      {/* Pricing Modal Overlay */}
       {showPricing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-zinc-900 border border-green-500/30 rounded-2xl max-w-md w-full p-6 text-left relative shadow-2xl max-h-[90vh] overflow-y-auto">
@@ -221,8 +246,6 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
             </p>
 
             <div className="space-y-3 mb-6">
-              
-              {/* Premium Tier */}
               {(!user || user.tier === "free") && (
                 <div 
                   onClick={() => checkoutMutation.mutate({ tier: "premium" })}
@@ -240,7 +263,6 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
                 </div>
               )}
 
-              {/* Premium Plus Tier */}
               {(!user || user.tier === "free" || user.tier === "premium") && (
                 <div 
                   onClick={() => checkoutMutation.mutate({ tier: "premium_plus" })}
@@ -258,7 +280,6 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
                 </div>
               )}
 
-              {/* VIP Tier */}
               <div 
                 onClick={() => checkoutMutation.mutate({ tier: "vip" })}
                 className="p-4 rounded-xl border border-white/10 bg-black/40 hover:border-green-500/50 cursor-pointer transition-all flex items-center justify-between"
@@ -548,7 +569,6 @@ export default function Home() {
       standardSlots: stdSlots,
       preferredAttributes: preferredAttributes // Passed directly to math engine!
     } as any); 
-    // ^ `as any` allows this to compile safely until we update the TRPC router next
   };
 
   const handleReset = () => {
@@ -696,7 +716,7 @@ export default function Home() {
               )}
             </div>
 
-            {/* 👉 NEW PREFERRED ATTRIBUTES GRID */}
+            {/* 👉 NEW PREFERRED ATTRIBUTES DROPDOWNS */}
             <PreferredAttributes 
               userTier={userTier}
               selectedAttributes={preferredAttributes}
