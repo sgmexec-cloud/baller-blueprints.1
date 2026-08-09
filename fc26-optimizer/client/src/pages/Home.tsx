@@ -6,6 +6,118 @@ import ExportPoster from "@/components/ExportPoster";
 import type { Blueprint } from "../../../server/routers/scout";
 import type { MathEngineResult } from "../../../server/mathEngine";
 
+// ── Icons ──────────────────────────────────────────────────────────────────────
+const LockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="mb-[1px]">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+// ── Constants & Helpers ────────────────────────────────────────────────────────
+const ALL_ATTRIBUTES = [
+  "Sprint Speed", "Acceleration", "Finishing", "Shot Power",
+  "Long Shots", "Vision", "Crossing", "Short Passing", 
+  "Long Passing", "Agility", "Balance", "Reactions",
+  "Ball Control", "Dribbling", "Interceptions", "Def. Awareness", 
+  "Stand Tackle", "Stamina", "Strength", "Aggression"
+];
+
+type Tier = "free" | "premium" | "premium_plus" | "vip" | "owner";
+
+// ── Preferred Attributes Component ─────────────────────────────────────────────
+function PreferredAttributes({
+  userTier,
+  selectedAttributes,
+  onChange,
+  onUpgradeClick,
+}: {
+  userTier: Tier;
+  selectedAttributes: string[];
+  onChange: (attributes: string[]) => void;
+  onUpgradeClick: () => void;
+}) {
+  const getMaxAllowed = () => {
+    if (userTier === "owner" || userTier === "vip" || userTier === "premium_plus") return 3;
+    if (userTier === "premium") return 1;
+    return 0; // Free
+  };
+
+  const maxAllowed = getMaxAllowed();
+
+  const toggleAttribute = (attr: string) => {
+    if (selectedAttributes.includes(attr)) {
+      onChange(selectedAttributes.filter((a) => a !== attr));
+      return;
+    }
+
+    if (maxAllowed === 0) {
+      onUpgradeClick();
+      return;
+    }
+
+    if (maxAllowed === 1) {
+      onChange([attr]);
+      return;
+    }
+
+    if (selectedAttributes.length >= maxAllowed) {
+      alert(`Your tier allows up to ${maxAllowed} focus attributes.`);
+      return;
+    }
+
+    onChange([...selectedAttributes, attr]);
+  };
+
+  return (
+    <div className="w-full mt-4 p-4 bg-black/40 rounded-xl border border-white/5">
+      <div className="flex justify-between items-end mb-3">
+        <div>
+          <h3 className="text-[13px] font-bold text-white mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+            Focus Attributes
+          </h3>
+          <p className="text-[10px] text-gray-400">
+            Tell the AI exactly which stats to prioritize.
+          </p>
+        </div>
+        
+        <div className="text-[10px] font-bold tracking-wider text-green-400 bg-green-900/30 px-2 py-1 rounded border border-green-500/20">
+          {selectedAttributes.length} / {maxAllowed === 0 ? "3" : maxAllowed} Selected
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-1.5">
+        {ALL_ATTRIBUTES.map((attr) => {
+          const isSelected = selectedAttributes.includes(attr);
+          const isLocked = maxAllowed === 0;
+
+          return (
+            <button
+              key={attr}
+              type="button"
+              onClick={() => toggleAttribute(attr)}
+              className={`
+                relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all duration-200 uppercase tracking-wider
+                ${
+                  isSelected
+                    ? "bg-green-600 text-white shadow-[0_0_10px_rgba(22,163,74,0.4)] border border-green-500"
+                    : isLocked
+                    ? "bg-zinc-900/80 text-gray-500 border border-white/5 hover:bg-zinc-800 hover:text-gray-300"
+                    : "bg-zinc-900/80 text-gray-300 border border-white/5 hover:border-green-500/50 hover:bg-zinc-800"
+                }
+              `}
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+            >
+              {isLocked && <LockIcon />}
+              {attr}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Loading spinner ────────────────────────────────────────────────────────────
 function Spinner({ label }: { label: string }) {
   return (
@@ -45,12 +157,10 @@ function Spinner({ label }: { label: string }) {
 }
 
 // ── Hero header ────────────────────────────────────────────────────────────────
-function HeroHeader() {
+function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, setShowPricing: (v: boolean) => void }) {
   const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
     retry: false,
   });
-
-  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const checkoutMutation = trpc.stripe.createCheckout.useMutation({
     onSuccess: (data) => {
@@ -65,9 +175,7 @@ function HeroHeader() {
 
   const isCheckoutLoading = checkoutMutation.isPending;
   
-  // Logic controllers
   const isPaidTier = user?.tier === "premium" || user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
-  const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
   const canUpgrade = !user || user.tier === "free" || user.tier === "premium" || user.tier === "premium_plus";
 
   let tierLabel = "👤 Guest";
@@ -95,11 +203,11 @@ function HeroHeader() {
   return (
     <header className="relative overflow-hidden pt-8 pb-6 px-4 text-center">
       {/* Pricing Modal Overlay */}
-      {showPricingModal && (
+      {showPricing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
           <div className="bg-zinc-900 border border-green-500/30 rounded-2xl max-w-md w-full p-6 text-left relative shadow-2xl max-h-[90vh] overflow-y-auto">
             <button 
-              onClick={() => setShowPricingModal(false)}
+              onClick={() => setShowPricing(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-white text-lg font-bold"
             >
               ✕
@@ -123,7 +231,7 @@ function HeroHeader() {
                   <div>
                     <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>⭐️ Premium Member</div>
                     <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                      Get 50 AI-generated player builds per month and high-res player card exports.
+                      50 builds/mo + High-res exports + Pick 1 Focus Attribute.
                     </div>
                   </div>
                   <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
@@ -141,7 +249,7 @@ function HeroHeader() {
                   <div>
                     <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>🌟 Premium+ Member</div>
                     <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                      Get everything in Premium, plus unlock Forced Archetypes and Custom Scout Filters. Includes 50 builds per month.
+                      Everything in Premium, plus unlock Forced Archetypes and Pick up to 3 Focus Attributes. 50 builds/mo.
                     </div>
                   </div>
                   <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
@@ -158,7 +266,7 @@ function HeroHeader() {
                 <div>
                   <div className="font-bold text-white text-sm" style={{ fontFamily: "'Rajdhani', sans-serif" }}>💎 VIP Member</div>
                   <div className="text-[11px] text-gray-400 mt-0.5 leading-relaxed">
-                    Everything in Premium+, but powered by a superior AI engine for unmatched accuracy. Includes 100 builds per month.
+                    Everything in Premium+, but powered by a superior AI engine for unmatched accuracy. 100 builds/mo.
                   </div>
                 </div>
                 <div className="text-green-400 font-bold text-xs uppercase tracking-wider bg-green-950/40 px-3 py-1.5 rounded-lg border border-green-900/50 shrink-0 ml-3">
@@ -234,10 +342,9 @@ function HeroHeader() {
               </div>
             </div>
 
-            {/* Dynamic Upgrade Button */}
             {canUpgrade && (
               <button
-                onClick={() => setShowPricingModal(true)}
+                onClick={() => setShowPricing(true)}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-[1.02]"
                 style={{
                   background: "linear-gradient(135deg, rgba(20, 83, 45, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%)",
@@ -332,11 +439,14 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 export default function Home() {
   const [playerIdentity, setPlayerIdentity] = useState("");
   const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
+  const [preferredAttributes, setPreferredAttributes] = useState<string[]>([]);
+  
   const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
   const [phase, setPhase] = useState<1 | 2>(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   const [guestBuildCount, setGuestBuildCount] = useState(0);
 
@@ -358,7 +468,8 @@ export default function Home() {
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
-  const canForceArchetype = user?.tier === "premium_plus" || user?.tier === "vip" || user?.tier === "owner";
+  const userTier = (user?.tier as Tier) || "free";
+  const canForceArchetype = userTier === "premium_plus" || userTier === "vip" || userTier === "owner";
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -381,7 +492,6 @@ export default function Home() {
     }
   });
 
-  // 👉 The Calculator Mutation has been securely restored!
   const calcMutation = trpc.scout.calculateStats.useMutation({
     onSuccess: (data) => {
       setPlayerCard(data);
@@ -401,7 +511,7 @@ export default function Home() {
       return;
     }
 
-    if (user?.tier === "free" && (user?.monthlyBuilds || 0) >= 5) {
+    if (userTier === "free" && (user?.monthlyBuilds || 0) >= 5) {
       alert("Free limit reached (5/5)! Please tap 'Upgrade Plan' under your profile.");
       return;
     }
@@ -414,8 +524,13 @@ export default function Home() {
 
     const secureForcedArchetype = canForceArchetype ? forcedArchetype : undefined;
 
+    // Append preferred attributes to the prompt so the AI considers them!
+    const finalIdentity = preferredAttributes.length > 0 
+      ? `${playerIdentity}\n\nFocus on maximizing these specific attributes: ${preferredAttributes.join(", ")}`
+      : playerIdentity;
+
     scoutMutation.mutate({ 
-      playerIdentity, 
+      playerIdentity: finalIdentity, 
       forcedArchetype: secureForcedArchetype || undefined 
     });
   };
@@ -430,8 +545,10 @@ export default function Home() {
       blueprint, 
       apBudget,
       signatureSlots: sigSlots,
-      standardSlots: stdSlots
-    });
+      standardSlots: stdSlots,
+      preferredAttributes: preferredAttributes // Passed directly to math engine!
+    } as any); 
+    // ^ `as any` allows this to compile safely until we update the TRPC router next
   };
 
   const handleReset = () => {
@@ -440,6 +557,7 @@ export default function Home() {
     setPhase(1);
     setPlayerIdentity("");
     setForcedArchetype("");
+    setPreferredAttributes([]);
     setLevel(1);
   };
 
@@ -482,7 +600,7 @@ export default function Home() {
       )}
 
       <div className="max-w-lg mx-auto px-4 pb-16">
-        <HeroHeader />
+        <HeroHeader showPricing={showPricingModal} setShowPricing={setShowPricingModal} />
 
         <section className="mb-6">
           <PhaseIndicator phase={phase} />
@@ -535,7 +653,7 @@ export default function Home() {
               disabled={scoutMutation.isPending}
             />
 
-            <div className="mb-4 relative">
+            <div className="mb-2 relative">
               <div className="flex justify-between items-center mb-1.5">
                 <label 
                   className="block text-xs font-medium" 
@@ -569,20 +687,25 @@ export default function Home() {
                 </select>
               ) : (
                 <div 
-                  onClick={() => {
-                    const upgradeBtn = document.querySelector('button:has(span.text-base)');
-                    if (upgradeBtn) (upgradeBtn as HTMLButtonElement).click();
-                  }}
+                  onClick={() => setShowPricingModal(true)}
                   className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
                 >
                   <span>✨ Let AI Choose Best Match (Premium+ Required)</span>
-                  <span className="text-yellow-500/70">🔒</span>
+                  <span className="text-yellow-500/70"><LockIcon /></span>
                 </div>
               )}
             </div>
 
+            {/* 👉 NEW PREFERRED ATTRIBUTES GRID */}
+            <PreferredAttributes 
+              userTier={userTier}
+              selectedAttributes={preferredAttributes}
+              onChange={setPreferredAttributes}
+              onUpgradeClick={() => setShowPricingModal(true)}
+            />
+
             <button
-              className="btn-neon w-full py-3 rounded-lg text-sm"
+              className="btn-neon w-full py-3 rounded-lg text-sm mt-5"
               onClick={handleScout}
               disabled={scoutMutation.isPending || !playerIdentity.trim()}
             >
