@@ -72,7 +72,6 @@ const PlayStyleBadge = ({ name, isSignature }: { name: string; isSignature?: boo
   );
 };
 
-// Standard Bar for normal attributes
 function StatBar({ val, color }: { val: number; color: string }) {
   const pct = Math.min(100, Math.max(0, (val / 99) * 100));
   return (
@@ -82,11 +81,8 @@ function StatBar({ val, color }: { val: number; color: string }) {
   );
 }
 
-// 👉 NEW: Star rating visual component for Skill Moves and Weak Foot out of 5 max
 function StarRating({ val, color }: { val: number; color: string }) {
-  // Clamps value between 1 and 5
   const rating = Math.min(5, Math.max(1, Math.round(val)));
-  
   return (
     <div className="flex items-center gap-1">
       {[1, 2, 3, 4, 5].map((starIndex) => {
@@ -96,7 +92,7 @@ function StarRating({ val, color }: { val: number; color: string }) {
             key={starIndex} 
             style={{ 
               color: isFilled ? color : "oklch(0.30 0.01 240)", 
-              fontSize: "12px",
+              fontSize: "14px",
               lineHeight: 1
             }}
           >
@@ -108,8 +104,11 @@ function StarRating({ val, color }: { val: number; color: string }) {
   );
 }
 
-function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
-  const isStarMetric = stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
+function StatRow({ stat, catColor, categoryName }: { stat: StatResult; catColor: string; categoryName: string }) {
+  // 👉 Forces strict check for Skill Moves or Weak Foot regardless of attribute name variations
+  const isStarMetric = categoryName === "Skill Moves" || categoryName === "Weak Foot" || 
+                       stat.attribute === "SkillMoves" || stat.attribute === "WeakFoot" ||
+                       stat.attribute === "Skill Moves" || stat.attribute === "Weak Foot";
 
   return (
     <div className="mb-2.5">
@@ -121,7 +120,6 @@ function StatRow({ stat, catColor }: { stat: StatResult; catColor: string }) {
         </div>
       </div>
       
-      {/* 👉 Switches between Star rating or standard Stat Bar automatically */}
       {isStarMetric ? (
         <StarRating val={stat.final} color={catColor} />
       ) : (
@@ -136,7 +134,7 @@ function CategoryBlock({ name, stats }: { name: string; stats: StatResult[] }) {
   return (
     <div className="rounded-xl border p-3 mb-3" style={{ background: cfg.bg, borderColor: cfg.border }}>
       <div className="flex items-center gap-2 mb-3"><span>{cfg.icon}</span><span className="text-xs font-bold uppercase tracking-wider" style={{ color: cfg.color }}>{name}</span></div>
-      {stats.map((stat) => <StatRow key={stat.attribute} stat={stat} catColor={cfg.color} />)}
+      {stats.map((stat) => <StatRow key={stat.attribute} stat={stat} catColor={cfg.color} categoryName={name} />)}
     </div>
   );
 }
