@@ -35,13 +35,32 @@ authRouter.get("/discord/callback", async (req, res) => {
         redirect_uri: `${APP_URL}/api/auth/discord/callback`,
       }),
     });
-    const tokenData = await tokenResponse.json();
+
+    // 👉 SAFEGUARD: Inspect response text before parsing JSON
+    const rawTokenText = await tokenResponse.text();
+
+    if (!tokenResponse.ok) {
+      console.error("Discord Token Exchange Failed. Status:", tokenResponse.status);
+      console.error("Raw Discord Response Body:", rawTokenText);
+      return res.redirect("/?error=DiscordTokenFailed");
+    }
+
+    const tokenData = JSON.parse(rawTokenText);
 
     // B. Use the token to get their Discord profile (Username, ID, etc.)
     const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
-    const discordUser = await userResponse.json();
+
+    const rawUserText = await userResponse.text();
+
+    if (!userResponse.ok) {
+      console.error("Discord User Fetch Failed. Status:", userResponse.status);
+      console.error("Raw User Response Body:", rawUserText);
+      return res.redirect("/?error=DiscordUserFailed");
+    }
+
+    const discordUser = JSON.parse(rawUserText);
 
     // DEBUG: Log the data to see what Discord actually returned
     console.log("Discord User Data Received:", JSON.stringify(discordUser, null, 2));
@@ -51,10 +70,9 @@ authRouter.get("/discord/callback", async (req, res) => {
       throw new Error("Discord failed to return user ID. Check your OAuth scopes.");
     }
 
-    // 👉 NEW: Construct the Discord Avatar URL
+    // 👉 Construct the Discord Avatar URL
     let avatarUrl = null;
     if (discordUser.avatar) {
-      // Discord avatars are hosted at this specific CDN URL using their ID and Avatar Hash
       avatarUrl = `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`;
     }
 
@@ -64,7 +82,7 @@ authRouter.get("/discord/callback", async (req, res) => {
       name: discordUser.username || "Unknown",
       email: discordUser.email || null,
       loginMethod: "discord",
-      avatar: avatarUrl, // 👉 NEW: Pass the avatar URL to the database function
+      avatar: avatarUrl,
     });
 
     // D. Create a secure "VIP Pass" (a Cookie) so they stay logged in
