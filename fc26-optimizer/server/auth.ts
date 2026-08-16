@@ -10,6 +10,9 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-sec
 // Your live website URL
 const APP_URL = "https://baller-engine.onrender.com"; 
 
+// Custom User-Agent to bypass Cloudflare bot filtering on Discord's API
+const DISCORD_USER_AGENT = "ClubsDNA (https://baller-engine.onrender.com, v1.0.0)";
+
 // ── 1. The Login Doorway (Sends user to Discord) ──
 authRouter.get("/discord", (req, res) => {
   const redirectUri = encodeURIComponent(`${APP_URL}/api/auth/discord/callback`);
@@ -26,7 +29,10 @@ authRouter.get("/discord/callback", async (req, res) => {
     // A. Trade the secret code Discord gave us for an Access Token
     const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { 
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": DISCORD_USER_AGENT,
+      },
       body: new URLSearchParams({
         client_id: process.env.DISCORD_CLIENT_ID!,
         client_secret: process.env.DISCORD_CLIENT_SECRET!,
@@ -49,7 +55,10 @@ authRouter.get("/discord/callback", async (req, res) => {
 
     // B. Use the token to get their Discord profile (Username, ID, etc.)
     const userResponse = await fetch("https://discord.com/api/users/@me", {
-      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      headers: { 
+        Authorization: `Bearer ${tokenData.access_token}`,
+        "User-Agent": DISCORD_USER_AGENT,
+      },
     });
 
     const rawUserText = await userResponse.text();
