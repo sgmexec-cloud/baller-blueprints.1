@@ -10,8 +10,12 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-sec
 // Your live website URL
 const APP_URL = "https://baller-engine.onrender.com"; 
 
-// Custom User-Agent to bypass Cloudflare bot filtering on Discord's API
-const DISCORD_USER_AGENT = "ClubsDNA (https://baller-engine.onrender.com, v1.0.0)";
+// Full browser headers to pass Cloudflare anti-bot verification on Discord API requests
+const DISCORD_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 // ── 1. The Login Doorway (Sends user to Discord) ──
 authRouter.get("/discord", (req, res) => {
@@ -31,7 +35,7 @@ authRouter.get("/discord/callback", async (req, res) => {
       method: "POST",
       headers: { 
         "Content-Type": "application/x-www-form-urlencoded",
-        "User-Agent": DISCORD_USER_AGENT,
+        ...DISCORD_HEADERS,
       },
       body: new URLSearchParams({
         client_id: process.env.DISCORD_CLIENT_ID!,
@@ -57,7 +61,7 @@ authRouter.get("/discord/callback", async (req, res) => {
     const userResponse = await fetch("https://discord.com/api/users/@me", {
       headers: { 
         Authorization: `Bearer ${tokenData.access_token}`,
-        "User-Agent": DISCORD_USER_AGENT,
+        ...DISCORD_HEADERS,
       },
     });
 
