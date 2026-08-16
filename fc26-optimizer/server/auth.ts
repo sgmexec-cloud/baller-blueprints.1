@@ -4,18 +4,27 @@ import { upsertUser } from "./db";
 
 export const authRouter = Router();
 
-// Our secret key for locking the user's login cookie
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-secret-clubdna-key-change-me");
-
-// Your live website URL
 const APP_URL = "https://baller-engine.onrender.com"; 
 
-// Full browser headers to pass Cloudflare anti-bot verification on Discord API requests
 const DISCORD_HEADERS = {
   "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
   "Accept": "application/json",
   "Accept-Language": "en-US,en;q=0.9",
 };
+
+// Helper function to retry requests if hit with Cloudflare 429 rate limit
+async function fetchDiscordWithRetry(url: string, options: RequestInit, retries = 2): Promise<Response> {
+  let response = await fetch(url, options);
+  
+  if (response.status === 429 && retries > 0) {
+    console.warn(`[OAuth] Rate limited (429). Retrying in 2 seconds... (${retries} retries left)`);
+    await new Promise((res) => setTimeout(res, 2000));
+    return fetchDiscordWithRetry(url, options, retries - 1);
+  }
+  
+  return response;
+}
 
 // ── 1. The Login Doorway (Sends user to Discord) ──
 authRouter.get("/discord", (req, res) => {
@@ -30,8 +39,8 @@ authRouter.get("/discord/callback", async (req, res) => {
   if (!code) return res.redirect("/?error=NoCode");
 
   try {
-    // A. Trade the secret code Discord gave us for an Access Token
-    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
+    // A. Trade code for token (with auto-retry on 429)
+    const tokenResponse = await fetchDiscordWithRetry("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { 
         "Content-Type": "application/x-www-form-urlencoded",
@@ -46,7 +55,6 @@ authRouter.get("/discord/callback", async (req, res) => {
       }),
     });
 
-    // 👉 SAFEGUARD: Inspect response text before parsing JSON
     const rawTokenText = await tokenResponse.text();
 
     if (!tokenResponse.ok) {
@@ -57,8 +65,8 @@ authRouter.get("/discord/callback", async (req, res) => {
 
     const tokenData = JSON.parse(rawTokenText);
 
-    // B. Use the token to get their Discord profile (Username, ID, etc.)
-    const userResponse = await fetch("https://discord.com/api/users/@me", {
+    // B. Fetch profile (with auto-retry on 429)
+    const userResponse = await fetchDiscordWithRetry("https://discord.com/api/users/@me", {
       headers: { 
         Authorization: `Bearer ${tokenData.access_token}`,
         ...DISCORD_HEADERS,
@@ -75,21 +83,15 @@ authRouter.get("/discord/callback", async (req, res) => {
 
     const discordUser = JSON.parse(rawUserText);
 
-    // DEBUG: Log the data to see what Discord actually returned
-    console.log("Discord User Data Received:", JSON.stringify(discordUser, null, 2));
-
-    // C. Validation: Ensure we actually got an ID
     if (!discordUser.id) {
       throw new Error("Discord failed to return user ID. Check your OAuth scopes.");
     }
 
-    // 👉 Construct the Discord Avatar URL
     let avatarUrl = null;
     if (discordUser.avatar) {
       avatarUrl = `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png`;
     }
 
-    // Save this user into our Neon Postgres database!
     await upsertUser({
       openId: discordUser.id,
       name: discordUser.username || "Unknown",
@@ -98,14 +100,12 @@ authRouter.get("/discord/callback", async (req, res) => {
       avatar: avatarUrl,
     });
 
-    // D. Create a secure "VIP Pass" (a Cookie) so they stay logged in
     const token = await new SignJWT({ userId: discordUser.id })
       .setProtectedHeader({ alg: "HS256" })
       .setIssuedAt()
       .setExpirationTime("7d")
       .sign(JWT_SECRET);
 
-    // E. Put the cookie in their browser and send them back to the homepage
     res.cookie("clubdna_auth", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production", 
