@@ -103,25 +103,41 @@ async function startServer() {
 
         if (event.type === "checkout.session.completed") {
           const session = event.data.object as Stripe.Checkout.Session;
-          const discordId = session.client_reference_id;
+          const refId = session.client_reference_id;
+          const customerEmail = session.customer_details?.email || session.customer_email;
           const customerId = session.customer as string;
           const subscriptionId = session.subscription as string;
 
-          const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-          const priceId = subscription.items.data[0].price.id;
-          const newTier = getTierFromPriceId(priceId);
+          let newTier: "premium" | "premium_plus" | "vip" | "free" = "free";
 
-          if (discordId) {
-            await db.update(users)
-              .set({
-                tier: newTier,
-                stripeCustomerId: customerId,
-                stripeSubscriptionId: subscriptionId,
-                monthlyBuilds: 0, 
-              })
-              .where(eq(users.openId, discordId));
-              
-            console.log(`✅ UPGRADED user ${discordId} to ${newTier}!`);
+          if (subscriptionId) {
+            const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+            const priceId = subscription.items.data[0].price.id;
+            newTier = getTierFromPriceId(priceId);
+          }
+
+          // Look up user by openId OR email to support both Discord and Email logins safely
+          const targetIdentifier = refId || customerEmail;
+
+          if (targetIdentifier) {
+            const matchedUsers = await db.select().from(users)
+              .where(sql`${users.openId} = ${targetIdentifier} OR ${users.email} = ${targetIdentifier}`)
+              .limit(1);
+
+            if (matchedUsers.length > 0) {
+              await db.update(users)
+                .set({
+                  tier: newTier,
+                  stripeCustomerId: customerId,
+                  stripeSubscriptionId: subscriptionId,
+                  monthlyBuilds: 0,
+                })
+                .where(eq(users.id, matchedUsers[0].id));
+
+              console.log(`✅ UPGRADED user ${matchedUsers[0].email} to ${newTier}!`);
+            } else {
+              console.error(`❌ Webhook Error: Could not find user with identifier: ${targetIdentifier}`);
+            }
           }
         }
 
