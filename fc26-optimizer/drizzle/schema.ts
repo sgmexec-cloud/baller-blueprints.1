@@ -11,8 +11,12 @@ export const users = pgTable("users", {
   email: varchar("email", { length: 320 }),
   avatar: text("avatar"), // 👉 NEW: Store the Discord profile picture URL
   loginMethod: varchar("loginMethod", { length: 64 }),
-  role: roleEnum("role").default("user").notNull(),
   
+  // 👉 NEW: Columns for Email OTP Login
+  otpCode: text("otp_code"),
+  otpExpires: timestamp("otp_expires"),
+  
+  role: roleEnum("role").default("user").notNull(),
   tier: tierEnum("tier").default("free").notNull(),
   monthlyBuilds: integer("monthlyBuilds").default(0).notNull(),
   lastBuildDate: timestamp("lastBuildDate"),
