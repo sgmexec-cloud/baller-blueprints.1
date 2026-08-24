@@ -468,7 +468,7 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
               <div className="ml-2 flex flex-col items-end gap-1.5 border-l border-white/10 pl-4">
                 {isPaidTier && user.tier !== "owner" && (
                   <a 
-                    href="https://billing.stripe.com/p/login/test_9B6aEZ4In3R545o9te1gs00" 
+                    href="https://billing.stripe.com/p/login/aFaeVedpF3pXdCw5jv87K00" 
                     target="_blank" 
                     rel="noopener noreferrer" 
                     className="text-[10px] font-bold uppercase tracking-wider transition-colors hover:opacity-80"
