@@ -26,6 +26,132 @@ const ALL_ATTRIBUTES = [
 
 type Tier = "free" | "premium" | "premium_plus" | "vip" | "owner";
 
+// ── Email OTP Login Component ────────────────────────────────────────────────
+function EmailLogin() {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [step, setStep] = useState<1 | 2>(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send code");
+      }
+
+      setStep(2);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid code");
+      }
+
+      window.location.reload();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="w-full max-w-sm mx-auto mt-4 p-6 bg-black/60 backdrop-blur-sm rounded-xl border border-white/10 shadow-2xl">
+      <h2 className="text-xl font-bold text-white mb-4" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+        {step === 1 ? "Sign In to Build" : "Enter Verification Code"}
+      </h2>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-500/20 border border-red-500/50 text-red-400 rounded text-xs">
+          {error}
+        </div>
+      )}
+
+      {step === 1 ? (
+        <form onSubmit={handleSendCode} className="flex flex-col gap-3 text-left">
+          <input
+            type="email"
+            placeholder="player@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white text-sm focus:outline-none focus:border-green-500 transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 font-bold text-sm tracking-widest uppercase text-black bg-green-500 rounded-lg hover:bg-green-400 disabled:opacity-50 transition-colors"
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >
+            {loading ? "Sending..." : "Send Login Code"}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleVerifyCode} className="flex flex-col gap-3">
+          <p className="text-gray-400 text-xs">
+            We sent a 6-digit code to <span className="text-white font-bold">{email}</span>
+          </p>
+          <input
+            type="text"
+            placeholder="123456"
+            maxLength={6}
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-lg bg-black/40 border border-white/10 text-white text-center text-xl tracking-[0.5em] focus:outline-none focus:border-green-500 transition-colors"
+          />
+          <button
+            type="submit"
+            disabled={loading || code.length !== 6}
+            className="w-full py-3 font-bold text-sm tracking-widest uppercase text-black bg-green-500 rounded-lg hover:bg-green-400 disabled:opacity-50 transition-colors"
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >
+            {loading ? "Verifying..." : "Verify & Login"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            className="text-xs text-gray-500 hover:text-white mt-2 transition-colors"
+          >
+            Wrong email? Go back.
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // ── Preferred Attributes Dropdown Component ──────────────────────────────────
 function PreferredAttributes({
   userTier,
@@ -46,7 +172,6 @@ function PreferredAttributes({
 
   const maxAllowed = getMaxAllowed();
 
-  // Ensure we always have an array of exactly 3 items for the dropdowns
   const slots = [
     selectedAttributes[0] || "",
     selectedAttributes[1] || "",
@@ -56,7 +181,6 @@ function PreferredAttributes({
   const handleSelect = (index: number, value: string) => {
     const newSlots = [...slots];
     newSlots[index] = value;
-    // Filter out empty strings before passing back up
     onChange(newSlots.filter((v) => v !== ""));
   };
 
@@ -86,16 +210,13 @@ function PreferredAttributes({
 
           return (
             <div key={index} className="relative">
-              {/* Slot Label */}
               <div className="flex justify-between items-center mb-1">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   {slotLabel}
                 </span>
               </div>
 
-              {/* Native Dropdown Wrapper */}
               <div className="relative">
-                {/* If locked, this invisible div sits on top to intercept clicks and trigger the modal */}
                 {isLocked && (
                   <div 
                     className="absolute inset-0 z-10 cursor-pointer" 
@@ -125,7 +246,6 @@ function PreferredAttributes({
                   ))}
                 </select>
 
-                {/* Dropdown Arrow or Lock Icon */}
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
                   {isLocked ? (
                     <span className="text-yellow-500/70"><LockIcon /></span>
@@ -332,7 +452,7 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
                   />
                 ) : (
                   <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg shadow-lg border border-white/20"
-                       style={{ backgroundColor: "#5865F2", color: "#fff" }}>
+                       style={{ backgroundColor: "#10b981", color: "#fff" }}>
                     {user.name?.charAt(0).toUpperCase() || "?"}
                   </div>
                 )}
@@ -380,18 +500,7 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
             )}
           </div>
         ) : (
-          <a
-            href="/api/auth/discord"
-            className="inline-flex items-center gap-3 px-6 py-3 rounded-lg font-bold text-sm tracking-widest uppercase transition-all duration-200 hover:scale-105 hover:shadow-lg"
-            style={{
-              backgroundColor: "#5865F2",
-              color: "#ffffff",
-              boxShadow: "0 0 20px rgba(88, 101, 242, 0.4)",
-              fontFamily: "'Rajdhani', sans-serif",
-            }}
-          >
-            Login with Discord
-          </a>
+          <EmailLogin />
         )}
       </div>
     </header>
@@ -528,7 +637,7 @@ export default function Home() {
     const isGuest = !user;
 
     if (isGuest && guestBuildCount >= 2) {
-      alert("Guest limit reached! Please click 'Login with Discord' at the top of the page to get 5 free builds.");
+      alert("Guest limit reached! Please create an account to get 5 free builds.");
       return;
     }
 
@@ -545,7 +654,6 @@ export default function Home() {
 
     const secureForcedArchetype = canForceArchetype ? forcedArchetype : undefined;
 
-    // Append preferred attributes to the prompt so the AI considers them!
     const finalIdentity = preferredAttributes.length > 0 
       ? `${playerIdentity}\n\nFocus on maximizing these specific attributes: ${preferredAttributes.join(", ")}`
       : playerIdentity;
@@ -567,7 +675,7 @@ export default function Home() {
       apBudget,
       signatureSlots: sigSlots,
       standardSlots: stdSlots,
-      preferredAttributes: preferredAttributes // Passed directly to math engine!
+      preferredAttributes: preferredAttributes 
     } as any); 
   };
 
@@ -716,7 +824,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* 👉 NEW PREFERRED ATTRIBUTES DROPDOWNS */}
             <PreferredAttributes 
               userTier={userTier}
               selectedAttributes={preferredAttributes}
