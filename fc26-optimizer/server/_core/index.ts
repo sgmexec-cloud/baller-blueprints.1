@@ -14,6 +14,7 @@ import Stripe from "stripe";
 import { getDb } from "../db";
 import { users } from "../../drizzle/schema";
 import { eq, sql } from "drizzle-orm"; 
+import puppeteer from "puppeteer";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -58,7 +59,6 @@ async function startServer() {
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
       
-      // 👉 THE ENUM FIX: Teach the database the new tier names
       try {
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'premium_plus';`);
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'vip';`);
@@ -77,6 +77,7 @@ async function startServer() {
     apiVersion: "2024-06-20",
   });
 
+  // 👉 STRIPE WEBHOOK
   app.post(
     "/api/webhook",
     express.raw({ type: "application/json" }), 
@@ -116,7 +117,6 @@ async function startServer() {
             newTier = getTierFromPriceId(priceId);
           }
 
-          // Look up user by openId OR email to support both Discord and Email logins safely
           const targetIdentifier = refId || customerEmail;
 
           if (targetIdentifier) {
@@ -178,6 +178,48 @@ async function startServer() {
       res.json({ received: true });
     }
   );
+
+  // 👉 SOCIAL MEDIA AUTOMATION WEBHOOK (PUPPETEER SCREENSHOT GENERATOR)
+  app.get("/api/webhooks/auto-build", async (req, res) => {
+    const { player_name, secret } = req.query;
+
+    if (secret !== process.env.MAKE_WEBHOOK_SECRET) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    if (!player_name) {
+      return res.status(400).json({ error: "Missing player_name parameter" });
+    }
+
+    try {
+      const browser = await puppeteer.launch({
+        args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+      });
+      
+      const page = await browser.newPage();
+      await page.setViewport({ width: 450, height: 900 });
+
+      const targetUrl = `https://baller-engine.onrender.com/card-preview?name=${encodeURIComponent(player_name as string)}`;
+      await page.goto(targetUrl, { waitUntil: "networkidle0" });
+
+      const cardElement = await page.$("#final-player-card");
+
+      if (!cardElement) {
+        await browser.close();
+        return res.status(404).json({ error: "Card element not found on page" });
+      }
+
+      const imageBuffer = await cardElement.screenshot({ type: "jpeg", quality: 90 });
+      await browser.close();
+
+      res.set("Content-Type", "image/jpeg");
+      return res.send(imageBuffer);
+
+    } catch (error) {
+      console.error("Webhook build failed:", error);
+      return res.status(500).json({ error: "Failed to generate build card" });
+    }
+  });
 
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
