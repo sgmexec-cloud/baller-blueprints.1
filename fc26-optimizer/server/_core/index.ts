@@ -52,7 +52,6 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   
-  // 👉 DATABASE FIX: Update ENUMs and Columns automatically on startup
   try {
     const db = await getDb();
     if (db) {
@@ -179,16 +178,12 @@ async function startServer() {
     }
   );
 
-  // 👉 SOCIAL MEDIA AUTOMATION WEBHOOK (PUPPETEER SCREENSHOT GENERATOR)
+  // 👉 SOCIAL MEDIA AUTOMATION WEBHOOK (PREMIUM HIGH-RES GENERATOR)
   app.get("/api/webhooks/auto-build", async (req, res) => {
-    const { player_name, secret } = req.query;
+    const secret = req.query.secret;
 
     if (secret !== process.env.MAKE_WEBHOOK_SECRET) {
       return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    if (!player_name) {
-      return res.status(400).json({ error: "Missing player_name parameter" });
     }
 
     try {
@@ -197,22 +192,29 @@ async function startServer() {
       });
       
       const page = await browser.newPage();
-      await page.setViewport({ width: 450, height: 900 });
+      
+      // 👉 UPDATED: 1080x1350 for Instagram/TikTok with deviceScaleFactor for high fidelity
+      await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
-      const targetUrl = `https://baller-engine.onrender.com/card-preview?name=${encodeURIComponent(player_name as string)}`;
+      // 👉 UPDATED: Pass the entire Make.com query string down to the React app
+      const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+      const targetUrl = `https://baller-engine.onrender.com/card-preview?${queryString}`;
+      
       await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
-      const cardElement = await page.$("#final-player-card");
+      // 👉 UPDATED: Look for the new ExportPoster ID
+      const cardElement = await page.$("#export-poster");
 
       if (!cardElement) {
         await browser.close();
-        return res.status(404).json({ error: "Card element not found on page" });
+        return res.status(404).json({ error: "Poster element not found on page" });
       }
 
-      const imageBuffer = await cardElement.screenshot({ type: "jpeg", quality: 90 });
+      // Output as PNG for better text crispness
+      const imageBuffer = await cardElement.screenshot({ type: "png" });
       await browser.close();
 
-      res.set("Content-Type", "image/jpeg");
+      res.set("Content-Type", "image/png");
       return res.send(imageBuffer);
 
     } catch (error) {
