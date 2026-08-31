@@ -61,7 +61,11 @@ authRouter.post("/send-otp", async (req, res) => {
       }),
     });
 
-    if (!emailRes.ok) throw new Error("Failed to send email via Resend");
+    if (!emailRes.ok) {
+      const errorData = await emailRes.json();
+      console.error("🚨 RESEND REJECTED THE EMAIL:", errorData);
+      throw new Error("Failed to send email via Resend");
+    }
 
     res.json({ success: true, message: "Code sent!" });
   } catch (error) {
