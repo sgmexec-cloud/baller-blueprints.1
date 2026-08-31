@@ -46,7 +46,7 @@ authRouter.post("/send-otp", async (req, res) => {
     await upsertUser({ openId: email, name: email.split("@")[0], email: email, loginMethod: "email", avatar: null });
     await setOtpCode(email, otp, expires);
 
-    // D. Send Email via Resend API
+    // D. Send Email via Resend API using Verified Domain
     const emailRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -54,7 +54,7 @@ authRouter.post("/send-otp", async (req, res) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "ClubsDNA <onboarding@resend.dev>", 
+        from: "ClubsDNA <login@clubsdna.co.uk>", 
         to: email,
         subject: "Your ClubsDNA Login Code",
         html: `<h2>Welcome to ClubsDNA</h2><p>Your 6-digit login code is: <strong>${otp}</strong></p><p>This code expires in 10 minutes.</p>`,
