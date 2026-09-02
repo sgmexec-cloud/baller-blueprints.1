@@ -196,13 +196,13 @@ async function startServer() {
       // 👉 UPDATED: 1080x1350 for Instagram/TikTok with deviceScaleFactor for high fidelity
       await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
-      // 👉 UPDATED: Pass the entire Make.com query string down to the React app
+      // 👉 UPDATED: Target URL now uses the custom domain
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
-      const targetUrl = `https://baller-engine.onrender.com/card-preview?${queryString}`;
+      const targetUrl = `https://clubsdna.co.uk/card-preview?${queryString}`;
       
       await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
-      // 👉 UPDATED: Look for the new ExportPoster ID
+      // 👉 Look for the new ExportPoster ID
       const cardElement = await page.$("#export-poster");
 
       if (!cardElement) {
