@@ -202,6 +202,9 @@ async function startServer() {
       
       await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
+      // 👉 WAIT for the AI math to finish and the poster to render (up to 60 seconds)
+      await page.waitForSelector("#export-poster", { timeout: 60000 });
+
       // 👉 Look for the new ExportPoster ID
       const cardElement = await page.$("#export-poster");
 
