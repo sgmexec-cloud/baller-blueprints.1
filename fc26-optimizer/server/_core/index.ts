@@ -61,12 +61,27 @@ async function startServer() {
       try {
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'premium_plus';`);
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'vip';`);
-        console.log("✅ Database ENUMs updated successfully!");
-      } catch (enumErr) {
-        console.log("Notice: ENUMs might already exist or skipped.");
-      }
+      } catch (enumErr) {}
+
+      // 👉 NEW: Auto-create the game_version enum and the builds table!
+      try {
+        await db.execute(sql`CREATE TYPE "game_version" AS ENUM ('FC26', 'FC27');`);
+      } catch (enumErr) {}
+
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS "builds" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL REFERENCES "users"("id"),
+          "gameVersion" "game_version" DEFAULT 'FC26' NOT NULL,
+          "name" TEXT NOT NULL,
+          "archetype" TEXT NOT NULL,
+          "level" INTEGER NOT NULL,
+          "buildData" TEXT,
+          "createdAt" TIMESTAMP DEFAULT now() NOT NULL
+        );
+      `);
       
-      console.log("Stripe columns verified!");
+      console.log("✅ Database tables and enums verified successfully!");
     }
   } catch (err) {
     console.log("Notice: Columns might already exist or skipped.");
@@ -193,19 +208,15 @@ async function startServer() {
       
       const page = await browser.newPage();
       
-      // 👉 UPDATED: 1080x1350 for Instagram/TikTok with deviceScaleFactor for high fidelity
       await page.setViewport({ width: 1080, height: 1350, deviceScaleFactor: 2 });
 
-      // 👉 UPDATED: Target URL now uses the custom domain
       const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
       const targetUrl = `https://clubsdna.co.uk/card-preview?${queryString}`;
       
       await page.goto(targetUrl, { waitUntil: "networkidle0" });
 
-      // 👉 WAIT for the AI math to finish and the poster to render (up to 60 seconds)
       await page.waitForSelector("#export-poster", { timeout: 60000 });
 
-      // 👉 Look for the new ExportPoster ID
       const cardElement = await page.$("#export-poster");
 
       if (!cardElement) {
@@ -213,7 +224,6 @@ async function startServer() {
         return res.status(404).json({ error: "Poster element not found on page" });
       }
 
-      // Output as PNG for better text crispness
       const imageBuffer = await cardElement.screenshot({ type: "png" });
       await browser.close();
 
