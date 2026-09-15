@@ -2,7 +2,9 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, ALL_ARCHETYPES } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
+// 👉 Import from BOTH engines
+import { runMathEngine as runMathEngine26, ScoutingBlueprint, resolveSignaturePlaystyles as resolveSignatures26 } from "../mathEngine";
+import { runMathEngine as runMathEngine27, resolveSignaturePlaystyles as resolveSignatures27 } from "../mathEngine27";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
@@ -60,7 +62,7 @@ export const scoutRouter = router({
 
   generateReport: publicProcedure
     .input(z.object({ 
-      playerIdentity: z.string().min(1).max(1000), // Increased max length for appended attributes
+      playerIdentity: z.string().min(1).max(1000), 
       forcedArchetype: z.string().optional(),
       customHeight: z.string().optional(),
       customWeight: z.string().optional(),
@@ -214,9 +216,10 @@ ${filterRules.join("\n")}
     .input(z.object({ 
       blueprint: BlueprintSchema, 
       apBudget: z.number().int().min(1).max(999999),
+      gameVersion: z.enum(["FC26", "FC27"]).default("FC26"), // 👉 ADDED: The Game Version switch
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
-      preferredAttributes: z.array(z.string()).optional() // 👉 ADDED: Accepts Focus Attributes
+      preferredAttributes: z.array(z.string()).optional() 
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
@@ -252,19 +255,30 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      // 👉 Passes the preferred attributes cleanly into the engine
-      const result = runMathEngine(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
+      // 👉 THE BRIDGE: Run the correct Math Engine based on the selected game version!
+      let result;
+      let resolvedSignatures;
 
-      const resolvedSignatures = resolveSignaturePlaystyles(
-        input.blueprint.archetype,
-        signatureUpgrades,
-        input.blueprint.specialisationPlaystylePlus
-      );
+      if (input.gameVersion === "FC27") {
+        result = runMathEngine27(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
+        resolvedSignatures = resolveSignatures27(
+          input.blueprint.archetype,
+          signatureUpgrades,
+          input.blueprint.specialisationPlaystylePlus
+        );
+      } else {
+        result = runMathEngine26(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
+        resolvedSignatures = resolveSignatures26(
+          input.blueprint.archetype,
+          signatureUpgrades,
+          input.blueprint.specialisationPlaystylePlus
+        );
+      }
 
       const standardPlaystyles = input.blueprint.playstyles
         .map(ps => ps.name)
         .filter(ps => {
-          return !resolvedSignatures.some(sig => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
+          return !resolvedSignatures.some((sig: string) => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
         })
         .slice(0, customSlots); 
       
