@@ -1,18 +1,20 @@
 import { pgTable, serial, varchar, text, timestamp, pgEnum, integer } from "drizzle-orm/pg-core";
 
 export const roleEnum = pgEnum("role", ["user", "admin"]);
-// 👉 Added "owner" and "vip" tiers to support your personal unlimited tier and capped paid tiers
-export const tierEnum = pgEnum("tier", ["free", "premium", "vip", "owner"]);
+// 👉 Updated to perfectly match your live database tiers
+export const tierEnum = pgEnum("tier", ["free", "premium", "premium_plus", "vip", "owner"]);
+
+// 👉 NEW: Enum to safely lock the game version
+export const gameVersionEnum = pgEnum("game_version", ["FC26", "FC27"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  avatar: text("avatar"), // 👉 NEW: Store the Discord profile picture URL
+  avatar: text("avatar"),
   loginMethod: varchar("loginMethod", { length: 64 }),
   
-  // 👉 NEW: Columns for Email OTP Login
   otpCode: text("otp_code"),
   otpExpires: timestamp("otp_expires"),
   
@@ -34,4 +36,16 @@ export const guestUsage = pgTable("guest_usage", {
   builds: integer("builds").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
+});
+
+// 👉 NEW: The Builds Table to save FC26 and FC27 builds separately
+export const builds = pgTable("builds", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id).notNull(),
+  gameVersion: gameVersionEnum("gameVersion").default("FC26").notNull(),
+  name: text("name").notNull(),
+  archetype: text("archetype").notNull(),
+  level: integer("level").notNull(),
+  buildData: text("buildData"), // We will store the JSON math result here
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
