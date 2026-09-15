@@ -567,6 +567,10 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
+  // 👉 NEW: FC26 / FC27 Toggle State & Secret Developer Lock
+  const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC26");
+  const [isDevUnlocked, setIsDevUnlocked] = useState(false);
+
   const [playerIdentity, setPlayerIdentity] = useState("");
   const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
   const [preferredAttributes, setPreferredAttributes] = useState<string[]>([]);
@@ -588,6 +592,15 @@ export default function Home() {
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
+
+  // 👉 NEW: Hidden Developer Unlock Logic
+  useEffect(() => {
+    if (playerIdentity.trim().toUpperCase() === "DEV27") {
+      setIsDevUnlocked(true);
+      setPlayerIdentity(""); // Clear the password so it looks clean
+      alert("🔓 Developer Mode Unlocked: FC27 Prototype Engine Live.");
+    }
+  }, [playerIdentity]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -673,6 +686,7 @@ export default function Home() {
     calcMutation.mutate({ 
       blueprint, 
       apBudget,
+      gameVersion, // Sends FC26 or FC27 to the backend
       signatureSlots: sigSlots,
       standardSlots: stdSlots,
       preferredAttributes: preferredAttributes 
@@ -708,7 +722,7 @@ export default function Home() {
         imagePlaceholder: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=" 
       });
       const link = document.createElement("a");
-      link.download = `${blueprint.archetype}-FC26-Build.png`;
+      link.download = `${blueprint.archetype}-Build.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -733,121 +747,172 @@ export default function Home() {
         <section className="mb-6">
           <PhaseIndicator phase={phase} />
 
-          <div
-            className="rounded-xl p-4 border"
-            style={{
-              background: "oklch(0.11 0.015 240)",
-              borderColor:
-                phase === 1
-                  ? "oklch(0.75 0.22 142 / 0.3)"
-                  : "oklch(0.20 0.02 240)",
-              boxShadow:
-                phase === 1
-                  ? "0 0 20px oklch(0.75 0.22 142 / 0.08)"
-                  : "none",
-            }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <div
-                  className="w-1 h-5 rounded-full"
-                  style={{ background: "oklch(0.75 0.22 142)" }}
-                />
-                <span className="section-label">Phase 1 — Scouting</span>
-              </div>
-              
-              {!user && !isUserLoading && (
-                <div className="text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 text-gray-400">
-                  Guest Builds: <span className="text-white">{Math.max(0, 2 - guestBuildCount)}</span> / 2
-                </div>
-              )}
-            </div>
-
-            <label
-              className="block text-sm font-medium mb-2"
-              style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Inter', sans-serif" }}
+          {/* 👉 NEW: FC26 / FC27 Toggle UI */}
+          <div className="flex bg-black/60 border border-white/10 p-1 rounded-xl mb-6">
+            <button
+              onClick={() => setGameVersion("FC26")}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
+                gameVersion === "FC26"
+                  ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                  : "text-gray-500 hover:text-white"
+              }`}
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
             >
-              Player Identity &amp; Position
-            </label>
-            <textarea
-              className="input-gaming resize-none mb-3"
-              rows={3}
-              placeholder="e.g. Explosive left winger with elite dribbling, pace, and creativity. Plays for a high-press team as LW/CAM."
-              value={playerIdentity}
-              onChange={(e) => setPlayerIdentity(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && e.metaKey) handleScout();
-              }}
-              disabled={scoutMutation.isPending}
-            />
+              FC 26 BUILDER
+            </button>
+            <button
+              onClick={() => setGameVersion("FC27")}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
+                gameVersion === "FC27"
+                  ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                  : "text-gray-500 hover:text-white"
+              }`}
+              style={{ fontFamily: "'Rajdhani', sans-serif" }}
+            >
+              FC 27 BUILDER
+            </button>
+          </div>
 
-            <div className="mb-2 relative">
-              <div className="flex justify-between items-center mb-1.5">
-                <label 
-                  className="block text-xs font-medium" 
-                  style={{ fontFamily: "'Rajdhani', sans-serif", color: canForceArchetype ? "oklch(0.75 0.01 240)" : "oklch(0.40 0.01 240)" }}
-                >
-                  Force Archetype <span className="text-gray-500">(Optional)</span>
-                </label>
-                {!canForceArchetype && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
-                    Premium+ Feature
+          {/* 👉 NEW: The Public Holding Screen & Developer Shield */}
+          {gameVersion === "FC27" && !isDevUnlocked ? (
+            <div className="rounded-xl border border-green-500/30 bg-green-950/20 p-8 text-center animate-fade-in shadow-2xl">
+              <div className="text-5xl mb-4">⚙️</div>
+              <h3 className="text-xl font-black text-white mb-2 uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                FC 27 Engine Prep
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed mb-0 font-sans">
+                The ClubsDNA AI is currently being re-calibrated for the new EA SPORTS FC 27 Masteries and Amps systems. 
+                Check back during Early Access!
+              </p>
+            </div>
+          ) : (
+            /* Phase 1 Scouting Block */
+            <div
+              className="rounded-xl p-4 border animate-fade-in"
+              style={{
+                background: "oklch(0.11 0.015 240)",
+                borderColor:
+                  phase === 1
+                    ? "oklch(0.75 0.22 142 / 0.3)"
+                    : "oklch(0.20 0.02 240)",
+                boxShadow:
+                  phase === 1
+                    ? "0 0 20px oklch(0.75 0.22 142 / 0.08)"
+                    : "none",
+              }}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-1 h-5 rounded-full"
+                    style={{ background: "oklch(0.75 0.22 142)" }}
+                  />
+                  <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.75 0.22 142)", fontFamily: "'Rajdhani', sans-serif" }}>
+                    Phase 1 — Scouting
                   </span>
+                </div>
+                
+                {!user && !isUserLoading && (
+                  <div className="text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 text-gray-400">
+                    Guest Builds: <span className="text-white">{Math.max(0, 2 - guestBuildCount)}</span> / 2
+                  </div>
                 )}
               </div>
 
-              {canForceArchetype ? (
-                <select
-                  value={forcedArchetype}
-                  onChange={(e) => setForcedArchetype(e.target.value)}
-                  className="input-gaming w-full text-white appearance-none bg-black/40 text-xs py-2 px-3 rounded-lg"
-                >
-                  <option value="">✨ Let AI Choose Best Match</option>
-                  {archetypesList && archetypesList.length > 0 ? (
-                    archetypesList.map((arch) => (
-                      <option key={arch} value={arch}>
-                        {arch}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="" disabled>Loading archetypes...</option>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Inter', sans-serif" }}
+              >
+                Player Identity &amp; Position
+              </label>
+              <textarea
+                className="w-full bg-black/40 border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors resize-none mb-3"
+                rows={3}
+                placeholder="e.g. Explosive left winger with elite dribbling, pace, and creativity..."
+                value={playerIdentity}
+                onChange={(e) => setPlayerIdentity(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && e.metaKey) handleScout();
+                }}
+                disabled={scoutMutation.isPending}
+              />
+
+              <div className="mb-2 relative">
+                <div className="flex justify-between items-center mb-1.5">
+                  <label 
+                    className="block text-xs font-medium" 
+                    style={{ fontFamily: "'Rajdhani', sans-serif", color: canForceArchetype ? "oklch(0.75 0.01 240)" : "oklch(0.40 0.01 240)" }}
+                  >
+                    Force Archetype <span className="text-gray-500">(Optional)</span>
+                  </label>
+                  {!canForceArchetype && (
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/20">
+                      Premium+ Feature
+                    </span>
                   )}
-                </select>
-              ) : (
-                <div 
-                  onClick={() => setShowPricingModal(true)}
-                  className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
-                >
-                  <span>✨ Let AI Choose Best Match (Premium+ Required)</span>
-                  <span className="text-yellow-500/70"><LockIcon /></span>
                 </div>
-              )}
+
+                {canForceArchetype ? (
+                  <select
+                    value={forcedArchetype}
+                    onChange={(e) => setForcedArchetype(e.target.value)}
+                    className="w-full text-white appearance-none bg-black/40 border border-white/10 focus:border-green-500 text-xs py-2 px-3 rounded-lg transition-colors outline-none"
+                  >
+                    <option value="">✨ Let AI Choose Best Match</option>
+                    {archetypesList && archetypesList.length > 0 ? (
+                      archetypesList.map((arch) => (
+                        <option key={arch} value={arch}>
+                          {arch}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="" disabled>Loading archetypes...</option>
+                    )}
+                  </select>
+                ) : (
+                  <div 
+                    onClick={() => setShowPricingModal(true)}
+                    className="w-full text-gray-500 bg-black/40 border border-white/5 text-xs py-2 px-3 rounded-lg cursor-pointer flex items-center justify-between hover:bg-white/5 hover:border-white/10 transition-colors"
+                  >
+                    <span>✨ Let AI Choose Best Match (Premium+ Required)</span>
+                    <span className="text-yellow-500/70">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <PreferredAttributes 
+                userTier={userTier}
+                selectedAttributes={preferredAttributes}
+                onChange={setPreferredAttributes}
+                onUpgradeClick={() => setShowPricingModal(true)}
+              />
+
+              <button
+                className="w-full py-3 rounded-lg text-sm mt-5 font-bold tracking-widest uppercase transition-all duration-200"
+                onClick={handleScout}
+                disabled={scoutMutation.isPending || !playerIdentity.trim()}
+                style={{
+                  fontFamily: "'Rajdhani', sans-serif",
+                  background: scoutMutation.isPending || !playerIdentity.trim() ? "oklch(0.20 0.02 240)" : "oklch(0.75 0.22 142)",
+                  color: scoutMutation.isPending || !playerIdentity.trim() ? "oklch(0.45 0.01 240)" : "oklch(0.08 0.01 240)",
+                  boxShadow: scoutMutation.isPending || !playerIdentity.trim() ? "none" : "0 0 20px oklch(0.75 0.22 142 / 0.3)",
+                }}
+              >
+                {scoutMutation.isPending ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
+                    </svg>
+                    Analysing...
+                  </span>
+                ) : (
+                  "Generate Scouting Report"
+                )}
+              </button>
             </div>
-
-            <PreferredAttributes 
-              userTier={userTier}
-              selectedAttributes={preferredAttributes}
-              onChange={setPreferredAttributes}
-              onUpgradeClick={() => setShowPricingModal(true)}
-            />
-
-            <button
-              className="btn-neon w-full py-3 rounded-lg text-sm mt-5"
-              onClick={handleScout}
-              disabled={scoutMutation.isPending || !playerIdentity.trim()}
-            >
-              {scoutMutation.isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="30 70" />
-                  </svg>
-                  Analysing...
-                </span>
-              ) : (
-                "Generate Scouting Report"
-              )}
-            </button>
-          </div>
+          )}
         </section>
 
         {scoutMutation.isPending && (
@@ -932,7 +997,7 @@ export default function Home() {
                   <select 
                     value={level} 
                     onChange={(e) => setLevel(Number(e.target.value))}
-                    className="input-gaming w-full mb-4 text-white appearance-none bg-black/40"
+                    className="w-full bg-black/40 border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors mb-4 appearance-none"
                   >
                     {Object.keys(progressionData).map((lvl) => (
                       <option key={lvl} value={lvl}>
