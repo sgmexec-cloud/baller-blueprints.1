@@ -11,6 +11,23 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   "Weak Foot": ["WeakFoot"],
 };
 
+// 👉 NEW FC 27 FEATURE: Global Masteries Dictionary
+export const MASTERIES_MAP: Record<string, string[]> = {
+  "Shot Stopper": ["GKPositioning", "GKReflexes"],
+  "Sweeper Keeper": ["GKHandling", "GKDiving"],
+  "Progressor": ["LongPassing", "StandingTackle"],
+  "Boss": ["Aggression", "Strength"],
+  "Marauder": ["SlidingTackle", "SprintSpeed"],
+  "Disruptor": ["Stamina", "Interceptions"],
+  "Recycler": ["DefAwareness", "ShortPassing"],
+  "Maestro": ["Reactions", "BallControl"],
+  "Creator": ["FKAccuracy", "Vision"],
+  "Spark": ["Crossing", "Dribbling"],
+  "Magician": ["Curve", "Acceleration"],
+  "Finisher": ["Composure", "Finishing"],
+  "Target": ["Balance", "Jumping"],
+};
+
 export interface StatResult {
   attribute: string;
   base: number;
@@ -57,7 +74,8 @@ export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
   customSlots: number = 0,
-  preferredAttributes: string[] = [] // 👉 ADDED: Focus Attributes Array
+  preferredAttributes: string[] = [], 
+  unlockedMasteries: string[] = [] // 👉 ADDED: FC27 Masteries Array
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
@@ -73,9 +91,26 @@ export function runMathEngine(
     attrNames.push(attr);
   }
 
+  // 👉 NEW: Apply Masteries Boosts BEFORE spending any AP!
+  for (const mastery of unlockedMasteries) {
+    const masteryKey = Object.keys(MASTERIES_MAP).find(k => k.toLowerCase() === mastery.toLowerCase());
+    if (masteryKey) {
+      const boosts = MASTERIES_MAP[masteryKey];
+      for (const boostAttr of boosts) {
+        const matched = matchAttr(boostAttr, attrNames);
+        if (matched && stats[matched]) {
+          // Permanently boost the base stat by +1 if it hasn't hit the absolute ceiling yet
+          if (stats[matched].base < stats[matched].max) {
+            stats[matched].base += 1;
+            stats[matched].current += 1;
+          }
+        }
+      }
+    }
+  }
+
   let remainingAP = apBudget;
 
-  // 👉 HELPER: Removes caps for preferred Focus Attributes so they can hit 99
   function getHardCap(attrName: string, defaultCap: number): number {
     const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
     return isPreferred ? 99 : defaultCap;
@@ -114,8 +149,7 @@ export function runMathEngine(
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
 
-  // 👉 1.5 NEW: Focus Attributes VIP Pass
-  // Dedicate up to 25% of post-tax AP exclusively to driving up the user's selected stats
+  // 1.5 Focus Attributes VIP Pass
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
     let focusSpent = 0;
@@ -158,7 +192,6 @@ export function runMathEngine(
         .map(a => matchAttr(a, attrNames))
         .filter(m => {
           if (!m) return false;
-          // Apply Limit Breaker cap if it's a focus attribute
           const dynamicCap = getHardCap(m, baseHardCap);
           return stats[m].current < Math.min(dynamicCap, stats[m].max);
         })
@@ -190,7 +223,7 @@ export function runMathEngine(
     progress = false;
     
     const bonusCandidates = [
-      ...preferredAttributes.map(a => ({ attr: a, cap: 99 })), // Prioritize Focus Attributes again
+      ...preferredAttributes.map(a => ({ attr: a, cap: 99 })), 
       ...blueprint.coreAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) })),
       ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 95) })),
       ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 90) }))
@@ -215,7 +248,7 @@ export function runMathEngine(
     }
   }
 
-  // 4. Hero Spillover Pass (Forces 99-100% Efficiency)
+  // 4. Hero Spillover Pass
   let spilloverProgress = true;
   while (spilloverProgress && remainingAP > 0) {
     spilloverProgress = false;
@@ -223,7 +256,6 @@ export function runMathEngine(
     const spilloverOptions = attrNames
       .map(attr => {
         const s = stats[attr];
-        // We cap spillover stats at 83 so they don't overtake the player's core identity stats
         const dynamicCap = getHardCap(attr, 83);
         if (s.current >= dynamicCap || s.current >= s.max) return null; 
         return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current), cap: dynamicCap };
