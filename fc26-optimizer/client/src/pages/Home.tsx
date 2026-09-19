@@ -24,6 +24,12 @@ const ALL_ATTRIBUTES = [
   "Strength", "Aggression"
 ];
 
+// 👉 NEW: FC27 Masteries List for the UI
+const FC27_MASTERIES = [
+  "Shot Stopper", "Sweeper Keeper", "Progressor", "Boss", "Marauder", "Disruptor", 
+  "Recycler", "Maestro", "Creator", "Spark", "Magician", "Finisher", "Target"
+];
+
 type Tier = "free" | "premium" | "premium_plus" | "vip" | "owner";
 
 // ── Email OTP Login Component ────────────────────────────────────────────────
@@ -567,9 +573,11 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
 
 // ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
-  // 👉 NEW: FC26 / FC27 Toggle State & Secret Developer Lock
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC26");
   const [isDevUnlocked, setIsDevUnlocked] = useState(false);
+
+  // 👉 NEW: State to track which masteries the user has checked
+  const [unlockedMasteries, setUnlockedMasteries] = useState<string[]>([]);
 
   const [playerIdentity, setPlayerIdentity] = useState("");
   const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
@@ -593,11 +601,10 @@ export default function Home() {
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
-  // 👉 NEW: Hidden Developer Unlock Logic
   useEffect(() => {
     if (playerIdentity.trim().toUpperCase() === "DEV27") {
       setIsDevUnlocked(true);
-      setPlayerIdentity(""); // Clear the password so it looks clean
+      setPlayerIdentity(""); 
       alert("🔓 Developer Mode Unlocked: FC27 Prototype Engine Live.");
     }
   }, [playerIdentity]);
@@ -608,6 +615,13 @@ export default function Home() {
       setGuestBuildCount(storedCount);
     }
   }, [user, isUserLoading]);
+
+  // 👉 NEW: Handle checking/unchecking a mastery
+  const handleMasteryToggle = (mastery: string) => {
+    setUnlockedMasteries((prev) => 
+      prev.includes(mastery) ? prev.filter(m => m !== mastery) : [...prev, mastery]
+    );
+  };
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
@@ -686,10 +700,11 @@ export default function Home() {
     calcMutation.mutate({ 
       blueprint, 
       apBudget,
-      gameVersion, // Sends FC26 or FC27 to the backend
+      gameVersion, // Sends FC26 or FC27
       signatureSlots: sigSlots,
       standardSlots: stdSlots,
-      preferredAttributes: preferredAttributes 
+      preferredAttributes: preferredAttributes,
+      unlockedMasteries: gameVersion === "FC27" ? unlockedMasteries : undefined // 👉 Pass Masteries!
     } as any); 
   };
 
@@ -700,6 +715,7 @@ export default function Home() {
     setPlayerIdentity("");
     setForcedArchetype("");
     setPreferredAttributes([]);
+    setUnlockedMasteries([]); // Reset masteries on new build
     setLevel(1);
   };
 
@@ -747,7 +763,6 @@ export default function Home() {
         <section className="mb-6">
           <PhaseIndicator phase={phase} />
 
-          {/* 👉 NEW: FC26 / FC27 Toggle UI */}
           <div className="flex bg-black/60 border border-white/10 p-1 rounded-xl mb-6">
             <button
               onClick={() => setGameVersion("FC26")}
@@ -773,7 +788,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* 👉 NEW: The Public Holding Screen & Developer Shield */}
           {gameVersion === "FC27" && !isDevUnlocked ? (
             <div className="rounded-xl border border-green-500/30 bg-green-950/20 p-8 text-center animate-fade-in shadow-2xl">
               <div className="text-5xl mb-4">⚙️</div>
@@ -786,7 +800,6 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            /* Phase 1 Scouting Block */
             <div
               className="rounded-xl p-4 border animate-fade-in"
               style={{
@@ -876,7 +889,7 @@ export default function Home() {
                   >
                     <span>✨ Let AI Choose Best Match (Premium+ Required)</span>
                     <span className="text-yellow-500/70">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <LockIcon />
                     </span>
                   </div>
                 )}
@@ -888,6 +901,33 @@ export default function Home() {
                 onChange={setPreferredAttributes}
                 onUpgradeClick={() => setShowPricingModal(true)}
               />
+
+              {/* 👉 NEW: FC27 DEV UI - Masteries Checklist */}
+              {gameVersion === "FC27" && isDevUnlocked && (
+                <div className="w-full mt-4 p-4 bg-green-950/20 rounded-xl border border-green-500/30">
+                  <div className="mb-3">
+                    <h3 className="text-[13px] font-bold text-green-400 mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                      🛠️ DEV: Unlocked Masteries
+                    </h3>
+                    <p className="text-[10px] text-gray-400">
+                      Select maxed archetypes to apply their global +1 stat boosts.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+                    {FC27_MASTERIES.map(mastery => (
+                      <label key={mastery} className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-gray-300 cursor-pointer hover:text-white transition-colors uppercase">
+                        <input 
+                          type="checkbox" 
+                          className="w-3.5 h-3.5 rounded border-white/20 bg-black/50 text-green-500 focus:ring-green-500/50 focus:ring-offset-0"
+                          checked={unlockedMasteries.includes(mastery)}
+                          onChange={() => handleMasteryToggle(mastery)}
+                        />
+                        {mastery}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <button
                 className="w-full py-3 rounded-lg text-sm mt-5 font-bold tracking-widest uppercase transition-all duration-200"
