@@ -2,7 +2,6 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, ALL_ARCHETYPES } from "../csvLoader";
-// 👉 Import from BOTH engines
 import { runMathEngine as runMathEngine26, ScoutingBlueprint, resolveSignaturePlaystyles as resolveSignatures26 } from "../mathEngine";
 import { runMathEngine as runMathEngine27, resolveSignaturePlaystyles as resolveSignatures27 } from "../mathEngine27";
 import { TRPCError } from "@trpc/server";
@@ -186,7 +185,7 @@ ${filterRules.join("\n")}
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
 
       let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
-      cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+      cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/最新$/, "").replace(/```$/, "").trim();
 
       const parsed = JSON.parse(cleanedJson);
 
@@ -216,10 +215,11 @@ ${filterRules.join("\n")}
     .input(z.object({ 
       blueprint: BlueprintSchema, 
       apBudget: z.number().int().min(1).max(999999),
-      gameVersion: z.enum(["FC26", "FC27"]).default("FC26"), // 👉 ADDED: The Game Version switch
+      gameVersion: z.enum(["FC26", "FC27"]).default("FC26"),
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
-      preferredAttributes: z.array(z.string()).optional() 
+      preferredAttributes: z.array(z.string()).optional(),
+      unlockedMasteries: z.array(z.string()).optional() // 👉 ADDED: Receives masteries from frontend
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
@@ -255,12 +255,12 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      // 👉 THE BRIDGE: Run the correct Math Engine based on the selected game version!
       let result;
       let resolvedSignatures;
 
       if (input.gameVersion === "FC27") {
-        result = runMathEngine27(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
+        // 👉 PASS THE MASTERIES ARRAY INTO mathEngine27!
+        result = runMathEngine27(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || [], input.unlockedMasteries || []);
         resolvedSignatures = resolveSignatures27(
           input.blueprint.archetype,
           signatureUpgrades,
