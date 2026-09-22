@@ -1,0 +1,27 @@
+Playstyle,Description,PlaystylePlus_Name,Req_Attr1,Req_Val1,Req_Attr2,Req_Val2,Req_Attr3,Req_Val3
+Finesse Shot,"Performs Finesse Shots with slightly more curve and accuracy.",Finesse Shot+,Vision,80,Finishing,75,Curve,80
+Chip Shot,"Performs Chip Shots faster and with slightly better accuracy.",Chip Shot+,Reactions,75,Composure,80,Ball Control,80
+Power Shot,"Performs Power Shots faster and with slightly increased speed.",Power Shot+,Finishing,80,Shot Power,75,Long Shots,80
+Dead Ball,"Set pieces are delivered with slightly increased speed, curve, and accuracy. Ball trajectory preview line is longer.",Dead Ball+,Crossing,80,FK Accuracy,75,Shot Power,80
+Precision Header,"Performs headers with slightly increased power, accuracy and has access to unique Precision Header animations.",Precision Header+,Jumping,80,Aggression,80,Heading Accuracy,75
+Acrobatic,"Performs volleys with slightly increased accuracy and has access to Acrobatic volley animations.",Acrobatic+,Agility,80,Reactions,80,Volleys,75
+Low Driven Shot,"Performs Low Driven Shots with increased accuracy and quicker shot execution.",Low Driven Shot+,Composure,80,Finishing,75,Shot Power,80
+Inventive,"Performs Lofted and Fancy passes with improved accuracy and access to outside-of-the-foot passes and contextual Inventive passes.",Inventive+,Composure,80,Long Passing,75,Curve,80
+Whipped Pass,"Crosses travel faster and with more curve and accuracy.",Whipped Pass+,Crossing,80,Long Passing,75,,,
+Tiki Taka,"Executes difficult first-time Ground Passes with slightly increased accuracy. Short distance Ground Passes are slightly more accurate.",Tiki Taka+,Reactions,80,Ball Control,80,Short Passing,75
+Long Ball Pass,"Performs Lob and Lofted Through Passes with slightly increased accuracy and speed, making them more difficult to intercept.",Long Ball Pass+,Vision,85,Long Passing,80,,,
+Pinged Pass,"Performs Ground Passes with increased speed and Driven Passes with improved accuracy.",Pinged Pass+,Long Passing,75,Short Passing,80,,,
+Incisive Pass,"Performs Through Passes with slightly increased accuracy, Swerve Passes with added curve, and Precision Passes that travel faster.",Incisive Pass+,Vision,75,Long Passing,80,Curve,80
+Jockey,"Increased max speed of Sprint Jockey and improved transition speed from jockey to sprint.",Jockey+,Agility,80,Defensive Awareness,80,Standing Tackle,80
+Block,"Increased reach when performing blocks and improved ability to make a successful block.",Block+,Agility,80,Strength,75,Reactions,80
+Anticipate,"Increases the chances of standing tackle success and grants the ability to stop the ball directly at the player's feet when performing a tackle.",Anticipate+,Balance,80,Defensive Awareness,75,Standing Tackle,80
+Slide Tackle,"Grants the ability to stop the ball directly at their feet when performing a slide tackle.",Slide Tackle+,Aggression,75,Sliding Tackle,75,,,
+Aerial Fortress,"Performs higher jumps and has improved defensive aerial presence.",Aerial Fortress+,Jumping,75,Heading Accuracy,75,,,
+Press Proven,"Keeps close control of the ball while dribbling at jog speed and can shield the ball more effectively from stronger opponents.",Press Proven+,Strength,80,Composure,80,Ball Control,80
+Trickster,"Grants the ability to perform unique ground and flick Skill Moves.",Trickster+,Acceleration,80,Agility,75,Dribbling,80
+First Touch,"Has reduced error when trapping the ball and is able to transition to dribbling faster with greater control.",First Touch+,Composure,75,Ball Control,75,,,
+Rapid,"Reaches a higher sprint speed while dribbling and has reduced chance of an error when sprinting or performing knock-ons.",Rapid+,Acceleration,75,Sprint Speed,80,Dribbling,80
+Quick Step,"Accelerates faster during Explosive Sprint.",Quick Step+,Acceleration,75,Sprint Speed,80,Stamina,80
+Long Throw,"Performs throw-ins with increased power to cover a greater distance.",Long Throw+,Strength,75,Vision,75,,,
+Bruiser,"Greater strength when performing physical tackles.",Bruiser+,Strength,75,Aggression,80,Defensive Awareness,80
+Enforcer,"Greater strength when performing shield dribbles.",Enforcer+,Balance,80,Strength,75,Ball Control,80
