@@ -1,0 +1,320 @@
+Archetype,Attribute,Base Value,Max Value
+Boss,Acceleration,70,90
+Boss,Sprint Speed,70,90
+Boss,Attack Positioning,75,90
+Boss,Finishing,45,82
+Boss,Shot Power,70,96
+Boss,Long Shots,60,85
+Boss,Volleys,60,80
+Boss,Penalties,65,92
+Boss,Vision,55,90
+Boss,Crossing,45,90
+Boss,FK Accuracy,50,90
+Boss,Short Passing,65,92
+Boss,Long Passing,65,90
+Boss,Curve,50,75
+Boss,Agility,65,90
+Boss,Balance,75,90
+Boss,Reactions,75,99
+Boss,Ball Control,65,92
+Boss,Dribbling,60,88
+Boss,Composure,65,92
+Boss,Interceptions,75,96
+Boss,Heading Accuracy,75,99
+Boss,Defensive Awareness,75,96
+Boss,Standing Tackle,75,96
+Boss,Sliding Tackle,75,99
+Boss,Jumping,75,99
+Boss,Stamina,70,92
+Boss,Strength,75,99
+Boss,Aggression,75,99
+Progressor,Acceleration,70,92
+Progressor,Sprint Speed,72,92
+Progressor,Attack Positioning,70,90
+Progressor,Finishing,50,85
+Progressor,Shot Power,65,92
+Progressor,Long Shots,50,85
+Progressor,Volleys,50,75
+Progressor,Penalties,65,92
+Progressor,Vision,75,92
+Progressor,Crossing,50,92
+Progressor,FK Accuracy,45,90
+Progressor,Short Passing,75,96
+Progressor,Long Passing,75,96
+Progressor,Curve,50,85
+Progressor,Agility,70,92
+Progressor,Balance,70,92
+Progressor,Reactions,65,99
+Progressor,Ball Control,70,96
+Progressor,Dribbling,65,92
+Progressor,Composure,75,96
+Progressor,Interceptions,75,96
+Progressor,Heading Accuracy,75,96
+Progressor,Defensive Awareness,75,99
+Progressor,Standing Tackle,75,99
+Progressor,Sliding Tackle,75,96
+Progressor,Jumping,75,99
+Progressor,Stamina,65,92
+Progressor,Strength,70,96
+Progressor,Aggression,65,96
+Marauder,Acceleration,90,95
+Marauder,Sprint Speed,90,95
+Marauder,Attack Positioning,65,92
+Marauder,Finishing,55,90
+Marauder,Shot Power,65,92
+Marauder,Long Shots,60,90
+Marauder,Volleys,60,90
+Marauder,Penalties,65,96
+Marauder,Vision,60,92
+Marauder,Crossing,85,99
+Marauder,FK Accuracy,60,95
+Marauder,Short Passing,85,92
+Marauder,Long Passing,85,92
+Marauder,Curve,75,96
+Marauder,Agility,70,95
+Marauder,Balance,65,92
+Marauder,Reactions,70,99
+Marauder,Ball Control,70,96
+Marauder,Dribbling,70,92
+Marauder,Composure,65,92
+Marauder,Interceptions,70,96
+Marauder,Heading Accuracy,65,90
+Marauder,Defensive Awareness,70,96
+Marauder,Standing Tackle,70,96
+Marauder,Sliding Tackle,75,96
+Marauder,Jumping,60,92
+Marauder,Stamina,85,96
+Marauder,Strength,60,92
+Marauder,Aggression,72,96
+Maestro,Acceleration,70,90
+Maestro,Sprint Speed,65,90
+Maestro,Attack Positioning,80,96
+Maestro,Finishing,65,96
+Maestro,Shot Power,70,96
+Maestro,Long Shots,70,96
+Maestro,Volleys,65,96
+Maestro,Penalties,70,99
+Maestro,Vision,75,99
+Maestro,Crossing,75,92
+Maestro,FK Accuracy,75,99
+Maestro,Short Passing,75,96
+Maestro,Long Passing,75,99
+Maestro,Curve,70,96
+Maestro,Agility,72,99
+Maestro,Balance,70,96
+Maestro,Reactions,65,99
+Maestro,Ball Control,75,99
+Maestro,Dribbling,65,96
+Maestro,Composure,72,99
+Maestro,Interceptions,55,92
+Maestro,Heading Accuracy,50,85
+Maestro,Defensive Awareness,50,90
+Maestro,Standing Tackle,72,90
+Maestro,Sliding Tackle,50,90
+Maestro,Jumping,60,90
+Maestro,Stamina,65,92
+Maestro,Strength,60,92
+Maestro,Aggression,65,92
+Creator,Acceleration,70,92
+Creator,Sprint Speed,65,92
+Creator,Attack Positioning,80,99
+Creator,Finishing,65,96
+Creator,Shot Power,72,96
+Creator,Long Shots,72,99
+Creator,Volleys,72,96
+Creator,Penalties,75,99
+Creator,Vision,75,99
+Creator,Crossing,75,96
+Creator,FK Accuracy,75,99
+Creator,Short Passing,75,96
+Creator,Long Passing,75,96
+Creator,Curve,75,99
+Creator,Agility,72,99
+Creator,Balance,65,96
+Creator,Reactions,75,99
+Creator,Ball Control,75,99
+Creator,Dribbling,75,96
+Creator,Composure,72,96
+Creator,Interceptions,55,85
+Creator,Heading Accuracy,50,85
+Creator,Defensive Awareness,50,85
+Creator,Standing Tackle,65,90
+Creator,Sliding Tackle,50,90
+Creator,Jumping,60,90
+Creator,Stamina,65,92
+Creator,Strength,55,92
+Creator,Aggression,55,92
+Recycler,Acceleration,70,90
+Recycler,Sprint Speed,70,90
+Recycler,Attack Positioning,70,90
+Recycler,Finishing,55,90
+Recycler,Shot Power,70,96
+Recycler,Long Shots,65,96
+Recycler,Volleys,65,90
+Recycler,Penalties,65,92
+Recycler,Vision,75,96
+Recycler,Crossing,65,92
+Recycler,FK Accuracy,50,99
+Recycler,Short Passing,70,96
+Recycler,Long Passing,75,96
+Recycler,Curve,50,90
+Recycler,Agility,68,92
+Recycler,Balance,75,92
+Recycler,Reactions,65,99
+Recycler,Ball Control,65,96
+Recycler,Dribbling,65,92
+Recycler,Composure,72,99
+Recycler,Interceptions,75,99
+Recycler,Heading Accuracy,60,90
+Recycler,Defensive Awareness,75,99
+Recycler,Standing Tackle,75,96
+Recycler,Sliding Tackle,75,92
+Recycler,Jumping,65,90
+Recycler,Stamina,72,96
+Recycler,Strength,72,96
+Recycler,Aggression,75,96
+Disruptor,Acceleration,85,92
+Disruptor,Sprint Speed,85,92
+Disruptor,Attack Positioning,70,90
+Disruptor,Finishing,50,90
+Disruptor,Shot Power,70,92
+Disruptor,Long Shots,65,85
+Disruptor,Volleys,65,90
+Disruptor,Penalties,65,92
+Disruptor,Vision,90,90
+Disruptor,Crossing,65,96
+Disruptor,FK Accuracy,50,95
+Disruptor,Short Passing,90,96
+Disruptor,Long Passing,90,92
+Disruptor,Curve,65,90
+Disruptor,Agility,68,92
+Disruptor,Balance,75,96
+Disruptor,Reactions,70,99
+Disruptor,Ball Control,70,96
+Disruptor,Dribbling,65,92
+Disruptor,Composure,70,92
+Disruptor,Interceptions,75,92
+Disruptor,Heading Accuracy,65,90
+Disruptor,Defensive Awareness,70,92
+Disruptor,Standing Tackle,70,92
+Disruptor,Sliding Tackle,75,92
+Disruptor,Jumping,70,90
+Disruptor,Stamina,75,99
+Disruptor,Strength,75,96
+Disruptor,Aggression,70,96
+Magician,Acceleration,75,95
+Magician,Sprint Speed,70,95
+Magician,Attack Positioning,80,96
+Magician,Finishing,75,99
+Magician,Shot Power,70,92
+Magician,Long Shots,65,96
+Magician,Volleys,75,96
+Magician,Penalties,75,99
+Magician,Vision,75,96
+Magician,Crossing,65,92
+Magician,FK Accuracy,65,99
+Magician,Short Passing,75,96
+Magician,Long Passing,50,92
+Magician,Curve,75,99
+Magician,Agility,75,99
+Magician,Balance,75,99
+Magician,Reactions,75,99
+Magician,Ball Control,75,96
+Magician,Dribbling,75,96
+Magician,Composure,72,96
+Magician,Interceptions,50,82
+Magician,Heading Accuracy,65,85
+Magician,Defensive Awareness,45,82
+Magician,Standing Tackle,40,75
+Magician,Sliding Tackle,40,75
+Magician,Jumping,60,85
+Magician,Stamina,72,92
+Magician,Strength,65,90
+Magician,Aggression,55,92
+Finisher,Acceleration,75,95
+Finisher,Sprint Speed,70,95
+Finisher,Attack Positioning,80,99
+Finisher,Finishing,75,99
+Finisher,Shot Power,75,99
+Finisher,Long Shots,60,96
+Finisher,Volleys,75,99
+Finisher,Penalties,75,99
+Finisher,Vision,65,92
+Finisher,Crossing,55,92
+Finisher,FK Accuracy,65,99
+Finisher,Short Passing,70,92
+Finisher,Long Passing,50,92
+Finisher,Curve,70,96
+Finisher,Agility,72,99
+Finisher,Balance,75,96
+Finisher,Reactions,75,99
+Finisher,Ball Control,70,96
+Finisher,Dribbling,70,96
+Finisher,Composure,75,99
+Finisher,Interceptions,50,85
+Finisher,Heading Accuracy,75,96
+Finisher,Defensive Awareness,55,85
+Finisher,Standing Tackle,50,75
+Finisher,Sliding Tackle,40,75
+Finisher,Jumping,60,92
+Finisher,Stamina,65,92
+Finisher,Strength,65,92
+Finisher,Aggression,65,96
+Spark,Acceleration,75,99
+Spark,Sprint Speed,75,95
+Spark,Attack Positioning,80,96
+Spark,Finishing,65,96
+Spark,Shot Power,65,92
+Spark,Long Shots,65,92
+Spark,Volleys,72,96
+Spark,Penalties,75,99
+Spark,Vision,75,96
+Spark,Crossing,75,99
+Spark,FK Accuracy,65,99
+Spark,Short Passing,75,96
+Spark,Long Passing,50,92
+Spark,Curve,75,96
+Spark,Agility,75,99
+Spark,Balance,75,96
+Spark,Reactions,75,99
+Spark,Ball Control,75,96
+Spark,Dribbling,75,99
+Spark,Composure,72,96
+Spark,Interceptions,55,85
+Spark,Heading Accuracy,50,85
+Spark,Defensive Awareness,50,85
+Spark,Standing Tackle,55,80
+Spark,Sliding Tackle,45,75
+Spark,Jumping,55,85
+Spark,Stamina,65,92
+Spark,Strength,65,90
+Spark,Aggression,50,92
+Target,Acceleration,70,90
+Target,Sprint Speed,65,92
+Target,Attack Positioning,80,96
+Target,Finishing,72,96
+Target,Shot Power,75,99
+Target,Long Shots,65,96
+Target,Volleys,72,96
+Target,Penalties,75,99
+Target,Vision,65,92
+Target,Crossing,50,90
+Target,FK Accuracy,65,99
+Target,Short Passing,75,96
+Target,Long Passing,50,92
+Target,Curve,55,90
+Target,Agility,70,92
+Target,Balance,75,92
+Target,Reactions,75,99
+Target,Ball Control,70,92
+Target,Dribbling,70,92
+Target,Composure,72,96
+Target,Interceptions,50,82
+Target,Heading Accuracy,75,99
+Target,Defensive Awareness,50,82
+Target,Standing Tackle,45,75
+Target,Sliding Tackle,40,75
+Target,Jumping,75,96
+Target,Stamina,60,92
+Target,Strength,75,99
+Target,Aggression,65,92
