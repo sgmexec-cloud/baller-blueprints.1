@@ -25,3 +25,7 @@ Quick Step,"Accelerates faster during Explosive Sprint.",Quick Step+,Acceleratio
 Long Throw,"Performs throw-ins with increased power to cover a greater distance.",Long Throw+,Strength,75,Vision,75,,,
 Bruiser,"Greater strength when performing physical tackles.",Bruiser+,Strength,75,Aggression,80,Defensive Awareness,80
 Enforcer,"Greater strength when performing shield dribbles.",Enforcer+,Balance,80,Strength,75,Ball Control,80
+Technical,"Reaches a higher speed when performing Controlled Sprint and performs wide turns while dribbling with more precision.",Technical+,Balance,80,Ball Control,75,Dribbling,80
+Intercept,"Increased reach and improved chances of retaining possession of the ball when performing interceptions.",Intercept+,Aggression,80,Interceptions,80,,,
+Relentless,"Increases stamina regeneration speed. Increases the duration of teammate contain and partial team press.",Relentless+,Agility,80,Stamina,80,,,
+Gamechanger,"Fancy shots are performed with slightly increased accuracy, with access to Trivela shots and Gamechanger animations.",Gamechanger+,Composure,80,Finishing,75,Curve,80
