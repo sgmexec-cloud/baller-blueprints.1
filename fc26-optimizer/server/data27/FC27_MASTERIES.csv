@@ -1,0 +1,40 @@
+Archetype,Level,Attribute,Bonus
+Marauder,10,Slide Tackle,1
+Marauder,10,Sprint Speed,1
+Marauder,30,Sprint Speed,1
+Shot Stopper,10,GK Positioning,1
+Shot Stopper,10,GK Reflexes,1
+Shot Stopper,30,GK Reflexes,1
+Sweeper Keeper,10,GK Handling,1
+Sweeper Keeper,10,GK Diving,1
+Sweeper Keeper,30,GK Diving,1
+Progressor,10,Long Pass,1
+Progressor,10,Stand Tackle,1
+Progressor,30,Stand Tackle,1
+Boss,10,Aggression,1
+Boss,10,Strength,1
+Boss,30,Strength,1
+Disruptor,10,Stamina,1
+Disruptor,10,Interceptions,1
+Disruptor,30,Interceptions,1
+Recycler,10,Def. Aware,1
+Recycler,10,Short Pass,1
+Recycler,30,Short Pass,1
+Maestro,10,Reactions,1
+Maestro,10,Ball Control,1
+Maestro,30,Ball Control,1
+Creator,10,FK Acc.,1
+Creator,10,Vision,1
+Creator,30,Vision,1
+Spark,10,Crossing,1
+Spark,10,Dribbling,1
+Spark,30,Dribbling,1
+Magician,10,Curve,1
+Magician,10,Acceleration,1
+Magician,30,Acceleration,1
+Finisher,10,Composure,1
+Finisher,10,Finishing,1
+Finisher,30,Finishing,1
+Target,10,Balance,1
+Target,10,Jumping,1
+Target,30,Jumping,1
