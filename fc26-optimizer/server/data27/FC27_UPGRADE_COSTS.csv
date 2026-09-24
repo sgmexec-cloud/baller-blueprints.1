@@ -1,0 +1,3072 @@
+Archetype,Attribute,Level,Cost
+Progressor,Agility,71,6
+Progressor,Agility,72,6
+Progressor,Agility,73,6
+Progressor,Agility,74,6
+Progressor,Agility,75,8
+Progressor,Agility,76,8
+Progressor,Agility,77,8
+Progressor,Agility,78,8
+Progressor,Agility,79,8
+Progressor,Agility,80,10
+Progressor,Agility,81,10
+Progressor,Agility,82,10
+Progressor,Agility,83,10
+Progressor,Agility,84,10
+Progressor,Agility,85,15
+Progressor,Agility,86,15
+Progressor,Agility,87,15
+Progressor,Agility,88,15
+Progressor,Agility,89,15
+Progressor,Agility,90,20
+Progressor,Agility,91,20
+Progressor,Agility,92,20
+Progressor,Balance,71,4
+Progressor,Balance,72,4
+Progressor,Balance,73,4
+Progressor,Balance,74,4
+Progressor,Balance,75,6
+Progressor,Balance,76,6
+Progressor,Balance,77,6
+Progressor,Balance,78,6
+Progressor,Balance,79,6
+Progressor,Balance,80,7
+Progressor,Balance,81,7
+Progressor,Balance,82,7
+Progressor,Balance,83,7
+Progressor,Balance,84,7
+Progressor,Balance,85,11
+Progressor,Balance,86,11
+Progressor,Balance,87,11
+Progressor,Balance,88,11
+Progressor,Balance,89,11
+Progressor,Balance,90,15
+Progressor,Balance,91,15
+Progressor,Balance,92,15
+Progressor,Reactions,66,2
+Progressor,Reactions,67,2
+Progressor,Reactions,68,2
+Progressor,Reactions,69,2
+Progressor,Reactions,70,3
+Progressor,Reactions,71,3
+Progressor,Reactions,72,3
+Progressor,Reactions,73,3
+Progressor,Reactions,74,3
+Progressor,Reactions,75,4
+Progressor,Reactions,76,4
+Progressor,Reactions,77,4
+Progressor,Reactions,78,4
+Progressor,Reactions,79,4
+Progressor,Reactions,80,5
+Progressor,Reactions,81,5
+Progressor,Reactions,82,5
+Progressor,Reactions,83,5
+Progressor,Reactions,84,5
+Progressor,Reactions,85,8
+Progressor,Reactions,86,8
+Progressor,Reactions,87,8
+Progressor,Reactions,88,8
+Progressor,Reactions,89,8
+Progressor,Reactions,90,11
+Progressor,Reactions,91,11
+Progressor,Reactions,92,13
+Progressor,Reactions,93,13
+Progressor,Reactions,94,15
+Progressor,Reactions,95,20
+Progressor,Reactions,96,25
+Progressor,Reactions,97,30
+Progressor,Reactions,98,35
+Progressor,Reactions,99,40
+Progressor,Ball Control,71,4
+Progressor,Ball Control,72,4
+Progressor,Ball Control,73,4
+Progressor,Ball Control,74,4
+Progressor,Ball Control,75,6
+Progressor,Ball Control,76,6
+Progressor,Ball Control,77,6
+Progressor,Ball Control,78,6
+Progressor,Ball Control,79,6
+Progressor,Ball Control,80,7
+Progressor,Ball Control,81,7
+Progressor,Ball Control,82,7
+Progressor,Ball Control,83,7
+Progressor,Ball Control,84,7
+Progressor,Ball Control,85,11
+Progressor,Ball Control,86,11
+Progressor,Ball Control,87,11
+Progressor,Ball Control,88,11
+Progressor,Ball Control,89,11
+Progressor,Ball Control,90,15
+Progressor,Ball Control,91,15
+Progressor,Ball Control,92,15
+Progressor,Ball Control,93,20
+Progressor,Ball Control,94,20
+Progressor,Ball Control,95,25
+Progressor,Ball Control,96,30
+Progressor,Dribbling,66,4
+Progressor,Dribbling,67,5
+Progressor,Dribbling,68,5
+Progressor,Dribbling,69,5
+Progressor,Dribbling,70,6
+Progressor,Dribbling,71,6
+Progressor,Dribbling,72,6
+Progressor,Dribbling,73,6
+Progressor,Dribbling,74,6
+Progressor,Dribbling,75,8
+Progressor,Dribbling,76,8
+Progressor,Dribbling,77,8
+Progressor,Dribbling,78,8
+Progressor,Dribbling,79,8
+Progressor,Dribbling,80,10
+Progressor,Dribbling,81,10
+Progressor,Dribbling,82,10
+Progressor,Dribbling,83,10
+Progressor,Dribbling,84,10
+Progressor,Dribbling,85,15
+Progressor,Dribbling,86,15
+Progressor,Dribbling,87,15
+Progressor,Dribbling,88,15
+Progressor,Dribbling,89,15
+Progressor,Dribbling,90,20
+Progressor,Dribbling,91,20
+Progressor,Dribbling,92,20
+Progressor,Composure,76,3
+Progressor,Composure,77,3
+Progressor,Composure,78,3
+Progressor,Composure,79,3
+Progressor,Composure,80,3
+Progressor,Composure,81,3
+Progressor,Composure,82,3
+Progressor,Composure,83,3
+Progressor,Composure,84,3
+Progressor,Composure,85,6
+Progressor,Composure,86,6
+Progressor,Composure,87,6
+Progressor,Composure,88,6
+Progressor,Composure,89,6
+Progressor,Composure,90,8
+Progressor,Composure,91,8
+Progressor,Composure,92,8
+Progressor,Composure,93,10
+Progressor,Composure,94,10
+Progressor,Composure,95,15
+Progressor,Composure,96,20
+Progressor,Vision,76,6
+Progressor,Vision,77,6
+Progressor,Vision,78,6
+Progressor,Vision,79,6
+Progressor,Vision,80,7
+Progressor,Vision,81,7
+Progressor,Vision,82,7
+Progressor,Vision,83,7
+Progressor,Vision,84,7
+Progressor,Vision,85,11
+Progressor,Vision,86,11
+Progressor,Vision,87,11
+Progressor,Vision,88,11
+Progressor,Vision,89,11
+Progressor,Vision,90,15
+Progressor,Vision,91,15
+Progressor,Vision,92,15
+Progressor,Crossing,51,1
+Progressor,Crossing,52,1
+Progressor,Crossing,53,1
+Progressor,Crossing,54,1
+Progressor,Crossing,55,1
+Progressor,Crossing,56,1
+Progressor,Crossing,57,1
+Progressor,Crossing,58,1
+Progressor,Crossing,59,1
+Progressor,Crossing,60,1
+Progressor,Crossing,61,2
+Progressor,Crossing,62,2
+Progressor,Crossing,63,2
+Progressor,Crossing,64,3
+Progressor,Crossing,65,3
+Progressor,Crossing,66,3
+Progressor,Crossing,67,3
+Progressor,Crossing,68,3
+Progressor,Crossing,69,3
+Progressor,Crossing,70,4
+Progressor,Crossing,71,4
+Progressor,Crossing,72,4
+Progressor,Crossing,73,4
+Progressor,Crossing,74,4
+Progressor,Crossing,75,6
+Progressor,Crossing,76,6
+Progressor,Crossing,77,6
+Progressor,Crossing,78,6
+Progressor,Crossing,79,6
+Progressor,Crossing,80,7
+Progressor,Crossing,81,7
+Progressor,Crossing,82,7
+Progressor,Crossing,83,7
+Progressor,Crossing,84,9
+Progressor,Crossing,85,9
+Progressor,Crossing,86,11
+Progressor,Crossing,87,11
+Progressor,Crossing,88,11
+Progressor,Crossing,89,13
+Progressor,Crossing,90,13
+Progressor,Crossing,91,15
+Progressor,Crossing,92,15
+Progressor,FK Accuracy,46,1
+Progressor,FK Accuracy,47,1
+Progressor,FK Accuracy,48,1
+Progressor,FK Accuracy,49,1
+Progressor,FK Accuracy,50,1
+Progressor,FK Accuracy,51,1
+Progressor,FK Accuracy,52,1
+Progressor,FK Accuracy,53,1
+Progressor,FK Accuracy,54,1
+Progressor,FK Accuracy,55,1
+Progressor,FK Accuracy,56,1
+Progressor,FK Accuracy,57,1
+Progressor,FK Accuracy,58,1
+Progressor,FK Accuracy,59,1
+Progressor,FK Accuracy,60,1
+Progressor,FK Accuracy,61,1
+Progressor,FK Accuracy,62,1
+Progressor,FK Accuracy,63,1
+Progressor,FK Accuracy,64,1
+Progressor,FK Accuracy,65,1
+Progressor,FK Accuracy,66,4
+Progressor,FK Accuracy,67,2
+Progressor,FK Accuracy,68,2
+Progressor,FK Accuracy,69,2
+Progressor,FK Accuracy,70,3
+Progressor,FK Accuracy,71,3
+Progressor,FK Accuracy,72,3
+Progressor,FK Accuracy,73,3
+Progressor,FK Accuracy,74,3
+Progressor,FK Accuracy,75,4
+Progressor,FK Accuracy,76,4
+Progressor,FK Accuracy,77,4
+Progressor,FK Accuracy,78,4
+Progressor,FK Accuracy,79,4
+Progressor,FK Accuracy,80,5
+Progressor,FK Accuracy,81,5
+Progressor,FK Accuracy,82,5
+Progressor,FK Accuracy,83,5
+Progressor,FK Accuracy,84,5
+Progressor,FK Accuracy,85,8
+Progressor,FK Accuracy,86,8
+Progressor,FK Accuracy,87,8
+Progressor,FK Accuracy,88,8
+Progressor,FK Accuracy,89,9
+Progressor,FK Accuracy,90,10
+Progressor,Short Passing,76,8
+Progressor,Short Passing,77,8
+Progressor,Short Passing,78,8
+Progressor,Short Passing,79,9
+Progressor,Short Passing,80,9
+Progressor,Short Passing,81,10
+Progressor,Short Passing,82,10
+Progressor,Short Passing,83,10
+Progressor,Short Passing,84,10
+Progressor,Short Passing,85,15
+Progressor,Short Passing,86,15
+Progressor,Short Passing,87,15
+Progressor,Short Passing,88,15
+Progressor,Short Passing,89,15
+Progressor,Short Passing,90,20
+Progressor,Short Passing,91,20
+Progressor,Short Passing,92,20
+Progressor,Short Passing,93,25
+Progressor,Short Passing,94,25
+Progressor,Short Passing,95,30
+Progressor,Short Passing,96,35
+Progressor,Long Passing,76,3
+Progressor,Long Passing,77,3
+Progressor,Long Passing,78,3
+Progressor,Long Passing,79,3
+Progressor,Long Passing,80,3
+Progressor,Long Passing,81,3
+Progressor,Long Passing,82,3
+Progressor,Long Passing,83,3
+Progressor,Long Passing,84,3
+Progressor,Long Passing,85,6
+Progressor,Long Passing,86,6
+Progressor,Long Passing,87,6
+Progressor,Long Passing,88,6
+Progressor,Long Passing,89,6
+Progressor,Long Passing,90,8
+Progressor,Long Passing,91,8
+Progressor,Long Passing,92,8
+Progressor,Long Passing,93,10
+Progressor,Long Passing,94,10
+Progressor,Long Passing,95,15
+Progressor,Long Passing,96,20
+Progressor,Curve,51,1
+Progressor,Curve,52,1
+Progressor,Curve,53,1
+Progressor,Curve,54,1
+Progressor,Curve,55,1
+Progressor,Curve,56,1
+Progressor,Curve,57,1
+Progressor,Curve,58,1
+Progressor,Curve,59,1
+Progressor,Curve,60,1
+Progressor,Curve,61,1
+Progressor,Curve,62,1
+Progressor,Curve,63,1
+Progressor,Curve,64,2
+Progressor,Curve,65,2
+Progressor,Curve,66,2
+Progressor,Curve,67,2
+Progressor,Curve,68,2
+Progressor,Curve,69,2
+Progressor,Curve,70,3
+Progressor,Curve,71,3
+Progressor,Curve,72,3
+Progressor,Curve,73,3
+Progressor,Curve,74,3
+Progressor,Curve,75,4
+Progressor,Curve,76,4
+Progressor,Curve,77,4
+Progressor,Curve,78,4
+Progressor,Curve,79,4
+Progressor,Curve,80,5
+Progressor,Curve,81,5
+Progressor,Curve,82,5
+Progressor,Curve,83,5
+Progressor,Curve,84,5
+Progressor,Curve,85,8
+Progressor,Interceptions,76,8
+Progressor,Interceptions,77,8
+Progressor,Interceptions,78,8
+Progressor,Interceptions,79,8
+Progressor,Interceptions,80,10
+Progressor,Interceptions,81,10
+Progressor,Interceptions,82,10
+Progressor,Interceptions,83,10
+Progressor,Interceptions,84,10
+Progressor,Interceptions,85,15
+Progressor,Interceptions,86,15
+Progressor,Interceptions,87,15
+Progressor,Interceptions,88,15
+Progressor,Interceptions,89,15
+Progressor,Interceptions,90,20
+Progressor,Interceptions,91,20
+Progressor,Interceptions,92,20
+Progressor,Interceptions,93,25
+Progressor,Interceptions,94,25
+Progressor,Interceptions,95,30
+Progressor,Interceptions,96,35
+Progressor,Heading Accuracy,76,6
+Progressor,Heading Accuracy,77,6
+Progressor,Heading Accuracy,78,6
+Progressor,Heading Accuracy,79,6
+Progressor,Heading Accuracy,80,7
+Progressor,Heading Accuracy,81,7
+Progressor,Heading Accuracy,82,7
+Progressor,Heading Accuracy,83,7
+Progressor,Heading Accuracy,84,9
+Progressor,Heading Accuracy,85,9
+Progressor,Heading Accuracy,86,11
+Progressor,Heading Accuracy,87,11
+Progressor,Heading Accuracy,88,11
+Progressor,Heading Accuracy,89,11
+Progressor,Heading Accuracy,90,15
+Progressor,Heading Accuracy,91,15
+Progressor,Heading Accuracy,92,15
+Progressor,Heading Accuracy,93,20
+Progressor,Heading Accuracy,94,20
+Progressor,Heading Accuracy,95,25
+Progressor,Heading Accuracy,96,30
+Progressor,Defensive Awareness,76,3
+Progressor,Defensive Awareness,77,3
+Progressor,Defensive Awareness,78,3
+Progressor,Defensive Awareness,79,3
+Progressor,Defensive Awareness,80,3
+Progressor,Defensive Awareness,81,3
+Progressor,Defensive Awareness,82,3
+Progressor,Defensive Awareness,83,3
+Progressor,Defensive Awareness,84,3
+Progressor,Defensive Awareness,85,6
+Progressor,Defensive Awareness,86,6
+Progressor,Defensive Awareness,87,6
+Progressor,Defensive Awareness,88,6
+Progressor,Defensive Awareness,89,6
+Progressor,Defensive Awareness,90,8
+Progressor,Defensive Awareness,91,8
+Progressor,Defensive Awareness,92,8
+Progressor,Defensive Awareness,93,10
+Progressor,Defensive Awareness,94,10
+Progressor,Defensive Awareness,95,15
+Progressor,Defensive Awareness,96,20
+Progressor,Defensive Awareness,97,25
+Progressor,Defensive Awareness,98,30
+Progressor,Defensive Awareness,99,35
+Progressor,Standing Tackle,76,3
+Progressor,Standing Tackle,77,3
+Progressor,Standing Tackle,78,3
+Progressor,Standing Tackle,79,3
+Progressor,Standing Tackle,80,3
+Progressor,Standing Tackle,81,3
+Progressor,Standing Tackle,82,3
+Progressor,Standing Tackle,83,3
+Progressor,Standing Tackle,84,3
+Progressor,Standing Tackle,85,6
+Progressor,Standing Tackle,86,6
+Progressor,Standing Tackle,87,6
+Progressor,Standing Tackle,88,6
+Progressor,Standing Tackle,89,6
+Progressor,Standing Tackle,90,8
+Progressor,Standing Tackle,91,8
+Progressor,Standing Tackle,92,8
+Progressor,Standing Tackle,93,10
+Progressor,Standing Tackle,94,10
+Progressor,Standing Tackle,95,15
+Progressor,Standing Tackle,96,20
+Progressor,Standing Tackle,97,25
+Progressor,Standing Tackle,98,30
+Progressor,Standing Tackle,99,35
+Progressor,Sliding Tackle,76,6
+Progressor,Sliding Tackle,77,6
+Progressor,Sliding Tackle,78,6
+Progressor,Sliding Tackle,79,6
+Progressor,Sliding Tackle,80,7
+Progressor,Sliding Tackle,81,7
+Progressor,Sliding Tackle,82,7
+Progressor,Sliding Tackle,83,7
+Progressor,Sliding Tackle,84,7
+Progressor,Sliding Tackle,85,11
+Progressor,Sliding Tackle,86,11
+Progressor,Sliding Tackle,87,11
+Progressor,Sliding Tackle,88,11
+Progressor,Sliding Tackle,89,11
+Progressor,Sliding Tackle,90,15
+Progressor,Sliding Tackle,91,15
+Progressor,Sliding Tackle,92,15
+Progressor,Sliding Tackle,93,20
+Progressor,Sliding Tackle,94,20
+Progressor,Sliding Tackle,95,25
+Progressor,Sliding Tackle,96,30
+Progressor,Acceleration,71,6
+Progressor,Acceleration,72,6
+Progressor,Acceleration,73,6
+Progressor,Acceleration,74,6
+Progressor,Acceleration,75,8
+Progressor,Acceleration,76,8
+Progressor,Acceleration,77,8
+Progressor,Acceleration,78,8
+Progressor,Acceleration,79,8
+Progressor,Acceleration,80,10
+Progressor,Acceleration,81,10
+Progressor,Acceleration,82,10
+Progressor,Acceleration,83,10
+Progressor,Acceleration,84,10
+Progressor,Acceleration,85,15
+Progressor,Acceleration,86,15
+Progressor,Acceleration,87,15
+Progressor,Acceleration,88,15
+Progressor,Acceleration,89,15
+Progressor,Acceleration,90,20
+Progressor,Acceleration,91,20
+Progressor,Acceleration,92,20
+Progressor,Sprint Speed,73,6
+Progressor,Sprint Speed,74,6
+Progressor,Sprint Speed,75,8
+Progressor,Sprint Speed,76,8
+Progressor,Sprint Speed,77,8
+Progressor,Sprint Speed,78,8
+Progressor,Sprint Speed,79,8
+Progressor,Sprint Speed,80,10
+Progressor,Sprint Speed,81,10
+Progressor,Sprint Speed,82,10
+Progressor,Sprint Speed,83,10
+Progressor,Sprint Speed,84,10
+Progressor,Sprint Speed,85,15
+Progressor,Sprint Speed,86,15
+Progressor,Sprint Speed,87,15
+Progressor,Sprint Speed,88,15
+Progressor,Sprint Speed,89,15
+Progressor,Sprint Speed,90,20
+Progressor,Sprint Speed,91,20
+Progressor,Sprint Speed,92,20
+Progressor,Jumping,76,4
+Progressor,Jumping,77,4
+Progressor,Jumping,78,4
+Progressor,Jumping,79,4
+Progressor,Jumping,80,5
+Progressor,Jumping,81,5
+Progressor,Jumping,82,5
+Progressor,Jumping,83,5
+Progressor,Jumping,84,5
+Progressor,Jumping,85,8
+Progressor,Jumping,86,8
+Progressor,Jumping,87,8
+Progressor,Jumping,88,8
+Progressor,Jumping,89,8
+Progressor,Jumping,90,11
+Progressor,Jumping,91,11
+Progressor,Jumping,92,11
+Progressor,Jumping,93,15
+Progressor,Jumping,94,15
+Progressor,Jumping,95,20
+Progressor,Jumping,96,25
+Progressor,Jumping,97,30
+Progressor,Jumping,98,35
+Progressor,Jumping,99,40
+Progressor,Strength,71,4
+Progressor,Strength,72,4
+Progressor,Strength,73,4
+Progressor,Strength,74,4
+Progressor,Strength,75,6
+Progressor,Strength,76,6
+Progressor,Strength,77,6
+Progressor,Strength,78,6
+Progressor,Strength,79,6
+Progressor,Strength,80,7
+Progressor,Strength,81,7
+Progressor,Strength,82,7
+Progressor,Strength,83,7
+Progressor,Strength,84,7
+Progressor,Strength,85,11
+Progressor,Strength,86,11
+Progressor,Strength,87,11
+Progressor,Strength,88,11
+Progressor,Strength,89,11
+Progressor,Strength,90,15
+Progressor,Strength,91,15
+Progressor,Strength,92,15
+Progressor,Strength,93,20
+Progressor,Strength,94,20
+Progressor,Strength,95,25
+Progressor,Strength,96,30
+Progressor,Stamina,66,2
+Progressor,Stamina,67,2
+Progressor,Stamina,68,2
+Progressor,Stamina,69,2
+Progressor,Stamina,70,3
+Progressor,Stamina,71,3
+Progressor,Stamina,72,3
+Progressor,Stamina,73,3
+Progressor,Stamina,74,3
+Progressor,Stamina,75,4
+Progressor,Stamina,76,4
+Progressor,Stamina,77,4
+Progressor,Stamina,78,4
+Progressor,Stamina,79,4
+Progressor,Stamina,80,5
+Progressor,Stamina,81,5
+Progressor,Stamina,82,5
+Progressor,Stamina,83,5
+Progressor,Stamina,84,5
+Progressor,Stamina,85,8
+Progressor,Stamina,86,8
+Progressor,Stamina,87,8
+Progressor,Stamina,88,8
+Progressor,Stamina,89,8
+Progressor,Stamina,90,11
+Progressor,Stamina,91,11
+Progressor,Stamina,92,11
+Progressor,Aggression,66,2
+Progressor,Aggression,67,2
+Progressor,Aggression,68,2
+Progressor,Aggression,69,2
+Progressor,Aggression,70,3
+Progressor,Aggression,71,3
+Progressor,Aggression,72,3
+Progressor,Aggression,73,3
+Progressor,Aggression,74,3
+Progressor,Aggression,75,4
+Progressor,Aggression,76,4
+Progressor,Aggression,77,4
+Progressor,Aggression,78,4
+Progressor,Aggression,79,4
+Progressor,Aggression,80,5
+Progressor,Aggression,81,5
+Progressor,Aggression,82,5
+Progressor,Aggression,83,5
+Progressor,Aggression,84,5
+Progressor,Aggression,85,8
+Progressor,Aggression,86,8
+Progressor,Aggression,87,8
+Progressor,Aggression,88,8
+Progressor,Aggression,89,8
+Progressor,Aggression,90,11
+Progressor,Aggression,91,11
+Progressor,Aggression,92,11
+Progressor,Aggression,93,15
+Progressor,Aggression,94,15
+Progressor,Aggression,95,20
+Progressor,Aggression,96,25
+Progressor,Att. Positioning,71,3
+Progressor,Att. Positioning,72,3
+Progressor,Att. Positioning,73,3
+Progressor,Att. Positioning,74,3
+Progressor,Att. Positioning,75,4
+Progressor,Att. Positioning,76,4
+Progressor,Att. Positioning,77,4
+Progressor,Att. Positioning,78,4
+Progressor,Att. Positioning,79,4
+Progressor,Att. Positioning,80,5
+Progressor,Att. Positioning,81,5
+Progressor,Att. Positioning,82,5
+Progressor,Att. Positioning,83,5
+Progressor,Att. Positioning,84,5
+Progressor,Att. Positioning,85,8
+Progressor,Att. Positioning,86,8
+Progressor,Att. Positioning,87,8
+Progressor,Att. Positioning,88,8
+Progressor,Att. Positioning,89,8
+Progressor,Att. Positioning,90,11
+Progressor,Finishing,51,2
+Progressor,Finishing,52,2
+Progressor,Finishing,53,2
+Progressor,Finishing,54,2
+Progressor,Finishing,55,2
+Progressor,Finishing,56,2
+Progressor,Finishing,57,2
+Progressor,Finishing,58,2
+Progressor,Finishing,59,2
+Progressor,Finishing,60,2
+Progressor,Finishing,61,3
+Progressor,Finishing,62,3
+Progressor,Finishing,63,3
+Progressor,Finishing,64,4
+Progressor,Finishing,65,4
+Progressor,Finishing,66,4
+Progressor,Finishing,67,5
+Progressor,Finishing,68,5
+Progressor,Finishing,69,5
+Progressor,Finishing,70,6
+Progressor,Finishing,71,6
+Progressor,Finishing,72,6
+Progressor,Finishing,73,6
+Progressor,Finishing,74,6
+Progressor,Finishing,75,8
+Progressor,Finishing,76,8
+Progressor,Finishing,77,8
+Progressor,Finishing,78,8
+Progressor,Finishing,79,8
+Progressor,Finishing,80,10
+Progressor,Finishing,81,10
+Progressor,Finishing,82,10
+Progressor,Finishing,83,10
+Progressor,Finishing,84,10
+Progressor,Finishing,85,15
+Progressor,Shot Power,66,3
+Progressor,Shot Power,67,3
+Progressor,Shot Power,68,3
+Progressor,Shot Power,69,3
+Progressor,Shot Power,70,4
+Progressor,Shot Power,71,4
+Progressor,Shot Power,72,4
+Progressor,Shot Power,73,4
+Progressor,Shot Power,74,5
+Progressor,Shot Power,75,5
+Progressor,Shot Power,76,6
+Progressor,Shot Power,77,6
+Progressor,Shot Power,78,6
+Progressor,Shot Power,79,6
+Progressor,Shot Power,80,7
+Progressor,Shot Power,81,7
+Progressor,Shot Power,82,7
+Progressor,Shot Power,83,7
+Progressor,Shot Power,84,9
+Progressor,Shot Power,85,9
+Progressor,Shot Power,86,11
+Progressor,Shot Power,87,11
+Progressor,Shot Power,88,11
+Progressor,Shot Power,89,11
+Progressor,Shot Power,90,15
+Progressor,Shot Power,91,15
+Progressor,Shot Power,92,15
+Progressor,Long Shots,51,1
+Progressor,Long Shots,52,1
+Progressor,Long Shots,53,1
+Progressor,Long Shots,54,1
+Progressor,Long Shots,55,1
+Progressor,Long Shots,56,1
+Progressor,Long Shots,57,1
+Progressor,Long Shots,58,1
+Progressor,Long Shots,59,1
+Progressor,Long Shots,60,1
+Progressor,Long Shots,61,2
+Progressor,Long Shots,62,2
+Progressor,Long Shots,63,2
+Progressor,Long Shots,64,3
+Progressor,Long Shots,65,3
+Progressor,Long Shots,66,3
+Progressor,Long Shots,67,3
+Progressor,Long Shots,68,3
+Progressor,Long Shots,69,3
+Progressor,Long Shots,70,4
+Progressor,Long Shots,71,4
+Progressor,Long Shots,72,4
+Progressor,Long Shots,73,4
+Progressor,Long Shots,74,4
+Progressor,Long Shots,75,6
+Progressor,Long Shots,76,6
+Progressor,Long Shots,77,6
+Progressor,Long Shots,78,6
+Progressor,Long Shots,79,6
+Progressor,Long Shots,80,7
+Progressor,Long Shots,81,7
+Progressor,Long Shots,82,7
+Progressor,Long Shots,83,7
+Progressor,Long Shots,84,9
+Progressor,Long Shots,85,9
+Progressor,Volleys,51,1
+Progressor,Volleys,52,1
+Progressor,Volleys,53,1
+Progressor,Volleys,54,1
+Progressor,Volleys,55,1
+Progressor,Volleys,56,1
+Progressor,Volleys,57,1
+Progressor,Volleys,58,1
+Progressor,Volleys,59,1
+Progressor,Volleys,60,1
+Progressor,Volleys,61,1
+Progressor,Volleys,62,1
+Progressor,Volleys,63,1
+Progressor,Volleys,64,2
+Progressor,Volleys,65,2
+Progressor,Volleys,66,2
+Progressor,Volleys,67,2
+Progressor,Volleys,68,2
+Progressor,Volleys,69,2
+Progressor,Volleys,70,3
+Progressor,Volleys,71,3
+Progressor,Volleys,72,3
+Progressor,Volleys,73,3
+Progressor,Volleys,74,3
+Progressor,Volleys,75,4
+Progressor,Penalties,66,2
+Progressor,Penalties,67,2
+Progressor,Penalties,68,2
+Progressor,Penalties,69,2
+Progressor,Penalties,70,3
+Progressor,Penalties,71,3
+Progressor,Penalties,72,3
+Progressor,Penalties,73,3
+Progressor,Penalties,74,3
+Progressor,Penalties,75,4
+Progressor,Penalties,76,4
+Progressor,Penalties,77,4
+Progressor,Penalties,78,4
+Progressor,Penalties,79,4
+Progressor,Penalties,80,5
+Progressor,Penalties,81,5
+Progressor,Penalties,82,5
+Progressor,Penalties,83,5
+Progressor,Penalties,84,5
+Progressor,Penalties,85,8
+Progressor,Penalties,86,8
+Progressor,Penalties,87,8
+Progressor,Penalties,88,8
+Progressor,Penalties,89,8
+Progressor,Penalties,90,11
+Progressor,Penalties,91,11
+Progressor,Penalties,92,11
+Progressor,Weak Foot,4,25
+Progressor,Weak Foot,5,25
+Progressor,Skill Moves,4,10
+Progressor,Skill Moves,5,30
+Archetype,Attribute,Level,Cost
+Boss,Agility,66,4
+Boss,Agility,67,5
+Boss,Agility,68,5
+Boss,Agility,69,5
+Boss,Agility,70,6
+Boss,Agility,71,6
+Boss,Agility,72,6
+Boss,Agility,73,6
+Boss,Agility,74,6
+Boss,Agility,75,8
+Boss,Agility,76,8
+Boss,Agility,77,8
+Boss,Agility,78,8
+Boss,Agility,79,8
+Boss,Agility,80,10
+Boss,Agility,81,10
+Boss,Agility,82,10
+Boss,Agility,83,10
+Boss,Agility,84,10
+Boss,Agility,85,15
+Boss,Agility,86,15
+Boss,Agility,87,15
+Boss,Agility,88,15
+Boss,Agility,89,15
+Boss,Agility,90,20
+Boss,Balance,76,6
+Boss,Balance,77,6
+Boss,Balance,78,6
+Boss,Balance,79,6
+Boss,Balance,80,7
+Boss,Balance,81,7
+Boss,Balance,82,7
+Boss,Balance,83,7
+Boss,Balance,84,7
+Boss,Balance,85,11
+Boss,Balance,86,11
+Boss,Balance,87,11
+Boss,Balance,88,11
+Boss,Balance,89,11
+Boss,Balance,90,15
+Boss,Reactions,61,1
+Boss,Reactions,62,1
+Boss,Reactions,63,1
+Boss,Reactions,64,1
+Boss,Reactions,65,1
+Boss,Reactions,66,2
+Boss,Reactions,67,2
+Boss,Reactions,68,2
+Boss,Reactions,69,2
+Boss,Reactions,70,3
+Boss,Reactions,71,3
+Boss,Reactions,72,3
+Boss,Reactions,73,3
+Boss,Reactions,74,3
+Boss,Reactions,75,4
+Boss,Reactions,76,4
+Boss,Reactions,77,4
+Boss,Reactions,78,4
+Boss,Reactions,79,4
+Boss,Reactions,80,5
+Boss,Reactions,81,5
+Boss,Reactions,82,5
+Boss,Reactions,83,5
+Boss,Reactions,84,5
+Boss,Reactions,85,8
+Boss,Reactions,86,8
+Boss,Reactions,87,8
+Boss,Reactions,88,8
+Boss,Reactions,89,8
+Boss,Reactions,90,11
+Boss,Reactions,91,11
+Boss,Reactions,92,13
+Boss,Reactions,93,13
+Boss,Reactions,94,15
+Boss,Reactions,95,15
+Boss,Reactions,96,20
+Boss,Reactions,97,25
+Boss,Reactions,98,30
+Boss,Reactions,99,35
+Boss,Ball Control,66,3
+Boss,Ball Control,67,3
+Boss,Ball Control,68,3
+Boss,Ball Control,69,3
+Boss,Ball Control,70,4
+Boss,Ball Control,71,4
+Boss,Ball Control,72,4
+Boss,Ball Control,73,4
+Boss,Ball Control,74,4
+Boss,Ball Control,75,6
+Boss,Ball Control,76,6
+Boss,Ball Control,77,6
+Boss,Ball Control,78,6
+Boss,Ball Control,79,6
+Boss,Ball Control,80,7
+Boss,Ball Control,81,7
+Boss,Ball Control,82,7
+Boss,Ball Control,83,7
+Boss,Ball Control,84,7
+Boss,Ball Control,85,11
+Boss,Ball Control,86,11
+Boss,Ball Control,87,11
+Boss,Ball Control,88,11
+Boss,Ball Control,89,11
+Boss,Ball Control,90,15
+Boss,Ball Control,91,15
+Boss,Ball Control,92,15
+Boss,Dribbling,61,3
+Boss,Dribbling,62,3
+Boss,Dribbling,63,3
+Boss,Dribbling,64,3
+Boss,Dribbling,65,3
+Boss,Dribbling,66,4
+Boss,Dribbling,67,4
+Boss,Dribbling,68,4
+Boss,Dribbling,69,4
+Boss,Dribbling,70,6
+Boss,Dribbling,71,6
+Boss,Dribbling,72,6
+Boss,Dribbling,73,6
+Boss,Dribbling,74,6
+Boss,Dribbling,75,8
+Boss,Dribbling,76,8
+Boss,Dribbling,77,8
+Boss,Dribbling,78,8
+Boss,Dribbling,79,8
+Boss,Dribbling,80,10
+Boss,Dribbling,81,10
+Boss,Dribbling,82,10
+Boss,Dribbling,83,10
+Boss,Dribbling,84,10
+Boss,Dribbling,85,15
+Boss,Dribbling,86,15
+Boss,Dribbling,87,15
+Boss,Dribbling,88,15
+Boss,Composure,66,3
+Boss,Composure,67,3
+Boss,Composure,68,3
+Boss,Composure,69,3
+Boss,Composure,70,4
+Boss,Composure,71,4
+Boss,Composure,72,4
+Boss,Composure,73,4
+Boss,Composure,74,4
+Boss,Composure,75,6
+Boss,Composure,76,6
+Boss,Composure,77,6
+Boss,Composure,78,6
+Boss,Composure,79,6
+Boss,Composure,80,7
+Boss,Composure,81,7
+Boss,Composure,82,7
+Boss,Composure,83,7
+Boss,Composure,84,7
+Boss,Composure,85,11
+Boss,Composure,86,11
+Boss,Composure,87,11
+Boss,Composure,88,11
+Boss,Composure,89,11
+Boss,Composure,90,15
+Boss,Composure,91,15
+Boss,Composure,92,15
+Boss,Att. Position,76,4
+Boss,Att. Position,77,4
+Boss,Att. Position,78,4
+Boss,Att. Position,79,4
+Boss,Att. Position,80,5
+Boss,Att. Position,81,5
+Boss,Att. Position,82,5
+Boss,Att. Position,83,5
+Boss,Att. Position,84,5
+Boss,Att. Position,85,8
+Boss,Att. Position,86,8
+Boss,Att. Position,87,8
+Boss,Att. Position,88,8
+Boss,Att. Position,89,8
+Boss,Att. Position,90,11
+Boss,Finishing,46,2
+Boss,Finishing,47,2
+Boss,Finishing,48,2
+Boss,Finishing,49,2
+Boss,Finishing,50,2
+Boss,Finishing,51,2
+Boss,Finishing,52,2
+Boss,Finishing,53,2
+Boss,Finishing,54,2
+Boss,Finishing,55,2
+Boss,Finishing,56,2
+Boss,Finishing,57,2
+Boss,Finishing,58,2
+Boss,Finishing,59,2
+Boss,Finishing,60,2
+Boss,Finishing,61,3
+Boss,Finishing,62,3
+Boss,Finishing,63,3
+Boss,Finishing,64,4
+Boss,Finishing,65,4
+Boss,Finishing,66,4
+Boss,Finishing,67,5
+Boss,Finishing,68,5
+Boss,Finishing,69,5
+Boss,Finishing,70,6
+Boss,Finishing,71,6
+Boss,Finishing,72,6
+Boss,Finishing,73,6
+Boss,Finishing,74,6
+Boss,Finishing,75,8
+Boss,Finishing,76,8
+Boss,Finishing,77,8
+Boss,Finishing,78,8
+Boss,Finishing,79,8
+Boss,Finishing,80,10
+Boss,Finishing,81,10
+Boss,Finishing,82,10
+Boss,Shot Power,71,4
+Boss,Shot Power,72,4
+Boss,Shot Power,73,4
+Boss,Shot Power,74,5
+Boss,Shot Power,75,5
+Boss,Shot Power,76,6
+Boss,Shot Power,77,6
+Boss,Shot Power,78,6
+Boss,Shot Power,79,6
+Boss,Shot Power,80,7
+Boss,Shot Power,81,7
+Boss,Shot Power,82,7
+Boss,Shot Power,83,7
+Boss,Shot Power,84,9
+Boss,Shot Power,85,9
+Boss,Shot Power,86,11
+Boss,Shot Power,87,11
+Boss,Shot Power,88,11
+Boss,Shot Power,89,11
+Boss,Shot Power,90,15
+Boss,Shot Power,91,15
+Boss,Shot Power,92,15
+Boss,Shot Power,93,20
+Boss,Shot Power,94,20
+Boss,Shot Power,95,20
+Boss,Shot Power,96,20
+Boss,Long Shots,61,2
+Boss,Long Shots,62,2
+Boss,Long Shots,63,2
+Boss,Long Shots,64,3
+Boss,Long Shots,65,3
+Boss,Long Shots,66,3
+Boss,Long Shots,67,3
+Boss,Long Shots,68,3
+Boss,Long Shots,69,3
+Boss,Long Shots,70,4
+Boss,Long Shots,71,4
+Boss,Long Shots,72,4
+Boss,Long Shots,73,4
+Boss,Long Shots,74,4
+Boss,Long Shots,75,6
+Boss,Long Shots,76,6
+Boss,Long Shots,77,6
+Boss,Long Shots,78,6
+Boss,Long Shots,79,6
+Boss,Long Shots,80,7
+Boss,Long Shots,81,7
+Boss,Long Shots,82,7
+Boss,Long Shots,83,7
+Boss,Long Shots,84,9
+Boss,Long Shots,85,9
+Boss,Volleys,61,1
+Boss,Volleys,62,1
+Boss,Volleys,63,1
+Boss,Volleys,64,2
+Boss,Volleys,65,2
+Boss,Volleys,66,2
+Boss,Volleys,67,2
+Boss,Volleys,68,2
+Boss,Volleys,69,2
+Boss,Volleys,70,3
+Boss,Volleys,71,3
+Boss,Volleys,72,3
+Boss,Volleys,73,3
+Boss,Volleys,74,3
+Boss,Volleys,75,4
+Boss,Volleys,76,4
+Boss,Volleys,77,4
+Boss,Volleys,78,4
+Boss,Volleys,79,4
+Boss,Volleys,80,5
+Boss,Penalties,66,2
+Boss,Penalties,67,2
+Boss,Penalties,68,2
+Boss,Penalties,69,2
+Boss,Penalties,70,3
+Boss,Penalties,71,3
+Boss,Penalties,72,3
+Boss,Penalties,73,3
+Boss,Penalties,74,3
+Boss,Penalties,75,4
+Boss,Penalties,76,4
+Boss,Penalties,77,4
+Boss,Penalties,78,4
+Boss,Penalties,79,4
+Boss,Penalties,80,5
+Boss,Penalties,81,5
+Boss,Penalties,82,5
+Boss,Penalties,83,5
+Boss,Penalties,84,5
+Boss,Penalties,85,8
+Boss,Penalties,86,8
+Boss,Penalties,87,8
+Boss,Penalties,88,8
+Boss,Penalties,89,8
+Boss,Penalties,90,11
+Boss,Penalties,91,11
+Boss,Penalties,92,11
+Boss,Vision,56,1
+Boss,Vision,57,1
+Boss,Vision,58,1
+Boss,Vision,59,1
+Boss,Vision,60,1
+Boss,Vision,61,1
+Boss,Vision,62,1
+Boss,Vision,63,1
+Boss,Vision,64,1
+Boss,Vision,65,1
+Boss,Vision,66,2
+Boss,Vision,67,2
+Boss,Vision,68,2
+Boss,Vision,69,2
+Boss,Vision,70,3
+Boss,Vision,71,3
+Boss,Vision,72,3
+Boss,Vision,73,3
+Boss,Vision,74,3
+Boss,Vision,75,4
+Boss,Vision,76,4
+Boss,Vision,77,4
+Boss,Vision,78,4
+Boss,Vision,79,4
+Boss,Vision,80,5
+Boss,Vision,81,5
+Boss,Vision,82,5
+Boss,Vision,83,5
+Boss,Vision,84,5
+Boss,Vision,85,8
+Boss,Vision,86,8
+Boss,Vision,87,8
+Boss,Vision,88,8
+Boss,Vision,89,8
+Boss,Vision,90,11
+Boss,Crossing,46,1
+Boss,Crossing,47,1
+Boss,Crossing,48,1
+Boss,Crossing,49,1
+Boss,Crossing,50,1
+Boss,Crossing,51,1
+Boss,Crossing,52,1
+Boss,Crossing,53,1
+Boss,Crossing,54,1
+Boss,Crossing,55,1
+Boss,Crossing,56,1
+Boss,Crossing,57,1
+Boss,Crossing,58,1
+Boss,Crossing,59,1
+Boss,Crossing,60,1
+Boss,Crossing,61,2
+Boss,Crossing,62,2
+Boss,Crossing,63,2
+Boss,Crossing,64,3
+Boss,Crossing,65,3
+Boss,Crossing,66,3
+Boss,Crossing,67,3
+Boss,Crossing,68,3
+Boss,Crossing,69,3
+Boss,Crossing,70,4
+Boss,Crossing,71,4
+Boss,Crossing,72,4
+Boss,Crossing,73,4
+Boss,Crossing,74,4
+Boss,Crossing,75,6
+Boss,Crossing,76,6
+Boss,Crossing,77,6
+Boss,Crossing,78,6
+Boss,Crossing,79,6
+Boss,Crossing,80,7
+Boss,Crossing,81,7
+Boss,Crossing,82,7
+Boss,Crossing,83,7
+Boss,Crossing,84,9
+Boss,Crossing,85,9
+Boss,Crossing,86,11
+Boss,Crossing,87,11
+Boss,Crossing,88,11
+Boss,Crossing,89,13
+Boss,Crossing,90,13
+Boss,FK Accuracy,51,1
+Boss,FK Accuracy,52,1
+Boss,FK Accuracy,53,1
+Boss,FK Accuracy,54,1
+Boss,FK Accuracy,55,1
+Boss,FK Accuracy,56,1
+Boss,FK Accuracy,57,1
+Boss,FK Accuracy,58,1
+Boss,FK Accuracy,59,1
+Boss,FK Accuracy,60,1
+Boss,FK Accuracy,61,1
+Boss,FK Accuracy,62,1
+Boss,FK Accuracy,63,1
+Boss,FK Accuracy,64,1
+Boss,FK Accuracy,65,1
+Boss,FK Accuracy,66,2
+Boss,FK Accuracy,67,2
+Boss,FK Accuracy,68,2
+Boss,FK Accuracy,69,2
+Boss,FK Accuracy,70,3
+Boss,FK Accuracy,71,3
+Boss,FK Accuracy,72,3
+Boss,FK Accuracy,73,3
+Boss,FK Accuracy,74,3
+Boss,FK Accuracy,75,4
+Boss,FK Accuracy,76,4
+Boss,FK Accuracy,77,4
+Boss,FK Accuracy,78,4
+Boss,FK Accuracy,79,4
+Boss,FK Accuracy,80,5
+Boss,FK Accuracy,81,5
+Boss,FK Accuracy,82,5
+Boss,FK Accuracy,83,5
+Boss,FK Accuracy,84,5
+Boss,FK Accuracy,85,8
+Boss,FK Accuracy,86,8
+Boss,FK Accuracy,87,8
+Boss,FK Accuracy,88,8
+Boss,FK Accuracy,89,10
+Boss,FK Accuracy,90,10
+Boss,Short Pass,66,4
+Boss,Short Pass,67,4
+Boss,Short Pass,68,6
+Boss,Short Pass,69,6
+Boss,Short Pass,70,8
+Boss,Short Pass,71,8
+Boss,Short Pass,72,8
+Boss,Short Pass,73,8
+Boss,Short Pass,74,8
+Boss,Short Pass,75,9
+Boss,Short Pass,76,9
+Boss,Short Pass,77,9
+Boss,Short Pass,78,9
+Boss,Short Pass,79,9
+Boss,Short Pass,80,10
+Boss,Short Pass,81,10
+Boss,Short Pass,82,10
+Boss,Short Pass,83,10
+Boss,Short Pass,84,10
+Boss,Short Pass,85,15
+Boss,Short Pass,86,15
+Boss,Short Pass,87,15
+Boss,Short Pass,88,15
+Boss,Short Pass,89,15
+Boss,Short Pass,90,20
+Boss,Short Pass,91,20
+Boss,Short Pass,92,20
+Boss,Long Pass,66,3
+Boss,Long Pass,67,3
+Boss,Long Pass,68,3
+Boss,Long Pass,69,3
+Boss,Long Pass,70,4
+Boss,Long Pass,71,4
+Boss,Long Pass,72,4
+Boss,Long Pass,73,4
+Boss,Long Pass,74,4
+Boss,Long Pass,75,6
+Boss,Long Pass,76,6
+Boss,Long Pass,77,6
+Boss,Long Pass,78,6
+Boss,Long Pass,79,6
+Boss,Long Pass,80,7
+Boss,Long Pass,81,7
+Boss,Long Pass,82,7
+Boss,Long Pass,83,7
+Boss,Long Pass,84,7
+Boss,Long Pass,85,11
+Boss,Long Pass,86,11
+Boss,Long Pass,87,11
+Boss,Long Pass,88,11
+Boss,Long Pass,89,11
+Boss,Long Pass,90,15
+Boss,Curve,51,1
+Boss,Curve,52,1
+Boss,Curve,53,1
+Boss,Curve,54,1
+Boss,Curve,55,1
+Boss,Curve,56,1
+Boss,Curve,57,1
+Boss,Curve,58,1
+Boss,Curve,59,1
+Boss,Curve,60,1
+Boss,Curve,61,1
+Boss,Curve,62,1
+Boss,Curve,63,1
+Boss,Curve,64,2
+Boss,Curve,65,2
+Boss,Curve,66,2
+Boss,Curve,67,2
+Boss,Curve,68,2
+Boss,Curve,69,2
+Boss,Curve,70,3
+Boss,Curve,71,3
+Boss,Curve,72,3
+Boss,Curve,73,3
+Boss,Curve,74,3
+Boss,Curve,75,4
+Boss,Interceptions,76,8
+Boss,Interceptions,77,8
+Boss,Interceptions,78,8
+Boss,Interceptions,79,8
+Boss,Interceptions,80,10
+Boss,Interceptions,81,10
+Boss,Interceptions,82,10
+Boss,Interceptions,83,10
+Boss,Interceptions,84,10
+Boss,Interceptions,85,15
+Boss,Interceptions,86,15
+Boss,Interceptions,87,15
+Boss,Interceptions,88,15
+Boss,Interceptions,89,15
+Boss,Interceptions,90,20
+Boss,Interceptions,91,20
+Boss,Interceptions,92,20
+Boss,Interceptions,93,20
+Boss,Interceptions,94,20
+Boss,Interceptions,95,30
+Boss,Interceptions,96,35
+Boss,Heading Acc.,76,3
+Boss,Heading Acc.,77,3
+Boss,Heading Acc.,78,3
+Boss,Heading Acc.,79,3
+Boss,Heading Acc.,80,3
+Boss,Heading Acc.,81,3
+Boss,Heading Acc.,82,3
+Boss,Heading Acc.,83,3
+Boss,Heading Acc.,84,3
+Boss,Heading Acc.,85,6
+Boss,Heading Acc.,86,6
+Boss,Heading Acc.,87,6
+Boss,Heading Acc.,88,6
+Boss,Heading Acc.,89,6
+Boss,Heading Acc.,90,8
+Boss,Heading Acc.,91,8
+Boss,Heading Acc.,92,8
+Boss,Heading Acc.,93,8
+Boss,Heading Acc.,94,8
+Boss,Heading Acc.,95,10
+Boss,Heading Acc.,96,10
+Boss,Heading Acc.,97,10
+Boss,Heading Acc.,98,10
+Boss,Heading Acc.,99,10
+Boss,Def. Aware,76,6
+Boss,Def. Aware,77,6
+Boss,Def. Aware,78,6
+Boss,Def. Aware,79,6
+Boss,Def. Aware,80,7
+Boss,Def. Aware,81,7
+Boss,Def. Aware,82,7
+Boss,Def. Aware,83,7
+Boss,Def. Aware,84,7
+Boss,Def. Aware,85,11
+Boss,Def. Aware,86,11
+Boss,Def. Aware,87,11
+Boss,Def. Aware,88,11
+Boss,Def. Aware,89,11
+Boss,Def. Aware,90,15
+Boss,Def. Aware,91,15
+Boss,Def. Aware,92,15
+Boss,Def. Aware,93,15
+Boss,Def. Aware,94,15
+Boss,Def. Aware,95,20
+Boss,Def. Aware,96,20
+Boss,Stand Tackle,76,8
+Boss,Stand Tackle,77,8
+Boss,Stand Tackle,78,8
+Boss,Stand Tackle,79,8
+Boss,Stand Tackle,80,10
+Boss,Stand Tackle,81,10
+Boss,Stand Tackle,82,10
+Boss,Stand Tackle,83,10
+Boss,Stand Tackle,84,10
+Boss,Stand Tackle,85,15
+Boss,Stand Tackle,86,15
+Boss,Stand Tackle,87,15
+Boss,Stand Tackle,88,15
+Boss,Stand Tackle,89,15
+Boss,Stand Tackle,90,20
+Boss,Stand Tackle,91,20
+Boss,Stand Tackle,92,20
+Boss,Stand Tackle,93,20
+Boss,Stand Tackle,94,20
+Boss,Stand Tackle,95,30
+Boss,Stand Tackle,96,35
+Boss,Slide Tackle,76,4
+Boss,Slide Tackle,77,4
+Boss,Slide Tackle,78,4
+Boss,Slide Tackle,79,4
+Boss,Slide Tackle,80,5
+Boss,Slide Tackle,81,5
+Boss,Slide Tackle,82,5
+Boss,Slide Tackle,83,5
+Boss,Slide Tackle,84,5
+Boss,Slide Tackle,85,8
+Boss,Slide Tackle,86,8
+Boss,Slide Tackle,87,8
+Boss,Slide Tackle,88,8
+Boss,Slide Tackle,89,8
+Boss,Slide Tackle,90,11
+Boss,Slide Tackle,91,11
+Boss,Slide Tackle,92,11
+Boss,Slide Tackle,93,11
+Boss,Slide Tackle,94,11
+Boss,Slide Tackle,95,15
+Boss,Slide Tackle,96,15
+Boss,Slide Tackle,97,15
+Boss,Slide Tackle,98,15
+Boss,Slide Tackle,99,15
+Boss,Acceleration,71,6
+Boss,Acceleration,72,6
+Boss,Acceleration,73,6
+Boss,Acceleration,74,6
+Boss,Acceleration,75,8
+Boss,Acceleration,76,8
+Boss,Acceleration,77,8
+Boss,Acceleration,78,8
+Boss,Acceleration,79,8
+Boss,Acceleration,80,10
+Boss,Acceleration,81,10
+Boss,Acceleration,82,10
+Boss,Acceleration,83,10
+Boss,Acceleration,84,10
+Boss,Acceleration,85,15
+Boss,Acceleration,86,15
+Boss,Acceleration,87,15
+Boss,Acceleration,88,15
+Boss,Acceleration,89,15
+Boss,Acceleration,90,20
+Boss,Sprint Speed,71,6
+Boss,Sprint Speed,72,6
+Boss,Sprint Speed,73,6
+Boss,Sprint Speed,74,6
+Boss,Sprint Speed,75,8
+Boss,Sprint Speed,76,8
+Boss,Sprint Speed,77,8
+Boss,Sprint Speed,78,8
+Boss,Sprint Speed,79,8
+Boss,Sprint Speed,80,10
+Boss,Sprint Speed,81,10
+Boss,Sprint Speed,82,10
+Boss,Sprint Speed,83,10
+Boss,Sprint Speed,84,10
+Boss,Sprint Speed,85,15
+Boss,Sprint Speed,86,15
+Boss,Sprint Speed,87,15
+Boss,Sprint Speed,88,15
+Boss,Sprint Speed,89,15
+Boss,Sprint Speed,90,20
+Boss,Jumping,76,3
+Boss,Jumping,77,3
+Boss,Jumping,78,3
+Boss,Jumping,79,3
+Boss,Jumping,80,3
+Boss,Jumping,81,3
+Boss,Jumping,82,3
+Boss,Jumping,83,3
+Boss,Jumping,84,3
+Boss,Jumping,85,6
+Boss,Jumping,86,6
+Boss,Jumping,87,6
+Boss,Jumping,88,6
+Boss,Jumping,89,6
+Boss,Jumping,90,8
+Boss,Jumping,91,8
+Boss,Jumping,92,8
+Boss,Jumping,93,8
+Boss,Jumping,94,8
+Boss,Jumping,95,10
+Boss,Jumping,96,10
+Boss,Jumping,97,10
+Boss,Jumping,98,10
+Boss,Jumping,99,10
+Boss,Strength,76,2
+Boss,Strength,77,2
+Boss,Strength,78,2
+Boss,Strength,79,2
+Boss,Strength,80,2
+Boss,Strength,81,2
+Boss,Strength,82,2
+Boss,Strength,83,2
+Boss,Strength,84,2
+Boss,Strength,85,4
+Boss,Strength,86,4
+Boss,Strength,87,4
+Boss,Strength,88,4
+Boss,Strength,89,4
+Boss,Strength,90,6
+Boss,Strength,91,6
+Boss,Strength,92,6
+Boss,Strength,93,6
+Boss,Strength,94,6
+Boss,Strength,95,10
+Boss,Strength,96,10
+Boss,Strength,97,10
+Boss,Strength,98,10
+Boss,Strength,99,10
+Boss,Stamina,71,3
+Boss,Stamina,72,3
+Boss,Stamina,73,3
+Boss,Stamina,74,3
+Boss,Stamina,75,4
+Boss,Stamina,76,4
+Boss,Stamina,77,4
+Boss,Stamina,78,4
+Boss,Stamina,79,4
+Boss,Stamina,80,5
+Boss,Stamina,81,5
+Boss,Stamina,82,5
+Boss,Stamina,83,5
+Boss,Stamina,84,5
+Boss,Stamina,85,8
+Boss,Stamina,86,8
+Boss,Stamina,87,8
+Boss,Stamina,88,8
+Boss,Stamina,89,8
+Boss,Stamina,90,11
+Boss,Stamina,91,11
+Boss,Stamina,92,11
+Boss,Aggression,76,3
+Boss,Aggression,77,3
+Boss,Aggression,78,3
+Boss,Aggression,79,3
+Boss,Aggression,80,3
+Boss,Aggression,81,3
+Boss,Aggression,82,3
+Boss,Aggression,83,3
+Boss,Aggression,84,3
+Boss,Aggression,85,6
+Boss,Aggression,86,6
+Boss,Aggression,87,6
+Boss,Aggression,88,6
+Boss,Aggression,89,6
+Boss,Aggression,90,8
+Boss,Aggression,91,8
+Boss,Aggression,92,8
+Boss,Aggression,93,8
+Boss,Aggression,94,8
+Boss,Aggression,95,10
+Boss,Aggression,96,10
+Boss,Aggression,97,10
+Boss,Aggression,98,10
+Boss,Aggression,99,10
+Boss,Weak Foot,4,20
+Boss,Weak Foot,5,35
+Boss,Skill Moves,3,10
+Boss,Skill Moves,4,20
+Boss,Skill Moves,5,30
+Archetype,Attribute,Level,Cost
+Marauder,Agility,71,6
+Marauder,Agility,72,6
+Marauder,Agility,73,6
+Marauder,Agility,74,6
+Marauder,Agility,75,8
+Marauder,Agility,76,8
+Marauder,Agility,77,8
+Marauder,Agility,78,8
+Marauder,Agility,79,8
+Marauder,Agility,80,10
+Marauder,Agility,81,10
+Marauder,Agility,82,10
+Marauder,Agility,83,10
+Marauder,Agility,84,10
+Marauder,Agility,85,15
+Marauder,Agility,86,15
+Marauder,Agility,87,15
+Marauder,Agility,88,15
+Marauder,Agility,89,15
+Marauder,Agility,90,20
+Marauder,Agility,91,20
+Marauder,Agility,92,20
+Marauder,Agility,93,25
+Marauder,Agility,94,25
+Marauder,Agility,95,30
+Marauder,Balance,66,1
+Marauder,Balance,67,1
+Marauder,Balance,68,1
+Marauder,Balance,69,1
+Marauder,Balance,70,2
+Marauder,Balance,71,2
+Marauder,Balance,72,2
+Marauder,Balance,73,2
+Marauder,Balance,74,2
+Marauder,Balance,75,3
+Marauder,Balance,76,3
+Marauder,Balance,77,3
+Marauder,Balance,78,3
+Marauder,Balance,79,3
+Marauder,Balance,80,3
+Marauder,Balance,81,3
+Marauder,Balance,82,3
+Marauder,Balance,83,3
+Marauder,Balance,84,3
+Marauder,Balance,85,6
+Marauder,Balance,86,6
+Marauder,Balance,87,6
+Marauder,Balance,88,6
+Marauder,Balance,89,6
+Marauder,Balance,90,8
+Marauder,Balance,91,8
+Marauder,Balance,92,8
+Marauder,Reactions,71,3
+Marauder,Reactions,72,3
+Marauder,Reactions,73,3
+Marauder,Reactions,74,3
+Marauder,Reactions,75,4
+Marauder,Reactions,76,4
+Marauder,Reactions,77,4
+Marauder,Reactions,78,4
+Marauder,Reactions,79,4
+Marauder,Reactions,80,5
+Marauder,Reactions,81,5
+Marauder,Reactions,82,5
+Marauder,Reactions,83,5
+Marauder,Reactions,84,5
+Marauder,Reactions,85,8
+Marauder,Reactions,86,8
+Marauder,Reactions,87,8
+Marauder,Reactions,88,8
+Marauder,Reactions,89,8
+Marauder,Reactions,90,11
+Marauder,Reactions,91,11
+Marauder,Reactions,92,13
+Marauder,Reactions,93,13
+Marauder,Reactions,94,15
+Marauder,Reactions,95,15
+Marauder,Reactions,96,20
+Marauder,Reactions,97,25
+Marauder,Reactions,98,30
+Marauder,Reactions,99,35
+Marauder,Ball Control,71,4
+Marauder,Ball Control,72,4
+Marauder,Ball Control,73,4
+Marauder,Ball Control,74,4
+Marauder,Ball Control,75,6
+Marauder,Ball Control,76,6
+Marauder,Ball Control,77,6
+Marauder,Ball Control,78,6
+Marauder,Ball Control,79,6
+Marauder,Ball Control,80,7
+Marauder,Ball Control,81,7
+Marauder,Ball Control,82,7
+Marauder,Ball Control,83,7
+Marauder,Ball Control,84,7
+Marauder,Ball Control,85,11
+Marauder,Ball Control,86,11
+Marauder,Ball Control,87,11
+Marauder,Ball Control,88,11
+Marauder,Ball Control,89,11
+Marauder,Ball Control,90,15
+Marauder,Ball Control,91,15
+Marauder,Ball Control,92,15
+Marauder,Ball Control,93,20
+Marauder,Ball Control,94,20
+Marauder,Ball Control,95,25
+Marauder,Ball Control,96,30
+Marauder,Dribbling,71,6
+Marauder,Dribbling,72,6
+Marauder,Dribbling,73,6
+Marauder,Dribbling,74,6
+Marauder,Dribbling,75,8
+Marauder,Dribbling,76,8
+Marauder,Dribbling,77,8
+Marauder,Dribbling,78,8
+Marauder,Dribbling,79,8
+Marauder,Dribbling,80,10
+Marauder,Dribbling,81,10
+Marauder,Dribbling,82,10
+Marauder,Dribbling,83,10
+Marauder,Dribbling,84,10
+Marauder,Dribbling,85,15
+Marauder,Dribbling,86,15
+Marauder,Dribbling,87,15
+Marauder,Dribbling,88,15
+Marauder,Dribbling,89,15
+Marauder,Dribbling,90,20
+Marauder,Dribbling,91,20
+Marauder,Dribbling,92,20
+Marauder,Composure,66,3
+Marauder,Composure,67,3
+Marauder,Composure,68,3
+Marauder,Composure,69,3
+Marauder,Composure,70,4
+Marauder,Composure,71,4
+Marauder,Composure,72,4
+Marauder,Composure,73,4
+Marauder,Composure,74,4
+Marauder,Composure,75,6
+Marauder,Composure,76,6
+Marauder,Composure,77,6
+Marauder,Composure,78,6
+Marauder,Composure,79,6
+Marauder,Composure,80,7
+Marauder,Composure,81,7
+Marauder,Composure,82,7
+Marauder,Composure,83,7
+Marauder,Composure,84,7
+Marauder,Composure,85,11
+Marauder,Composure,86,11
+Marauder,Composure,87,11
+Marauder,Composure,88,11
+Marauder,Composure,89,11
+Marauder,Composure,90,15
+Marauder,Composure,91,15
+Marauder,Composure,92,15
+Marauder,Acceleration,76,6
+Marauder,Acceleration,77,6
+Marauder,Acceleration,78,6
+Marauder,Acceleration,79,6
+Marauder,Acceleration,80,7
+Marauder,Acceleration,81,7
+Marauder,Acceleration,82,7
+Marauder,Acceleration,83,7
+Marauder,Acceleration,84,7
+Marauder,Acceleration,85,11
+Marauder,Acceleration,86,11
+Marauder,Acceleration,87,11
+Marauder,Acceleration,88,11
+Marauder,Acceleration,89,11
+Marauder,Acceleration,90,15
+Marauder,Acceleration,91,15
+Marauder,Acceleration,92,15
+Marauder,Acceleration,93,20
+Marauder,Acceleration,94,20
+Marauder,Acceleration,95,25
+Marauder,Sprint Speed,76,6
+Marauder,Sprint Speed,77,6
+Marauder,Sprint Speed,78,6
+Marauder,Sprint Speed,79,6
+Marauder,Sprint Speed,80,7
+Marauder,Sprint Speed,81,7
+Marauder,Sprint Speed,82,7
+Marauder,Sprint Speed,83,7
+Marauder,Sprint Speed,84,7
+Marauder,Sprint Speed,85,11
+Marauder,Sprint Speed,86,11
+Marauder,Sprint Speed,87,11
+Marauder,Sprint Speed,88,11
+Marauder,Sprint Speed,89,11
+Marauder,Sprint Speed,90,15
+Marauder,Sprint Speed,91,15
+Marauder,Sprint Speed,92,15
+Marauder,Sprint Speed,93,20
+Marauder,Sprint Speed,94,20
+Marauder,Sprint Speed,95,25
+Marauder,Strength,61,2
+Marauder,Strength,62,2
+Marauder,Strength,63,2
+Marauder,Strength,64,2
+Marauder,Strength,65,2
+Marauder,Strength,66,3
+Marauder,Strength,67,3
+Marauder,Strength,68,3
+Marauder,Strength,69,3
+Marauder,Strength,70,4
+Marauder,Strength,71,4
+Marauder,Strength,72,4
+Marauder,Strength,73,4
+Marauder,Strength,74,4
+Marauder,Strength,75,6
+Marauder,Strength,76,6
+Marauder,Strength,77,6
+Marauder,Strength,78,6
+Marauder,Strength,79,6
+Marauder,Strength,80,7
+Marauder,Strength,81,7
+Marauder,Strength,82,7
+Marauder,Strength,83,7
+Marauder,Strength,84,7
+Marauder,Strength,85,11
+Marauder,Strength,86,11
+Marauder,Strength,87,11
+Marauder,Strength,88,11
+Marauder,Strength,89,11
+Marauder,Strength,90,15
+Marauder,Strength,91,15
+Marauder,Strength,92,15
+Marauder,Jumping,61,1
+Marauder,Jumping,62,1
+Marauder,Jumping,63,1
+Marauder,Jumping,64,1
+Marauder,Jumping,65,1
+Marauder,Jumping,66,2
+Marauder,Jumping,67,2
+Marauder,Jumping,68,2
+Marauder,Jumping,69,2
+Marauder,Jumping,70,3
+Marauder,Jumping,71,3
+Marauder,Jumping,72,3
+Marauder,Jumping,73,3
+Marauder,Jumping,74,3
+Marauder,Jumping,75,4
+Marauder,Jumping,76,4
+Marauder,Jumping,77,4
+Marauder,Jumping,78,4
+Marauder,Jumping,79,4
+Marauder,Jumping,80,5
+Marauder,Jumping,81,5
+Marauder,Jumping,82,5
+Marauder,Jumping,83,5
+Marauder,Jumping,84,5
+Marauder,Jumping,85,8
+Marauder,Jumping,86,8
+Marauder,Jumping,87,8
+Marauder,Jumping,88,8
+Marauder,Jumping,89,8
+Marauder,Jumping,90,11
+Marauder,Jumping,91,11
+Marauder,Jumping,92,11
+Marauder,Penalties,66,2
+Marauder,Penalties,67,2
+Marauder,Penalties,68,2
+Marauder,Penalties,69,2
+Marauder,Penalties,70,3
+Marauder,Penalties,71,3
+Marauder,Penalties,72,3
+Marauder,Penalties,73,3
+Marauder,Penalties,74,3
+Marauder,Penalties,75,4
+Marauder,Penalties,76,4
+Marauder,Penalties,77,4
+Marauder,Penalties,78,4
+Marauder,Penalties,79,4
+Marauder,Penalties,80,5
+Marauder,Penalties,81,5
+Marauder,Penalties,82,5
+Marauder,Penalties,83,5
+Marauder,Penalties,84,5
+Marauder,Penalties,85,8
+Marauder,Penalties,86,8
+Marauder,Penalties,87,8
+Marauder,Penalties,88,8
+Marauder,Penalties,89,8
+Marauder,Penalties,90,11
+Marauder,Penalties,91,11
+Marauder,Penalties,92,11
+Marauder,Penalties,93,11
+Marauder,Penalties,94,11
+Marauder,Penalties,95,15
+Marauder,Penalties,96,15
+Marauder,Volleys,66,2
+Marauder,Volleys,67,2
+Marauder,Volleys,68,2
+Marauder,Volleys,69,2
+Marauder,Volleys,70,3
+Marauder,Volleys,71,3
+Marauder,Volleys,72,3
+Marauder,Volleys,73,3
+Marauder,Volleys,74,3
+Marauder,Volleys,75,4
+Marauder,Volleys,76,4
+Marauder,Volleys,77,4
+Marauder,Volleys,78,4
+Marauder,Volleys,79,4
+Marauder,Volleys,80,5
+Marauder,Volleys,81,5
+Marauder,Volleys,82,5
+Marauder,Volleys,83,5
+Marauder,Volleys,84,5
+Marauder,Volleys,85,8
+Marauder,Volleys,86,8
+Marauder,Volleys,87,8
+Marauder,Volleys,88,8
+Marauder,Volleys,89,8
+Marauder,Volleys,90,11
+Marauder,Volleys,91,11
+Marauder,Volleys,92,11
+Marauder,Volleys,93,11
+Marauder,Volleys,94,11
+Marauder,Volleys,95,15
+Marauder,Volleys,96,15
+Marauder,Long Shots,61,2
+Marauder,Long Shots,62,2
+Marauder,Long Shots,63,2
+Marauder,Long Shots,64,3
+Marauder,Long Shots,65,3
+Marauder,Long Shots,66,3
+Marauder,Long Shots,67,3
+Marauder,Long Shots,68,3
+Marauder,Long Shots,69,3
+Marauder,Long Shots,70,4
+Marauder,Long Shots,71,4
+Marauder,Long Shots,72,4
+Marauder,Long Shots,73,4
+Marauder,Long Shots,74,4
+Marauder,Long Shots,75,6
+Marauder,Long Shots,76,6
+Marauder,Long Shots,77,6
+Marauder,Long Shots,78,6
+Marauder,Long Shots,79,6
+Marauder,Long Shots,80,7
+Marauder,Long Shots,81,7
+Marauder,Long Shots,82,7
+Marauder,Long Shots,83,7
+Marauder,Long Shots,84,7
+Marauder,Long Shots,85,11
+Marauder,Long Shots,86,11
+Marauder,Long Shots,87,11
+Marauder,Long Shots,88,11
+Marauder,Long Shots,89,11
+Marauder,Long Shots,90,15
+Marauder,Long Shots,91,15
+Marauder,Long Shots,92,15
+Marauder,Shot Power,66,3
+Marauder,Shot Power,67,3
+Marauder,Shot Power,68,3
+Marauder,Shot Power,69,3
+Marauder,Shot Power,70,4
+Marauder,Shot Power,71,4
+Marauder,Shot Power,72,4
+Marauder,Shot Power,73,4
+Marauder,Shot Power,74,4
+Marauder,Shot Power,75,6
+Marauder,Shot Power,76,6
+Marauder,Shot Power,77,6
+Marauder,Shot Power,78,6
+Marauder,Shot Power,79,6
+Marauder,Shot Power,80,7
+Marauder,Shot Power,81,7
+Marauder,Shot Power,82,7
+Marauder,Shot Power,83,7
+Marauder,Shot Power,84,7
+Marauder,Shot Power,85,11
+Marauder,Shot Power,86,11
+Marauder,Shot Power,87,11
+Marauder,Shot Power,88,11
+Marauder,Shot Power,89,11
+Marauder,Shot Power,90,15
+Marauder,Shot Power,91,15
+Marauder,Shot Power,92,15
+Marauder,Finishing,56,2
+Marauder,Finishing,57,2
+Marauder,Finishing,58,2
+Marauder,Finishing,59,2
+Marauder,Finishing,60,2
+Marauder,Finishing,61,3
+Marauder,Finishing,62,3
+Marauder,Finishing,63,3
+Marauder,Finishing,64,4
+Marauder,Finishing,65,4
+Marauder,Finishing,66,4
+Marauder,Finishing,67,5
+Marauder,Finishing,68,5
+Marauder,Finishing,69,5
+Marauder,Finishing,70,6
+Marauder,Finishing,71,6
+Marauder,Finishing,72,6
+Marauder,Finishing,73,6
+Marauder,Finishing,74,6
+Marauder,Finishing,75,8
+Marauder,Finishing,76,8
+Marauder,Finishing,77,8
+Marauder,Finishing,78,8
+Marauder,Finishing,79,8
+Marauder,Finishing,80,10
+Marauder,Finishing,81,10
+Marauder,Finishing,82,10
+Marauder,Finishing,83,10
+Marauder,Finishing,84,10
+Marauder,Finishing,85,15
+Marauder,Finishing,86,15
+Marauder,Finishing,87,15
+Marauder,Finishing,88,15
+Marauder,Finishing,89,15
+Marauder,Finishing,90,20
+Marauder,Att. Position,66,2
+Marauder,Att. Position,67,2
+Marauder,Att. Position,68,2
+Marauder,Att. Position,69,2
+Marauder,Att. Position,70,3
+Marauder,Att. Position,71,3
+Marauder,Att. Position,72,3
+Marauder,Att. Position,73,3
+Marauder,Att. Position,74,3
+Marauder,Att. Position,75,4
+Marauder,Att. Position,76,4
+Marauder,Att. Position,77,4
+Marauder,Att. Position,78,4
+Marauder,Att. Position,79,4
+Marauder,Att. Position,80,5
+Marauder,Att. Position,81,5
+Marauder,Att. Position,82,5
+Marauder,Att. Position,83,5
+Marauder,Att. Position,84,5
+Marauder,Att. Position,85,8
+Marauder,Att. Position,86,8
+Marauder,Att. Position,87,8
+Marauder,Att. Position,88,8
+Marauder,Att. Position,89,8
+Marauder,Att. Position,90,11
+Marauder,Att. Position,91,11
+Marauder,Att. Position,92,11
+Marauder,Att. Position,93,11
+Marauder,Att. Position,94,11
+Marauder,Att. Position,95,15
+Marauder,Att. Position,96,15
+Marauder,Vision,61,2
+Marauder,Vision,62,2
+Marauder,Vision,63,2
+Marauder,Vision,64,3
+Marauder,Vision,65,3
+Marauder,Vision,66,3
+Marauder,Vision,67,3
+Marauder,Vision,68,3
+Marauder,Vision,69,3
+Marauder,Vision,70,4
+Marauder,Vision,71,4
+Marauder,Vision,72,4
+Marauder,Vision,73,4
+Marauder,Vision,74,4
+Marauder,Vision,75,6
+Marauder,Vision,76,6
+Marauder,Vision,77,6
+Marauder,Vision,78,6
+Marauder,Vision,79,6
+Marauder,Vision,80,7
+Marauder,Vision,81,7
+Marauder,Vision,82,7
+Marauder,Vision,83,7
+Marauder,Vision,84,7
+Marauder,Vision,85,11
+Marauder,Vision,86,11
+Marauder,Vision,87,11
+Marauder,Vision,88,11
+Marauder,Vision,89,11
+Marauder,Vision,90,15
+Marauder,Vision,91,15
+Marauder,Vision,92,15
+Marauder,Crossing,76,6
+Marauder,Crossing,77,6
+Marauder,Crossing,78,6
+Marauder,Crossing,79,6
+Marauder,Crossing,80,7
+Marauder,Crossing,81,7
+Marauder,Crossing,82,7
+Marauder,Crossing,83,7
+Marauder,Crossing,84,7
+Marauder,Crossing,85,11
+Marauder,Crossing,86,11
+Marauder,Crossing,87,11
+Marauder,Crossing,88,11
+Marauder,Crossing,89,11
+Marauder,Crossing,90,13
+Marauder,Crossing,91,13
+Marauder,Crossing,92,15
+Marauder,Crossing,93,15
+Marauder,Crossing,94,15
+Marauder,Crossing,95,20
+Marauder,Crossing,96,20
+Marauder,Crossing,97,25
+Marauder,Crossing,98,25
+Marauder,Crossing,99,30
+Marauder,FK Acc.,61,1
+Marauder,FK Acc.,62,1
+Marauder,FK Acc.,63,1
+Marauder,FK Acc.,64,1
+Marauder,FK Acc.,65,1
+Marauder,FK Acc.,66,2
+Marauder,FK Acc.,67,2
+Marauder,FK Acc.,68,2
+Marauder,FK Acc.,69,2
+Marauder,FK Acc.,70,3
+Marauder,FK Acc.,71,3
+Marauder,FK Acc.,72,3
+Marauder,FK Acc.,73,3
+Marauder,FK Acc.,74,3
+Marauder,FK Acc.,75,4
+Marauder,FK Acc.,76,4
+Marauder,FK Acc.,77,4
+Marauder,FK Acc.,78,4
+Marauder,FK Acc.,79,4
+Marauder,FK Acc.,80,5
+Marauder,FK Acc.,81,5
+Marauder,FK Acc.,82,5
+Marauder,FK Acc.,83,5
+Marauder,FK Acc.,84,5
+Marauder,FK Acc.,85,8
+Marauder,FK Acc.,86,8
+Marauder,FK Acc.,87,8
+Marauder,FK Acc.,88,8
+Marauder,FK Acc.,89,8
+Marauder,FK Acc.,90,10
+Marauder,FK Acc.,91,10
+Marauder,FK Acc.,92,10
+Marauder,FK Acc.,93,10
+Marauder,FK Acc.,94,10
+Marauder,FK Acc.,95,15
+Marauder,Short Pass,66,4
+Marauder,Short Pass,67,5
+Marauder,Short Pass,68,5
+Marauder,Short Pass,69,5
+Marauder,Short Pass,70,6
+Marauder,Short Pass,71,6
+Marauder,Short Pass,72,6
+Marauder,Short Pass,73,6
+Marauder,Short Pass,74,6
+Marauder,Short Pass,75,8
+Marauder,Short Pass,76,8
+Marauder,Short Pass,77,8
+Marauder,Short Pass,78,8
+Marauder,Short Pass,79,8
+Marauder,Short Pass,80,10
+Marauder,Short Pass,81,10
+Marauder,Short Pass,82,10
+Marauder,Short Pass,83,10
+Marauder,Short Pass,84,10
+Marauder,Short Pass,85,15
+Marauder,Short Pass,86,15
+Marauder,Short Pass,87,15
+Marauder,Short Pass,88,15
+Marauder,Short Pass,89,15
+Marauder,Short Pass,90,20
+Marauder,Short Pass,91,20
+Marauder,Short Pass,92,20
+Marauder,Long Pass,66,3
+Marauder,Long Pass,67,3
+Marauder,Long Pass,68,3
+Marauder,Long Pass,69,3
+Marauder,Long Pass,70,4
+Marauder,Long Pass,71,4
+Marauder,Long Pass,72,4
+Marauder,Long Pass,73,4
+Marauder,Long Pass,74,4
+Marauder,Long Pass,75,6
+Marauder,Long Pass,76,6
+Marauder,Long Pass,77,6
+Marauder,Long Pass,78,6
+Marauder,Long Pass,79,6
+Marauder,Long Pass,80,7
+Marauder,Long Pass,81,7
+Marauder,Long Pass,82,7
+Marauder,Long Pass,83,7
+Marauder,Long Pass,84,7
+Marauder,Long Pass,85,11
+Marauder,Long Pass,86,11
+Marauder,Long Pass,87,11
+Marauder,Long Pass,88,11
+Marauder,Long Pass,89,11
+Marauder,Long Pass,90,15
+Marauder,Long Pass,91,15
+Marauder,Long Pass,92,15
+Marauder,Curve,76,4
+Marauder,Curve,77,4
+Marauder,Curve,78,4
+Marauder,Curve,79,4
+Marauder,Curve,80,5
+Marauder,Curve,81,5
+Marauder,Curve,82,5
+Marauder,Curve,83,5
+Marauder,Curve,84,5
+Marauder,Curve,85,8
+Marauder,Curve,86,8
+Marauder,Curve,87,8
+Marauder,Curve,88,8
+Marauder,Curve,89,8
+Marauder,Curve,90,11
+Marauder,Curve,91,11
+Marauder,Curve,92,11
+Marauder,Curve,93,11
+Marauder,Curve,94,11
+Marauder,Curve,95,15
+Marauder,Curve,96,15
+Marauder,Stamina,76,4
+Marauder,Stamina,77,4
+Marauder,Stamina,78,4
+Marauder,Stamina,79,4
+Marauder,Stamina,80,5
+Marauder,Stamina,81,5
+Marauder,Stamina,82,5
+Marauder,Stamina,83,5
+Marauder,Stamina,84,5
+Marauder,Stamina,85,8
+Marauder,Stamina,86,8
+Marauder,Stamina,87,8
+Marauder,Stamina,88,8
+Marauder,Stamina,89,8
+Marauder,Stamina,90,11
+Marauder,Stamina,91,11
+Marauder,Stamina,92,11
+Marauder,Stamina,93,11
+Marauder,Stamina,94,11
+Marauder,Stamina,95,15
+Marauder,Stamina,96,15
+Marauder,Aggression,73,3
+Marauder,Aggression,74,3
+Marauder,Aggression,75,4
+Marauder,Aggression,76,4
+Marauder,Aggression,77,4
+Marauder,Aggression,78,4
+Marauder,Aggression,79,4
+Marauder,Aggression,80,5
+Marauder,Aggression,81,5
+Marauder,Aggression,82,5
+Marauder,Aggression,83,5
+Marauder,Aggression,84,5
+Marauder,Aggression,85,8
+Marauder,Aggression,86,8
+Marauder,Aggression,87,8
+Marauder,Aggression,88,8
+Marauder,Aggression,89,8
+Marauder,Aggression,90,11
+Marauder,Aggression,91,11
+Marauder,Aggression,92,11
+Marauder,Aggression,93,11
+Marauder,Aggression,94,11
+Marauder,Aggression,95,15
+Marauder,Aggression,96,15
+Marauder,Slide Tackle,76,4
+Marauder,Slide Tackle,77,4
+Marauder,Slide Tackle,78,4
+Marauder,Slide Tackle,79,4
+Marauder,Slide Tackle,80,5
+Marauder,Slide Tackle,81,5
+Marauder,Slide Tackle,82,5
+Marauder,Slide Tackle,83,5
+Marauder,Slide Tackle,84,5
+Marauder,Slide Tackle,85,8
+Marauder,Slide Tackle,86,8
+Marauder,Slide Tackle,87,8
+Marauder,Slide Tackle,88,8
+Marauder,Slide Tackle,89,8
+Marauder,Slide Tackle,90,11
+Marauder,Slide Tackle,91,11
+Marauder,Slide Tackle,92,11
+Marauder,Slide Tackle,93,11
+Marauder,Slide Tackle,94,11
+Marauder,Slide Tackle,95,15
+Marauder,Slide Tackle,96,15
+Marauder,Stand Tackle,71,6
+Marauder,Stand Tackle,72,6
+Marauder,Stand Tackle,73,6
+Marauder,Stand Tackle,74,6
+Marauder,Stand Tackle,75,8
+Marauder,Stand Tackle,76,8
+Marauder,Stand Tackle,77,8
+Marauder,Stand Tackle,78,8
+Marauder,Stand Tackle,79,8
+Marauder,Stand Tackle,80,10
+Marauder,Stand Tackle,81,10
+Marauder,Stand Tackle,82,10
+Marauder,Stand Tackle,83,10
+Marauder,Stand Tackle,84,10
+Marauder,Stand Tackle,85,15
+Marauder,Stand Tackle,86,15
+Marauder,Stand Tackle,87,15
+Marauder,Stand Tackle,88,15
+Marauder,Stand Tackle,89,15
+Marauder,Stand Tackle,90,20
+Marauder,Stand Tackle,91,20
+Marauder,Stand Tackle,92,20
+Marauder,Stand Tackle,93,20
+Marauder,Stand Tackle,94,20
+Marauder,Stand Tackle,95,30
+Marauder,Stand Tackle,96,35
+Marauder,Def. Aware,71,4
+Marauder,Def. Aware,72,4
+Marauder,Def. Aware,73,4
+Marauder,Def. Aware,74,4
+Marauder,Def. Aware,75,6
+Marauder,Def. Aware,76,6
+Marauder,Def. Aware,77,6
+Marauder,Def. Aware,78,6
+Marauder,Def. Aware,79,6
+Marauder,Def. Aware,80,7
+Marauder,Def. Aware,81,7
+Marauder,Def. Aware,82,7
+Marauder,Def. Aware,83,7
+Marauder,Def. Aware,84,7
+Marauder,Def. Aware,85,11
+Marauder,Def. Aware,86,11
+Marauder,Def. Aware,87,11
+Marauder,Def. Aware,88,11
+Marauder,Def. Aware,89,11
+Marauder,Def. Aware,90,15
+Marauder,Def. Aware,91,15
+Marauder,Def. Aware,92,15
+Marauder,Def. Aware,93,15
+Marauder,Def. Aware,94,15
+Marauder,Def. Aware,95,20
+Marauder,Def. Aware,96,20
+Marauder,Heading Acc.,66,2
+Marauder,Heading Acc.,67,3
+Marauder,Heading Acc.,68,3
+Marauder,Heading Acc.,69,4
+Marauder,Heading Acc.,70,4
+Marauder,Heading Acc.,71,4
+Marauder,Heading Acc.,72,4
+Marauder,Heading Acc.,73,4
+Marauder,Heading Acc.,74,4
+Marauder,Heading Acc.,75,6
+Marauder,Heading Acc.,76,6
+Marauder,Heading Acc.,77,6
+Marauder,Heading Acc.,78,6
+Marauder,Heading Acc.,79,6
+Marauder,Heading Acc.,80,7
+Marauder,Heading Acc.,81,7
+Marauder,Heading Acc.,82,7
+Marauder,Heading Acc.,83,7
+Marauder,Heading Acc.,84,7
+Marauder,Heading Acc.,85,11
+Marauder,Heading Acc.,86,11
+Marauder,Heading Acc.,87,11
+Marauder,Heading Acc.,88,11
+Marauder,Heading Acc.,89,11
+Marauder,Heading Acc.,90,15
+Marauder,Interceptions,71,4
+Marauder,Interceptions,72,4
+Marauder,Interceptions,73,4
+Marauder,Interceptions,74,4
+Marauder,Interceptions,75,6
+Marauder,Interceptions,76,6
+Marauder,Interceptions,77,6
+Marauder,Interceptions,78,6
+Marauder,Interceptions,79,6
+Marauder,Interceptions,80,7
+Marauder,Interceptions,81,7
+Marauder,Interceptions,82,7
+Marauder,Interceptions,83,7
+Marauder,Interceptions,84,7
+Marauder,Interceptions,85,11
+Marauder,Interceptions,86,11
+Marauder,Interceptions,87,11
+Marauder,Interceptions,88,11
+Marauder,Interceptions,89,11
+Marauder,Interceptions,90,15
+Marauder,Interceptions,91,15
+Marauder,Interceptions,92,15
+Marauder,Interceptions,93,15
+Marauder,Interceptions,94,15
+Marauder,Interceptions,95,20
+Marauder,Interceptions,96,20
+Marauder,Weak Foot,4,25
+Marauder,Weak Foot,5,25
+Marauder,Skill Moves,4,10
+Marauder,Skill Moves,5,30
+Archetype,Attribute,Level,Cost
+Recycler,Agility,66,3
+Recycler,Agility,67,3
+Recycler,Agility,68,3
+Recycler,Agility,69,3
+Recycler,Agility,70,4
+Recycler,Agility,71,4
+Recycler,Agility,72,4
+Recycler,Agility,73,4
+Recycler,Agility,74,4
+Recycler,Agility,75,6
+Recycler,Agility,76,6
+Recycler,Agility,77,6
+Recycler,Agility,78,6
+Recycler,Agility,79,6
+Recycler,Agility,80,7
+Recycler,Agility,81,7
+Recycler,Agility,82,7
+Recycler,Agility,83,7
+Recycler,Agility,84,7
+Recycler,Agility,85,11
+Recycler,Agility,86,11
+Recycler,Agility,87,11
+Recycler,Agility,88,11
+Recycler,Agility,89,11
+Recycler,Agility,90,15
+Recycler,Agility,91,15
+Recycler,Agility,92,15
+Recycler,Balance,76,3
+Recycler,Balance,77,3
+Recycler,Balance,78,3
+Recycler,Balance,79,3
+Recycler,Balance,80,3
+Recycler,Balance,81,3
+Recycler,Balance,82,3
+Recycler,Balance,83,3
+Recycler,Balance,84,3
+Recycler,Balance,85,6
+Recycler,Balance,86,6
+Recycler,Balance,87,6
+Recycler,Balance,88,6
+Recycler,Balance,89,6
+Recycler,Balance,90,8
+Recycler,Balance,91,8
+Recycler,Balance,92,8
+Recycler,Reactions,66,2
+Recycler,Reactions,67,2
+Recycler,Reactions,68,2
+Recycler,Reactions,69,2
+Recycler,Reactions,70,3
+Recycler,Reactions,71,3
+Recycler,Reactions,72,3
+Recycler,Reactions,73,3
+Recycler,Reactions,74,3
+Recycler,Reactions,75,4
+Recycler,Reactions,76,4
+Recycler,Reactions,77,4
+Recycler,Reactions,78,4
+Recycler,Reactions,79,4
+Recycler,Reactions,80,5
+Recycler,Reactions,81,5
+Recycler,Reactions,82,5
+Recycler,Reactions,83,5
+Recycler,Reactions,84,5
+Recycler,Reactions,85,8
+Recycler,Reactions,86,8
+Recycler,Reactions,87,8
+Recycler,Reactions,88,8
+Recycler,Reactions,89,8
+Recycler,Reactions,90,11
+Recycler,Reactions,91,11
+Recycler,Reactions,92,13
+Recycler,Reactions,93,13
+Recycler,Reactions,94,15
+Recycler,Reactions,95,15
+Recycler,Reactions,96,20
+Recycler,Reactions,97,25
+Recycler,Reactions,98,30
+Recycler,Reactions,99,35
+Recycler,Ball Control,66,4
+Recycler,Ball Control,67,5
+Recycler,Ball Control,68,5
+Recycler,Ball Control,69,5
+Recycler,Ball Control,70,6
+Recycler,Ball Control,71,6
+Recycler,Ball Control,72,6
+Recycler,Ball Control,73,6
+Recycler,Ball Control,74,6
+Recycler,Ball Control,75,8
+Recycler,Ball Control,76,8
+Recycler,Ball Control,77,8
+Recycler,Ball Control,78,8
+Recycler,Ball Control,79,8
+Recycler,Ball Control,80,10
+Recycler,Ball Control,81,10
+Recycler,Ball Control,82,10
+Recycler,Ball Control,83,10
+Recycler,Ball Control,84,10
+Recycler,Ball Control,85,15
+Recycler,Ball Control,86,15
+Recycler,Ball Control,87,15
+Recycler,Ball Control,88,15
+Recycler,Ball Control,89,15
+Recycler,Ball Control,90,20
+Recycler,Ball Control,91,20
+Recycler,Ball Control,92,20
+Recycler,Ball Control,93,25
+Recycler,Ball Control,94,25
+Recycler,Ball Control,95,30
+Recycler,Ball Control,96,35
+Recycler,Dribbling,66,4
+Recycler,Dribbling,67,5
+Recycler,Dribbling,68,5
+Recycler,Dribbling,69,5
+Recycler,Dribbling,70,6
+Recycler,Dribbling,71,6
+Recycler,Dribbling,72,6
+Recycler,Dribbling,73,6
+Recycler,Dribbling,74,6
+Recycler,Dribbling,75,8
+Recycler,Dribbling,76,8
+Recycler,Dribbling,77,8
+Recycler,Dribbling,78,8
+Recycler,Dribbling,79,8
+Recycler,Dribbling,80,10
+Recycler,Dribbling,81,10
+Recycler,Dribbling,82,10
+Recycler,Dribbling,83,10
+Recycler,Dribbling,84,10
+Recycler,Dribbling,85,15
+Recycler,Dribbling,86,15
+Recycler,Dribbling,87,15
+Recycler,Dribbling,88,15
+Recycler,Dribbling,89,15
+Recycler,Dribbling,90,20
+Recycler,Dribbling,91,20
+Recycler,Dribbling,92,20
+Recycler,Composure,71,4
+Recycler,Composure,72,4
+Recycler,Composure,73,4
+Recycler,Composure,74,4
+Recycler,Composure,75,6
+Recycler,Composure,76,6
+Recycler,Composure,77,6
+Recycler,Composure,78,6
+Recycler,Composure,79,6
+Recycler,Composure,80,7
+Recycler,Composure,81,7
+Recycler,Composure,82,7
+Recycler,Composure,83,7
+Recycler,Composure,84,7
+Recycler,Composure,85,11
+Recycler,Composure,86,11
+Recycler,Composure,87,11
+Recycler,Composure,88,11
+Recycler,Composure,89,11
+Recycler,Composure,90,15
+Recycler,Composure,91,15
+Recycler,Composure,92,15
+Recycler,Composure,93,20
+Recycler,Composure,94,20
+Recycler,Composure,95,25
+Recycler,Composure,96,30
+Recycler,Composure,97,30
+Recycler,Composure,98,35
+Recycler,Composure,99,40
+Recycler,Acceleration,71,3
+Recycler,Acceleration,72,3
+Recycler,Acceleration,73,3
+Recycler,Acceleration,74,3
+Recycler,Acceleration,75,4
+Recycler,Acceleration,76,4
+Recycler,Acceleration,77,4
+Recycler,Acceleration,78,4
+Recycler,Acceleration,79,4
+Recycler,Acceleration,80,5
+Recycler,Acceleration,81,5
+Recycler,Acceleration,82,5
+Recycler,Acceleration,83,5
+Recycler,Acceleration,84,5
+Recycler,Acceleration,85,8
+Recycler,Acceleration,86,8
+Recycler,Acceleration,87,8
+Recycler,Acceleration,88,8
+Recycler,Acceleration,89,8
+Recycler,Acceleration,90,11
+Recycler,Sprint Speed,71,3
+Recycler,Sprint Speed,72,3
+Recycler,Sprint Speed,73,3
+Recycler,Sprint Speed,74,3
+Recycler,Sprint Speed,75,4
+Recycler,Sprint Speed,76,4
+Recycler,Sprint Speed,77,4
+Recycler,Sprint Speed,78,4
+Recycler,Sprint Speed,79,4
+Recycler,Sprint Speed,80,5
+Recycler,Sprint Speed,81,5
+Recycler,Sprint Speed,82,5
+Recycler,Sprint Speed,83,5
+Recycler,Sprint Speed,84,5
+Recycler,Sprint Speed,85,8
+Recycler,Sprint Speed,86,8
+Recycler,Sprint Speed,87,8
+Recycler,Sprint Speed,88,8
+Recycler,Sprint Speed,89,8
+Recycler,Sprint Speed,90,11
+Recycler,Strength,71,4
+Recycler,Strength,72,4
+Recycler,Strength,73,4
+Recycler,Strength,74,4
+Recycler,Strength,75,6
+Recycler,Strength,76,6
+Recycler,Strength,77,6
+Recycler,Strength,78,6
+Recycler,Strength,79,6
+Recycler,Strength,80,7
+Recycler,Strength,81,7
+Recycler,Strength,82,7
+Recycler,Strength,83,7
+Recycler,Strength,84,7
+Recycler,Strength,85,11
+Recycler,Strength,86,11
+Recycler,Strength,87,11
+Recycler,Strength,88,11
+Recycler,Strength,89,11
+Recycler,Strength,90,15
+Recycler,Strength,91,15
+Recycler,Strength,92,15
+Recycler,Strength,93,20
+Recycler,Strength,94,20
+Recycler,Strength,95,25
+Recycler,Strength,96,30
+Recycler,Jumping,66,2
+Recycler,Jumping,67,2
+Recycler,Jumping,68,2
+Recycler,Jumping,69,2
+Recycler,Jumping,70,3
+Recycler,Jumping,71,3
+Recycler,Jumping,72,3
+Recycler,Jumping,73,3
+Recycler,Jumping,74,3
+Recycler,Jumping,75,4
+Recycler,Jumping,76,4
+Recycler,Jumping,77,4
+Recycler,Jumping,78,4
+Recycler,Jumping,79,4
+Recycler,Jumping,80,5
+Recycler,Jumping,81,5
+Recycler,Jumping,82,5
+Recycler,Jumping,83,5
+Recycler,Jumping,84,5
+Recycler,Jumping,85,8
+Recycler,Jumping,86,8
+Recycler,Jumping,87,8
+Recycler,Jumping,88,8
+Recycler,Jumping,89,8
+Recycler,Jumping,90,11
+Recycler,Jumping,91,11
+Recycler,Jumping,92,11
+Recycler,Jumping,93,11
+Recycler,Jumping,94,11
+Recycler,Jumping,95,15
+Recycler,Stamina,71,3
+Recycler,Stamina,72,3
+Recycler,Stamina,73,3
+Recycler,Stamina,74,3
+Recycler,Stamina,75,4
+Recycler,Stamina,76,4
+Recycler,Stamina,77,4
+Recycler,Stamina,78,4
+Recycler,Stamina,79,4
+Recycler,Stamina,80,5
+Recycler,Stamina,81,5
+Recycler,Stamina,82,5
+Recycler,Stamina,83,5
+Recycler,Stamina,84,5
+Recycler,Stamina,85,8
+Recycler,Stamina,86,8
+Recycler,Stamina,87,8
+Recycler,Stamina,88,8
+Recycler,Stamina,89,8
+Recycler,Stamina,90,11
+Recycler,Stamina,91,11
+Recycler,Stamina,92,11
+Recycler,Stamina,93,11
+Recycler,Stamina,94,11
+Recycler,Stamina,95,15
+Recycler,Stamina,96,15
+Recycler,Aggression,76,3
+Recycler,Aggression,77,3
+Recycler,Aggression,78,3
+Recycler,Aggression,79,3
+Recycler,Aggression,80,3
+Recycler,Aggression,81,3
+Recycler,Aggression,82,3
+Recycler,Aggression,83,3
+Recycler,Aggression,84,3
+Recycler,Aggression,85,6
+Recycler,Aggression,86,6
+Recycler,Aggression,87,6
+Recycler,Aggression,88,6
+Recycler,Aggression,89,6
+Recycler,Aggression,90,8
+Recycler,Aggression,91,8
+Recycler,Aggression,92,8
+Recycler,Aggression,93,10
+Recycler,Aggression,94,10
+Recycler,Aggression,95,15
+Recycler,Aggression,96,20
+Recycler,Penalties,66,2
+Recycler,Penalties,67,2
+Recycler,Penalties,68,2
+Recycler,Penalties,69,2
+Recycler,Penalties,70,3
+Recycler,Penalties,71,3
+Recycler,Penalties,72,3
+Recycler,Penalties,73,3
+Recycler,Penalties,74,3
+Recycler,Penalties,75,4
+Recycler,Penalties,76,4
+Recycler,Penalties,77,4
+Recycler,Penalties,78,4
+Recycler,Penalties,79,4
+Recycler,Penalties,80,5
+Recycler,Penalties,81,5
+Recycler,Penalties,82,5
+Recycler,Penalties,83,5
+Recycler,Penalties,84,5
+Recycler,Penalties,85,8
+Recycler,Penalties,86,8
+Recycler,Penalties,87,8
+Recycler,Penalties,88,8
+Recycler,Penalties,89,8
+Recycler,Penalties,90,11
+Recycler,Volleys,66,2
+Recycler,Volleys,67,2
+Recycler,Volleys,68,2
+Recycler,Volleys,69,2
+Recycler,Volleys,70,3
+Recycler,Volleys,71,3
+Recycler,Volleys,72,3
+Recycler,Volleys,73,3
+Recycler,Volleys,74,3
+Recycler,Volleys,75,4
+Recycler,Volleys,76,4
+Recycler,Volleys,77,4
+Recycler,Volleys,78,4
+Recycler,Volleys,79,4
+Recycler,Volleys,80,5
+Recycler,Volleys,81,5
+Recycler,Volleys,82,5
+Recycler,Volleys,83,5
+Recycler,Volleys,84,5
+Recycler,Volleys,85,8
+Recycler,Volleys,86,8
+Recycler,Volleys,87,8
+Recycler,Volleys,88,8
+Recycler,Volleys,89,8
+Recycler,Volleys,90,11
+Recycler,Long Shots,66,3
+Recycler,Long Shots,67,3
+Recycler,Long Shots,68,3
+Recycler,Long Shots,69,3
+Recycler,Long Shots,70,4
+Recycler,Long Shots,71,4
+Recycler,Long Shots,72,4
+Recycler,Long Shots,73,4
+Recycler,Long Shots,74,4
+Recycler,Long Shots,75,6
+Recycler,Long Shots,76,6
+Recycler,Long Shots,77,6
+Recycler,Long Shots,78,6
+Recycler,Long Shots,79,6
+Recycler,Long Shots,80,7
+Recycler,Long Shots,81,7
+Recycler,Long Shots,82,7
+Recycler,Long Shots,83,7
+Recycler,Long Shots,84,7
+Recycler,Long Shots,85,11
+Recycler,Long Shots,86,11
+Recycler,Long Shots,87,11
+Recycler,Long Shots,88,11
+Recycler,Long Shots,89,11
+Recycler,Long Shots,90,15
+Recycler,Shot Power,71,4
+Recycler,Shot Power,72,4
+Recycler,Shot Power,73,4
+Recycler,Shot Power,74,5
+Recycler,Shot Power,75,5
+Recycler,Shot Power,76,6
+Recycler,Shot Power,77,6
+Recycler,Shot Power,78,6
+Recycler,Shot Power,79,6
+Recycler,Shot Power,80,7
+Recycler,Shot Power,81,7
+Recycler,Shot Power,82,7
+Recycler,Shot Power,83,7
+Recycler,Shot Power,84,9
+Recycler,Shot Power,85,9
+Recycler,Shot Power,86,11
+Recycler,Shot Power,87,11
+Recycler,Shot Power,88,11
+Recycler,Shot Power,89,11
+Recycler,Shot Power,90,15
+Recycler,Shot Power,91,15
+Recycler,Shot Power,92,15
+Recycler,Shot Power,93,20
+Recycler,Shot Power,94,20
+Recycler,Shot Power,95,20
+Recycler,Shot Power,96,20
+Recycler,Finishing,56,2
+Recycler,Finishing,57,2
+Recycler,Finishing,58,2
+Recycler,Finishing,59,2
+Recycler,Finishing,60,2
+Recycler,Finishing,61,3
+Recycler,Finishing,62,3
+Recycler,Finishing,63,3
+Recycler,Finishing,64,4
+Recycler,Finishing,65,4
+Recycler,Finishing,66,4
+Recycler,Finishing,67,5
+Recycler,Finishing,68,5
+Recycler,Finishing,69,5
+Recycler,Finishing,70,6
+Recycler,Finishing,71,6
+Recycler,Finishing,72,6
+Recycler,Finishing,73,6
+Recycler,Finishing,74,6
+Recycler,Finishing,75,8
+Recycler,Finishing,76,8
+Recycler,Finishing,77,8
+Recycler,Finishing,78,8
+Recycler,Finishing,79,8
+Recycler,Finishing,80,10
+Recycler,Finishing,81,10
+Recycler,Finishing,82,10
+Recycler,Finishing,83,10
+Recycler,Finishing,84,10
+Recycler,Finishing,85,15
+Recycler,Finishing,86,15
+Recycler,Finishing,87,15
+Recycler,Finishing,88,15
+Recycler,Finishing,89,15
+Recycler,Finishing,90,20
+Recycler,Att. Position,71,3
+Recycler,Att. Position,72,3
+Recycler,Att. Position,73,3
+Recycler,Att. Position,74,3
+Recycler,Att. Position,75,4
+Recycler,Att. Position,76,4
+Recycler,Att. Position,77,4
+Recycler,Att. Position,78,4
+Recycler,Att. Position,79,4
+Recycler,Att. Position,80,5
+Recycler,Att. Position,81,5
+Recycler,Att. Position,82,5
+Recycler,Att. Position,83,5
+Recycler,Att. Position,84,5
+Recycler,Att. Position,85,8
+Recycler,Att. Position,86,8
+Recycler,Att. Position,87,8
+Recycler,Att. Position,88,8
+Recycler,Att. Position,89,8
+Recycler,Att. Position,90,11
+Recycler,Vision,76,3
+Recycler,Vision,77,3
+Recycler,Vision,78,3
+Recycler,Vision,79,3
+Recycler,Vision,80,3
+Recycler,Vision,81,3
+Recycler,Vision,82,3
+Recycler,Vision,83,3
+Recycler,Vision,84,3
+Recycler,Vision,85,6
+Recycler,Vision,86,6
+Recycler,Vision,87,6
+Recycler,Vision,88,6
+Recycler,Vision,89,6
+Recycler,Vision,90,8
+Recycler,Vision,91,8
+Recycler,Vision,92,8
+Recycler,Vision,93,10
+Recycler,Vision,94,10
+Recycler,Vision,95,15
+Recycler,Vision,96,20
+Recycler,Crossing,66,3
+Recycler,Crossing,67,3
+Recycler,Crossing,68,3
+Recycler,Crossing,69,3
+Recycler,Crossing,70,4
+Recycler,Crossing,71,4
+Recycler,Crossing,72,4
+Recycler,Crossing,73,4
+Recycler,Crossing,74,4
+Recycler,Crossing,75,6
+Recycler,Crossing,76,6
+Recycler,Crossing,77,6
+Recycler,Crossing,78,6
+Recycler,Crossing,79,6
+Recycler,Crossing,80,7
+Recycler,Crossing,81,7
+Recycler,Crossing,82,7
+Recycler,Crossing,83,7
+Recycler,Crossing,84,9
+Recycler,Crossing,85,9
+Recycler,Crossing,86,11
+Recycler,Crossing,87,11
+Recycler,Crossing,88,11
+Recycler,Crossing,89,13
+Recycler,Crossing,90,13
+Recycler,Crossing,91,15
+Recycler,Crossing,92,15
+Recycler,FK Acc.,51,1
+Recycler,FK Acc.,52,1
+Recycler,FK Acc.,53,1
+Recycler,FK Acc.,54,1
+Recycler,FK Acc.,55,1
+Recycler,FK Acc.,56,1
+Recycler,FK Acc.,57,1
+Recycler,FK Acc.,58,1
+Recycler,FK Acc.,59,1
+Recycler,FK Acc.,60,1
+Recycler,FK Acc.,61,2
+Recycler,FK Acc.,62,2
+Recycler,FK Acc.,63,2
+Recycler,FK Acc.,64,3
+Recycler,FK Acc.,65,3
+Recycler,FK Acc.,66,3
+Recycler,FK Acc.,67,3
+Recycler,FK Acc.,68,3
+Recycler,FK Acc.,69,3
+Recycler,FK Acc.,70,4
+Recycler,FK Acc.,71,4
+Recycler,FK Acc.,72,4
+Recycler,FK Acc.,73,4
+Recycler,FK Acc.,74,4
+Recycler,FK Acc.,75,6
+Recycler,FK Acc.,76,6
+Recycler,FK Acc.,77,6
+Recycler,FK Acc.,78,6
+Recycler,FK Acc.,79,6
+Recycler,FK Acc.,80,7
+Recycler,FK Acc.,81,7
+Recycler,FK Acc.,82,7
+Recycler,FK Acc.,83,7
+Recycler,FK Acc.,84,9
+Recycler,FK Acc.,85,9
+Recycler,FK Acc.,86,11
+Recycler,FK Acc.,87,11
+Recycler,FK Acc.,88,11
+Recycler,FK Acc.,89,13
+Recycler,FK Acc.,90,13
+Recycler,FK Acc.,91,15
+Recycler,FK Acc.,92,15
+Recycler,FK Acc.,93,20
+Recycler,FK Acc.,94,20
+Recycler,FK Acc.,95,25
+Recycler,Short Pass,71,6
+Recycler,Short Pass,72,6
+Recycler,Short Pass,73,6
+Recycler,Short Pass,74,6
+Recycler,Short Pass,75,8
+Recycler,Short Pass,76,8
+Recycler,Short Pass,77,8
+Recycler,Short Pass,78,8
+Recycler,Short Pass,79,8
+Recycler,Short Pass,80,10
+Recycler,Short Pass,81,10
+Recycler,Short Pass,82,10
+Recycler,Short Pass,83,10
+Recycler,Short Pass,84,10
+Recycler,Short Pass,85,15
+Recycler,Short Pass,86,15
+Recycler,Short Pass,87,15
+Recycler,Short Pass,88,15
+Recycler,Short Pass,89,15
+Recycler,Short Pass,90,20
+Recycler,Short Pass,91,20
+Recycler,Short Pass,92,20
+Recycler,Short Pass,93,25
+Recycler,Short Pass,94,25
+Recycler,Short Pass,95,30
+Recycler,Short Pass,96,35
+Recycler,Long Pass,76,3
+Recycler,Long Pass,77,3
+Recycler,Long Pass,78,3
+Recycler,Long Pass,79,3
+Recycler,Long Pass,80,3
+Recycler,Long Pass,81,3
+Recycler,Long Pass,82,3
+Recycler,Long Pass,83,3
+Recycler,Long Pass,84,3
+Recycler,Long Pass,85,6
+Recycler,Long Pass,86,6
+Recycler,Long Pass,87,6
+Recycler,Long Pass,88,6
+Recycler,Long Pass,89,6
+Recycler,Long Pass,90,8
+Recycler,Long Pass,91,8
+Recycler,Long Pass,92,8
+Recycler,Long Pass,93,10
+Recycler,Long Pass,94,10
+Recycler,Long Pass,95,15
+Recycler,Long Pass,96,20
+Recycler,Curve,66,2
+Recycler,Curve,67,2
+Recycler,Curve,68,2
+Recycler,Curve,69,2
+Recycler,Curve,70,3
+Recycler,Curve,71,3
+Recycler,Curve,72,3
+Recycler,Curve,73,3
+Recycler,Curve,74,3
+Recycler,Curve,75,4
+Recycler,Curve,76,4
+Recycler,Curve,77,4
+Recycler,Curve,78,4
+Recycler,Curve,79,4
+Recycler,Curve,80,5
+Recycler,Curve,81,5
+Recycler,Curve,82,5
+Recycler,Curve,83,5
+Recycler,Curve,84,5
+Recycler,Curve,85,8
+Recycler,Curve,86,8
+Recycler,Curve,87,8
+Recycler,Curve,88,8
+Recycler,Curve,89,8
+Recycler,Curve,90,11
+Recycler,Curve,91,11
+Recycler,Curve,92,11
+Recycler,Slide Tackle,76,4
+Recycler,Slide Tackle,77,4
+Recycler,Slide Tackle,78,4
+Recycler,Slide Tackle,79,4
+Recycler,Slide Tackle,80,5
+Recycler,Slide Tackle,81,5
+Recycler,Slide Tackle,82,5
+Recycler,Slide Tackle,83,5
+Recycler,Slide Tackle,84,5
+Recycler,Slide Tackle,85,8
+Recycler,Slide Tackle,86,8
+Recycler,Slide Tackle,87,8
+Recycler,Slide Tackle,88,8
+Recycler,Slide Tackle,89,8
+Recycler,Slide Tackle,90,11
+Recycler,Slide Tackle,91,11
+Recycler,Slide Tackle,92,11
+Recycler,Slide Tackle,93,11
+Recycler,Slide Tackle,94,11
+Recycler,Slide Tackle,95,15
+Recycler,Slide Tackle,96,15
+Recycler,Stand Tackle,76,3
+Recycler,Stand Tackle,77,3
+Recycler,Stand Tackle,78,3
+Recycler,Stand Tackle,79,3
+Recycler,Stand Tackle,80,3
+Recycler,Stand Tackle,81,3
+Recycler,Stand Tackle,82,3
+Recycler,Stand Tackle,83,3
+Recycler,Stand Tackle,84,3
+Recycler,Stand Tackle,85,6
+Recycler,Stand Tackle,86,6
+Recycler,Stand Tackle,87,6
+Recycler,Stand Tackle,88,6
+Recycler,Stand Tackle,89,6
+Recycler,Stand Tackle,90,8
+Recycler,Stand Tackle,91,8
+Recycler,Stand Tackle,92,8
+Recycler,Stand Tackle,93,10
+Recycler,Stand Tackle,94,10
+Recycler,Stand Tackle,95,15
+Recycler,Stand Tackle,96,20
+Recycler,Stand Tackle,97,25
+Recycler,Stand Tackle,98,30
+Recycler,Stand Tackle,99,35
+Recycler,Def. Aware,76,3
+Recycler,Def. Aware,77,3
+Recycler,Def. Aware,78,3
+Recycler,Def. Aware,79,3
+Recycler,Def. Aware,80,3
+Recycler,Def. Aware,81,3
+Recycler,Def. Aware,82,3
+Recycler,Def. Aware,83,3
+Recycler,Def. Aware,84,3
+Recycler,Def. Aware,85,6
+Recycler,Def. Aware,86,6
+Recycler,Def. Aware,87,6
+Recycler,Def. Aware,88,6
+Recycler,Def. Aware,89,6
+Recycler,Def. Aware,90,8
+Recycler,Def. Aware,91,8
+Recycler,Def. Aware,92,8
+Recycler,Def. Aware,93,10
+Recycler,Def. Aware,94,10
+Recycler,Def. Aware,95,15
+Recycler,Def. Aware,96,20
+Recycler,Def. Aware,97,25
+Recycler,Def. Aware,98,30
+Recycler,Def. Aware,99,35
+Recycler,Heading Acc.,61,1
+Recycler,Heading Acc.,62,1
+Recycler,Heading Acc.,63,1
+Recycler,Heading Acc.,64,2
+Recycler,Heading Acc.,65,2
+Recycler,Heading Acc.,66,2
+Recycler,Heading Acc.,67,2
+Recycler,Heading Acc.,68,2
+Recycler,Heading Acc.,69,2
+Recycler,Heading Acc.,70,3
+Recycler,Heading Acc.,71,3
+Recycler,Heading Acc.,72,3
+Recycler,Heading Acc.,73,3
+Recycler,Heading Acc.,74,3
+Recycler,Heading Acc.,75,4
+Recycler,Heading Acc.,76,4
+Recycler,Heading Acc.,77,4
+Recycler,Heading Acc.,78,4
+Recycler,Heading Acc.,79,4
+Recycler,Heading Acc.,80,5
+Recycler,Heading Acc.,81,5
+Recycler,Heading Acc.,82,5
+Recycler,Heading Acc.,83,5
+Recycler,Heading Acc.,84,5
+Recycler,Heading Acc.,85,8
+Recycler,Heading Acc.,86,8
+Recycler,Heading Acc.,87,8
+Recycler,Heading Acc.,88,8
+Recycler,Heading Acc.,89,8
+Recycler,Heading Acc.,90,11
+Recycler,Interceptions,76,8
+Recycler,Interceptions,77,8
+Recycler,Interceptions,78,8
+Recycler,Interceptions,79,8
+Recycler,Interceptions,80,10
+Recycler,Interceptions,81,10
+Recycler,Interceptions,82,10
+Recycler,Interceptions,83,10
+Recycler,Interceptions,84,10
+Recycler,Interceptions,85,15
+Recycler,Interceptions,86,15
+Recycler,Interceptions,87,15
+Recycler,Interceptions,88,15
+Recycler,Interceptions,89,15
+Recycler,Interceptions,90,20
+Recycler,Interceptions,91,20
+Recycler,Interceptions,92,20
+Recycler,Interceptions,93,25
+Recycler,Interceptions,94,25
+Recycler,Interceptions,95,30
+Recycler,Interceptions,96,35
+Recycler,Weak Foot,4,25
+Recycler,Weak Foot,5,25
+Recycler,Skill Moves,4,10
+Recycler,Skill Moves,5,30
+
+
