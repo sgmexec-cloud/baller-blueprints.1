@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { getScoutingContext, ALL_ARCHETYPES } from "../csvLoader";
+import { getScoutingContext, getArchetypeProfiles } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -48,15 +48,19 @@ Describe observable football qualities (First Touch, Scanning, Decision Making, 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
 export const scoutRouter = router({
-  getArchetypes: publicProcedure.query(async () => {
-    try {
-      const uniqueArchetypes = Array.from(new Set(ALL_ARCHETYPES.map(row => row.Archetype.trim())));
-      return uniqueArchetypes.sort();
-    } catch (e) {
-      console.error("Failed to load archetypes:", e);
-      return [];
-    }
-  }),
+  getArchetypes: publicProcedure
+    .input(z.object({ gameVersion: z.enum(["FC26", "FC27"]).default("FC26") }).optional())
+    .query(async ({ input }) => {
+      try {
+        const version = input?.gameVersion || "FC26";
+        const profiles = getArchetypeProfiles(version);
+        const uniqueArchetypes = Array.from(new Set(profiles.map(row => row.Archetype.trim()))).filter(Boolean);
+        return uniqueArchetypes.sort();
+      } catch (e) {
+        console.error("Failed to load archetypes:", e);
+        return [];
+      }
+    }),
 
   generateReport: publicProcedure
     .input(z.object({ 
@@ -67,7 +71,8 @@ export const scoutRouter = router({
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
       customPlaystyles: z.array(z.string()).optional(), 
-      isDevMode: z.boolean().optional(), // 👉 ADDED: Developer mode bypass
+      isDevMode: z.boolean().optional(),
+      gameVersion: z.enum(["FC26", "FC27"]).default("FC26")
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -107,7 +112,6 @@ export const scoutRouter = router({
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      // 👉 Skip limit check completely if in dev mode
       if (!input.isDevMode && currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
@@ -129,7 +133,7 @@ export const scoutRouter = router({
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      const context = getScoutingContext();
+      const context = getScoutingContext(input.gameVersion);
       
       const filterRules: string[] = [];
       if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
@@ -143,7 +147,8 @@ export const scoutRouter = router({
         filterRules.push(`- PLAYSTYLES: The 'playstylePlus' array MUST include: ${input.customPlaystyles.join(", ")}.`);
       }
 
-      const stage2SystemPrompt = `You are the ultimate FC 26 Data Analyst. Translate the scout report into strict FC 26 JSON using ONLY this context:
+      const currentVersion = input.gameVersion === "FC27" ? "FC 27" : "FC 26";
+      const stage2SystemPrompt = `You are the ultimate ${currentVersion} Data Analyst. Translate the scout report into strict ${currentVersion} JSON using ONLY this context:
 ${context}
 
 Your output MUST be a single raw JSON object that strictly matches this exact structure:
@@ -202,7 +207,6 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      // 👉 Skip incrementing builds count if in dev mode
       if (!input.isDevMode && currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         const nextBuilds = currentBuilds + 1;
         await db.execute(
