@@ -78,22 +78,25 @@ export function runMathEngine(
   unlockedMasteries: Record<string, number> = {}
 ): MathEngineResult {
 
-  // 👉 DYNAMIC LOAD: Pulls FC26 or FC27 data based on version passed
   const ALL_ARCHETYPES = getAllArchetypes(gameVersion);
   const PLAYSTYLES = getPlaystyles(gameVersion);
   const COST_DICT = getCostDict(gameVersion);
 
-  const archKey = blueprint.archetype.toLowerCase();
-  const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
+  const archKey = blueprint.archetype.trim().toLowerCase();
+  const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype?.trim().toLowerCase() === archKey);
 
-  if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
+  if (archetypeRows.length === 0) {
+    throw new Error(`Archetype "${blueprint.archetype}" not found in ${gameVersion} database.`);
+  }
 
   const stats: Record<string, { base: number; max: number; current: number; apSpent: number }> = {};
   const attrNames: string[] = [];
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    stats[attr] = { base: parseInt(row["Base Value"], 10), max: parseInt(row["Max Value"], 10), current: parseInt(row["Base Value"], 10), apSpent: 0 };
+    const baseVal = parseInt(row["Base Value"] || "0", 10);
+    const maxVal = parseInt(row["Max Value"] || "99", 10);
+    stats[attr] = { base: baseVal, max: maxVal, current: baseVal, apSpent: 0 };
     attrNames.push(attr);
   }
 
@@ -125,7 +128,7 @@ export function runMathEngine(
 
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
   for (const ps of activePlaystyles) {
-    const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
+    const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle?.toLowerCase() === ps.name.toLowerCase());
     if (realReqs) {
       if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
       if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
@@ -272,11 +275,11 @@ export function runMathEngine(
 }
 
 export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string, gameVersion: "FC26" | "FC27" = "FC26"): string[] {
-  // 👉 Load correct version of Archetypes
   const ARCHETYPE_PROFILES = getArchetypeProfiles(gameVersion);
-  const arch = ARCHETYPE_PROFILES.find((a: any) => a.Archetype.toLowerCase() === archetypeName.toLowerCase());
+  const arch = ARCHETYPE_PROFILES.find((a: any) => a.Archetype?.toLowerCase() === archetypeName.toLowerCase());
   if (!arch) return [];
-  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s: string) => s.trim());
+  const rawSigs = arch.Signature_PlayStyles || "";
+  const baseSignatures = rawSigs ? rawSigs.split(",").map((s: string) => s.trim()) : [];
   const upgradedSignatures = baseSignatures.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
   if (specialisationBonusPlus) upgradedSignatures[3] = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
   return upgradedSignatures.slice(0, 4);
