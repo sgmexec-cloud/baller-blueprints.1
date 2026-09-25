@@ -598,17 +598,14 @@ export default function Home() {
   const utils = trpc.useUtils();
 
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
-  
-  // 👉 UPDATED: Passing { gameVersion } dynamically so progression data swaps!
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery({ gameVersion });
-  
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
   useEffect(() => {
     if (playerIdentity.trim().toUpperCase() === "DEV27") {
       setIsDevUnlocked(true);
       setPlayerIdentity(""); 
-      alert("🔓 Developer Mode Unlocked: FC27 Prototype Engine Live.");
+      alert("🔓 Developer Mode Unlocked: FC27 Prototype Engine Live & Unlimited Builds Active.");
     }
   }, [playerIdentity]);
 
@@ -635,7 +632,7 @@ export default function Home() {
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
   
   const userTier = (user?.tier as Tier) || "free";
-  const canForceArchetype = userTier === "premium_plus" || userTier === "vip" || userTier === "owner";
+  const canForceArchetype = userTier === "premium_plus" || userTier === "vip" || userTier === "owner" || isDevUnlocked;
 
   const scoutMutation = trpc.scout.generateReport.useMutation({
     onSuccess: (data) => {
@@ -672,20 +669,23 @@ export default function Home() {
     
     const isGuest = !user;
 
-    if (isGuest && guestBuildCount >= 2) {
-      alert("Guest limit reached! Please create an account to get 5 free builds.");
-      return;
-    }
+    // 👉 Bypass guest / free limits if Dev Mode is unlocked
+    if (!isDevUnlocked) {
+      if (isGuest && guestBuildCount >= 2) {
+        alert("Guest limit reached! Please create an account to get 5 free builds.");
+        return;
+      }
 
-    if (userTier === "free" && (user?.monthlyBuilds || 0) >= 5) {
-      alert("Free limit reached (5/5)! Please tap 'Upgrade Plan' under your profile.");
-      return;
-    }
+      if (userTier === "free" && (user?.monthlyBuilds || 0) >= 5) {
+        alert("Free limit reached (5/5)! Please tap 'Upgrade Plan' under your profile.");
+        return;
+      }
 
-    if (isGuest) {
-      const newCount = guestBuildCount + 1;
-      localStorage.setItem("guest_builds", newCount.toString());
-      setGuestBuildCount(newCount);
+      if (isGuest) {
+        const newCount = guestBuildCount + 1;
+        localStorage.setItem("guest_builds", newCount.toString());
+        setGuestBuildCount(newCount);
+      }
     }
 
     const secureForcedArchetype = canForceArchetype ? forcedArchetype : undefined;
@@ -696,8 +696,9 @@ export default function Home() {
 
     scoutMutation.mutate({ 
       playerIdentity: finalIdentity, 
-      forcedArchetype: secureForcedArchetype || undefined 
-    });
+      forcedArchetype: secureForcedArchetype || undefined,
+      isDevMode: isDevUnlocked // 👉 Send dev flag to server
+    } as any);
   };
 
   const handleCalculate = () => {
@@ -724,7 +725,7 @@ export default function Home() {
     setPlayerIdentity("");
     setForcedArchetype("");
     setPreferredAttributes([]);
-    setUnlockedMasteries({}); // Reset masteries on new build
+    setUnlockedMasteries({});
     setLevel(1);
   };
 
@@ -834,11 +835,15 @@ export default function Home() {
                   </span>
                 </div>
                 
-                {!user && !isUserLoading && (
+                {isDevUnlocked ? (
+                  <div className="text-[10px] font-bold px-2 py-1 rounded bg-green-500/20 border border-green-500/40 text-green-400">
+                    🔓 Dev Mode: Unlimited
+                  </div>
+                ) : !user && !isUserLoading ? (
                   <div className="text-[10px] font-bold px-2 py-1 rounded bg-black/40 border border-white/10 text-gray-400">
                     Guest Builds: <span className="text-white">{Math.max(0, 2 - guestBuildCount)}</span> / 2
                   </div>
-                )}
+                ) : null}
               </div>
 
               <label
