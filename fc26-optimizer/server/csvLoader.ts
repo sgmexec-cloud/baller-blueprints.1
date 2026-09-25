@@ -8,20 +8,29 @@ const DATA_DIR_27 = path.join(__dirname, "data27");
 
 function parseCSV(dir: string, filename: string): Record<string, string>[] {
   try {
-    const content = fs.readFileSync(path.join(dir, filename), "utf-8");
+    const fullPath = path.join(dir, filename);
+    let content = fs.readFileSync(fullPath, "utf-8");
+    
+    // 👉 FIX 1: Automatically strip invisible BOM characters added by Excel
+    content = content.replace(/^\uFEFF/, "");
+    
     const lines = content.trim().split("\n");
     if (lines.length < 2) return [];
+    
     const headers = parseCSVLine(lines[0]);
     return lines.slice(1).map((line) => {
       const values = parseCSVLine(line);
       const row: Record<string, string> = {};
       headers.forEach((h, i) => {
-        row[h.trim()] = (values[i] ?? "").trim();
+        // Lowercase the header so we don't miss "Archetype" vs "archetype"
+        row[h.trim().toLowerCase()] = (values[i] ?? "").trim();
       });
       return row;
     });
   } catch (e) {
-    console.error(`Failed to load ${filename} from ${dir}`);
+    // 👉 FIX 2: Loudly log exact missing filenames to your terminal
+    console.error(`\n🚨 DATA ERROR: Failed to load "${filename}" from the "${dir}" folder.`);
+    console.error(`🚨 Make sure the file exists and is spelled exactly as shown above!\n`);
     return [];
   }
 }
@@ -104,72 +113,126 @@ export interface CostRow {
 
 // ── Load FC26 Data ────────────────────────────────────────────────────────────
 
-export const ARCHETYPE_PROFILES_26 = parseCSV(DATA_DIR_26, "ARCHETYPE_PROFILE.csv") as unknown as ArchetypeProfile[];
-export const PLAYSTYLE_INFO_26 = parseCSV(DATA_DIR_26, "PLAYSTYLE_INFO.csv") as unknown as PlaystyleInfo[];
-export const PLAYSTYLES_26 = parseCSV(DATA_DIR_26, "PLAYSTYLES.csv") as unknown as PlaystyleReq[];
-export const SPECIALISATIONS_26 = parseCSV(DATA_DIR_26, "SPECIALISATIONS.csv") as unknown as Specialisation[];
-export const ALL_ARCHETYPES_26 = parseCSV(DATA_DIR_26, "ALL_ARCHETYPES.csv") as unknown as ArchetypeAttribute[];
-export const MASTER_COST_DATA_26 = parseCSV(DATA_DIR_26, "MASTER_COST_DATA.csv") as unknown as CostRow[];
+const rawArch26 = parseCSV(DATA_DIR_26, "ARCHETYPE_PROFILE.csv");
+export const ARCHETYPE_PROFILES_26: ArchetypeProfile[] = rawArch26.map(r => ({
+  Archetype: r.archetype || "",
+  MinH: r.minh || "",
+  MaxH: r.maxh || "",
+  MinW: r.minw || "",
+  MaxW: r.maxw || "",
+  Signature_PlayStyles: r.signature_playstyles || "",
+  Recommended_Positions: r.recommended_positions || "",
+  Key_Attributes: r.key_attributes || "",
+  Specialisations: r.specialisations || "",
+}));
 
-// ── Load FC27 Data with Flexible Header Mapping ────────────────────────────────
+const rawInfo26 = parseCSV(DATA_DIR_26, "PLAYSTYLE_INFO.csv");
+export const PLAYSTYLE_INFO_26: PlaystyleInfo[] = rawInfo26.map(r => ({
+  Name: r.name || "",
+  Info: r.info || "",
+  Playstyle: r.playstyle || "",
+  "Playstyle+": r["playstyle+"] || ""
+}));
+
+const rawPlaystyles26 = parseCSV(DATA_DIR_26, "PLAYSTYLES.csv");
+export const PLAYSTYLES_26: PlaystyleReq[] = rawPlaystyles26.map(r => ({
+  Playstyle: r.playstyle || "",
+  Attr1: r.attr1 || "",
+  Val1: r.val1 || "",
+  Attr2: r.attr2 || "",
+  Val2: r.val2 || "",
+  Attr3: r.attr3 || "",
+  Val3: r.val3 || "",
+}));
+
+const rawSpec26 = parseCSV(DATA_DIR_26, "SPECIALISATIONS.csv");
+export const SPECIALISATIONS_26: Specialisation[] = rawSpec26.map(r => ({
+  Archetype: r.archetype || "",
+  Specialisation: r.specialisation || "",
+  "Playstyle+": r["playstyle+"] || "",
+  Attr1: r.attr1 || "",
+  Val1: r.val1 || "",
+  Attr2: r.attr2 || "",
+  Val2: r.val2 || "",
+  Attr3: r.attr3 || "",
+  Val3: r.val3 || "",
+}));
+
+const rawBase26 = parseCSV(DATA_DIR_26, "ALL_ARCHETYPES.csv");
+export const ALL_ARCHETYPES_26: ArchetypeAttribute[] = rawBase26.map(r => ({
+  Archetype: r.archetype || "",
+  Attribute: r.attribute || "",
+  "Base Value": r["base value"] || "0",
+  "Max Value": r["max value"] || "99",
+}));
+
+const rawCosts26 = parseCSV(DATA_DIR_26, "MASTER_COST_DATA.csv");
+export const MASTER_COST_DATA_26: CostRow[] = rawCosts26.map(r => ({
+  Archetype: r.archetype || "",
+  Attribute: r.attribute || "",
+  Level: r.level || "0",
+  Cost: r.cost || "0",
+}));
+
+// ── Load FC27 Data & Map Headers to Match FC26 Structure ──────────────────────
 
 const rawArch27 = parseCSV(DATA_DIR_27, "FC27_ARCHETYPES.csv");
 export const ARCHETYPE_PROFILES_27: ArchetypeProfile[] = rawArch27.map(r => ({
-  Archetype: r.Archetype || r.archetype || "",
-  MinH: r.MinHeight || r.MinH || "",
-  MaxH: r.MaxHeight || r.MaxH || "",
-  MinW: r.MinWeight || r.MinW || "",
-  MaxW: r.MaxWeight || r.MaxW || "",
-  Signature_PlayStyles: r.Signature_PlayStyles || r.SignaturePlaystyles || r.Signatures || "",
-  Recommended_Positions: r.Recommended_Positions || r.RecommendedPositions || "",
-  Key_Attributes: r.Key_Attributes || r.KeyAttributes || "",
-  Specialisations: r.Specialisation_Name || r.Specialisations || "",
+  Archetype: r.archetype || "",
+  MinH: r.minheight || r.minh || "",
+  MaxH: r.maxheight || r.maxh || "",
+  MinW: r.minweight || r.minw || "",
+  MaxW: r.maxweight || r.maxw || "",
+  Signature_PlayStyles: r.signature_playstyles || r.signatureplaystyles || "",
+  Recommended_Positions: r.recommended_positions || r.recommendedpositions || "",
+  Key_Attributes: r.key_attributes || r.keyattributes || "",
+  Specialisations: r.specialisation_name || r.specialisations || "",
 }));
 
 export const SPECIALISATIONS_27: Specialisation[] = rawArch27.map(r => ({
-  Archetype: r.Archetype || r.archetype || "",
-  Specialisation: r.Specialisation_Name || r.Specialisation || "",
-  "Playstyle+": r.Spec_Bonus_PlaystylePlus || r["Playstyle+"] || "",
-  Attr1: r.Spec_Req_Attr1 || r.Attr1 || "",
-  Val1: r.Spec_Req_Val1 || r.Val1 || "",
-  Attr2: r.Spec_Req_Attr2 || r.Attr2 || "",
-  Val2: r.Spec_Req_Val2 || r.Val2 || "",
-  Attr3: r.Spec_Req_Attr3 || r.Attr3 || "",
-  Val3: r.Spec_Req_Val3 || r.Val3 || "",
+  Archetype: r.archetype || "",
+  Specialisation: r.specialisation_name || r.specialisation || "",
+  "Playstyle+": r.spec_bonus_playstyleplus || r["playstyle+"] || "",
+  Attr1: r.spec_req_attr1 || r.attr1 || "",
+  Val1: r.spec_req_val1 || r.val1 || "",
+  Attr2: r.spec_req_attr2 || r.attr2 || "",
+  Val2: r.spec_req_val2 || r.val2 || "",
+  Attr3: r.spec_req_attr3 || r.attr3 || "",
+  Val3: r.spec_req_val3 || r.val3 || "",
 })).filter(s => s.Specialisation);
 
 const rawPlaystyles27 = parseCSV(DATA_DIR_27, "FC27_PLAYSTYLES.csv");
 export const PLAYSTYLES_27: PlaystyleReq[] = rawPlaystyles27.map(r => ({
-  Playstyle: r.Playstyle || r.playstyle || "",
-  Attr1: r.Req_Attr1 || r.Attr1 || "",
-  Val1: r.Req_Val1 || r.Val1 || "",
-  Attr2: r.Req_Attr2 || r.Attr2 || "",
-  Val2: r.Req_Val2 || r.Val2 || "",
-  Attr3: r.Req_Attr3 || r.Attr3 || "",
-  Val3: r.Req_Val3 || r.Val3 || "",
+  Playstyle: r.playstyle || "",
+  Attr1: r.req_attr1 || r.attr1 || "",
+  Val1: r.req_val1 || r.val1 || "",
+  Attr2: r.req_attr2 || r.attr2 || "",
+  Val2: r.req_val2 || r.val2 || "",
+  Attr3: r.req_attr3 || r.attr3 || "",
+  Val3: r.req_val3 || r.val3 || "",
 }));
 
 export const PLAYSTYLE_INFO_27: PlaystyleInfo[] = rawPlaystyles27.map(r => ({
-  Name: r.Playstyle || r.Name || "",
-  Info: r.Description || r.Info || "",
-  Playstyle: r.Playstyle || "",
-  "Playstyle+": r.PlaystylePlus_Name || r["Playstyle+"] || ""
+  Name: r.playstyle || r.name || "",
+  Info: r.description || r.info || "",
+  Playstyle: r.playstyle || "",
+  "Playstyle+": r.playstyleplus_name || r["playstyle+"] || ""
 }));
 
 const rawBase27 = parseCSV(DATA_DIR_27, "FC27_BASE_STATS.csv");
 export const ALL_ARCHETYPES_27: ArchetypeAttribute[] = rawBase27.map(r => ({
-  Archetype: r.Archetype || r.archetype || "",
-  Attribute: r.Attribute || r.attribute || "",
-  "Base Value": r["Base Value"] || r.BaseValue || r.Base || r.base || "0",
-  "Max Value": r["Max Value"] || r.MaxValue || r.Max || r.max || "99",
+  Archetype: r.archetype || "",
+  Attribute: r.attribute || "",
+  "Base Value": r["base value"] || r.basevalue || r.base || "0",
+  "Max Value": r["max value"] || r.maxvalue || r.max || "99",
 }));
 
 const rawCosts27 = parseCSV(DATA_DIR_27, "FC27_UPGRADE_COSTS.csv");
 export const MASTER_COST_DATA_27: CostRow[] = rawCosts27.map(r => ({
-  Archetype: r.Archetype || r.archetype || "",
-  Attribute: r.Attribute || r.attribute || "",
-  Level: r.Level || r.level || r.Lvl || "0",
-  Cost: r.Cost || r.cost || r.AP || r.ap || "0",
+  Archetype: r.archetype || "",
+  Attribute: r.attribute || "",
+  Level: r.level || r.lvl || "0",
+  Cost: r.cost || r.ap || "0",
 }));
 
 // ── Dynamic Getters for the Math Engine ───────────────────────────────────────
@@ -202,7 +265,6 @@ function buildCostDict(data: CostRow[]): CostDict {
     const attr = row.Attribute.trim().toLowerCase().replace(/\s+/g, "");
     const level = parseInt(row.Level, 10);
     const cost = parseInt(row.Cost, 10);
-    if (isNaN(level) || isNaN(cost)) continue;
     if (!dict[arch]) dict[arch] = {};
     if (!dict[arch][attr]) dict[arch][attr] = {};
     dict[arch][attr][level] = cost;
@@ -222,7 +284,7 @@ export function normAttr(attr: string): string {
   return attr.trim().toLowerCase().replace(/\s+/g, "");
 }
 
-// ── Legacy Exports ────────────────────────────────────────────────────────────
+// ── Legacy Exports (To prevent breaking old code) ────────────────────────────
 export const ARCHETYPE_PROFILES = ARCHETYPE_PROFILES_26;
 export const PLAYSTYLE_INFO = PLAYSTYLE_INFO_26;
 export const PLAYSTYLES = PLAYSTYLES_26;
