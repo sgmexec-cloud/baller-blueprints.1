@@ -221,7 +221,6 @@ function loadFC27Data() {
     MaxH: r.maxheight || r.maxh || "",
     MinW: r.minweight || r.minw || "",
     MaxW: r.maxweight || r.maxw || "",
-    // 👉 ADDED: Full support for spaced headers
     Signature_PlayStyles: r["signature playstyles"] || r.signature_playstyles || r.signatureplaystyles || r.signatures || "",
     Recommended_Positions: r["recommended positions"] || r.recommended_positions || r.recommendedpositions || r.positions || "",
     Key_Attributes: r["key attributes"] || r.key_attributes || r.keyattributes || "",
@@ -302,6 +301,10 @@ export function getCostDict(version: "FC26" | "FC27" = "FC26"): CostDict {
   return version === "FC27" ? loadFC27Data().costDict : COST_DICT_26;
 }
 
+export function getPlaystyleInfo(version: "FC26" | "FC27" = "FC26"): PlaystyleInfo[] {
+  return version === "FC27" ? loadFC27Data().playstyleInfo : PLAYSTYLE_INFO_26;
+}
+
 export function normAttr(attr: string): string {
   return attr.trim().toLowerCase().replace(/\s+/g, "");
 }
@@ -315,8 +318,8 @@ export const ALL_ARCHETYPES = ALL_ARCHETYPES_26;
 export const MASTER_COST_DATA = MASTER_COST_DATA_26;
 export const COST_DICT = COST_DICT_26;
 
-export function getScoutingContext(): string {
-  const archetypes = ARCHETYPE_PROFILES_26.map((a) => ({
+export function getScoutingContext(version: "FC26" | "FC27" = "FC26"): string {
+  const archetypes = getArchetypeProfiles(version).map((a) => ({
     archetype: a.Archetype,
     heightRange: `${a.MinH}–${a.MaxH} cm`,
     weightRange: `${a.MinW}–${a.MaxW} kg`,
@@ -326,7 +329,7 @@ export function getScoutingContext(): string {
     specialisations: a.Specialisations,
   }));
 
-  const playstyleReqs = PLAYSTYLES_26.map((p) => {
+  const playstyleReqs = getPlaystyles(version).map((p) => {
     const reqs: string[] = [];
     if (p.Attr1 && p.Val1) reqs.push(`${p.Attr1} ≥ ${p.Val1}`);
     if (p.Attr2 && p.Val2) reqs.push(`${p.Attr2} ≥ ${p.Val2}`);
@@ -334,7 +337,7 @@ export function getScoutingContext(): string {
     return { playstyle: p.Playstyle, requirements: reqs };
   });
 
-  const specialisations = SPECIALISATIONS_26.map((s) => ({
+  const specialisations = getSpecialisations(version).map((s) => ({
     archetype: s.Archetype,
     specialisation: s.Specialisation,
     bonusPlaystylePlus: s["Playstyle+"],
@@ -345,7 +348,7 @@ export function getScoutingContext(): string {
     ].filter(Boolean),
   }));
 
-  const playstyleInfo = PLAYSTYLE_INFO_26.map((p) => ({
+  const playstyleInfo = getPlaystyleInfo(version).map((p) => ({
     name: p.Name,
     description: p.Info,
   }));
