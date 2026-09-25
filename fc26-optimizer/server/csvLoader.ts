@@ -9,28 +9,34 @@ const DATA_DIR_27 = path.join(__dirname, "data27");
 function parseCSV(dir: string, filename: string): Record<string, string>[] {
   try {
     const fullPath = path.join(dir, filename);
+    if (!fs.existsSync(fullPath)) {
+      console.error(`🚨 ERROR: File not found -> ${fullPath}`);
+      return [];
+    }
+
     let content = fs.readFileSync(fullPath, "utf-8");
-    
-    // 👉 FIX 1: Automatically strip invisible BOM characters added by Excel
-    content = content.replace(/^\uFEFF/, "");
+    content = content.replace(/^\uFEFF/, ""); // Strip invisible Excel characters (BOM)
     
     const lines = content.trim().split("\n");
     if (lines.length < 2) return [];
     
     const headers = parseCSVLine(lines[0]);
+    
+    // 👉 VITAL DEV LOG: Prints exactly how the server sees your column headers
+    if (dir.includes("data27")) {
+       console.log(`[FC27 DATA] ${filename} Headers:`, headers);
+    }
+
     return lines.slice(1).map((line) => {
       const values = parseCSVLine(line);
       const row: Record<string, string> = {};
       headers.forEach((h, i) => {
-        // Lowercase the header so we don't miss "Archetype" vs "archetype"
         row[h.trim().toLowerCase()] = (values[i] ?? "").trim();
       });
       return row;
     });
   } catch (e) {
-    // 👉 FIX 2: Loudly log exact missing filenames to your terminal
-    console.error(`\n🚨 DATA ERROR: Failed to load "${filename}" from the "${dir}" folder.`);
-    console.error(`🚨 Make sure the file exists and is spelled exactly as shown above!\n`);
+    console.error(`🚨 FAILED to parse ${filename}:`, e);
     return [];
   }
 }
@@ -111,7 +117,25 @@ export interface CostRow {
   Cost: string;
 }
 
-// ── Load FC26 Data ────────────────────────────────────────────────────────────
+export type CostDict = Record<string, Record<string, Record<number, number>>>;
+
+function buildCostDict(data: CostRow[]): CostDict {
+  const dict: CostDict = {};
+  for (const row of data) {
+    if (!row.Archetype || !row.Attribute || !row.Level || !row.Cost) continue;
+    const arch = row.Archetype.trim().toLowerCase();
+    const attr = row.Attribute.trim().toLowerCase().replace(/\s+/g, "");
+    const level = parseInt(row.Level, 10);
+    const cost = parseInt(row.Cost, 10);
+    if (isNaN(level) || isNaN(cost)) continue;
+    if (!dict[arch]) dict[arch] = {};
+    if (!dict[arch][attr]) dict[arch][attr] = {};
+    dict[arch][attr][level] = cost;
+  }
+  return dict;
+}
+
+// ── Load FC26 Data (Static) ───────────────────────────────────────────────────
 
 const rawArch26 = parseCSV(DATA_DIR_26, "ARCHETYPE_PROFILE.csv");
 export const ARCHETYPE_PROFILES_26: ArchetypeProfile[] = rawArch26.map(r => ({
@@ -174,109 +198,114 @@ export const MASTER_COST_DATA_26: CostRow[] = rawCosts26.map(r => ({
   Cost: r.cost || "0",
 }));
 
-// ── Load FC27 Data & Map Headers to Match FC26 Structure ──────────────────────
+export const COST_DICT_26: CostDict = buildCostDict(MASTER_COST_DATA_26);
 
-const rawArch27 = parseCSV(DATA_DIR_27, "FC27_ARCHETYPES.csv");
-export const ARCHETYPE_PROFILES_27: ArchetypeProfile[] = rawArch27.map(r => ({
-  Archetype: r.archetype || "",
-  MinH: r.minheight || r.minh || "",
-  MaxH: r.maxheight || r.maxh || "",
-  MinW: r.minweight || r.minw || "",
-  MaxW: r.maxweight || r.maxw || "",
-  Signature_PlayStyles: r.signature_playstyles || r.signatureplaystyles || "",
-  Recommended_Positions: r.recommended_positions || r.recommendedpositions || "",
-  Key_Attributes: r.key_attributes || r.keyattributes || "",
-  Specialisations: r.specialisation_name || r.specialisations || "",
-}));
+// ── FC27 Dynamic (JIT) Loader ─────────────────────────────────────────────────
 
-export const SPECIALISATIONS_27: Specialisation[] = rawArch27.map(r => ({
-  Archetype: r.archetype || "",
-  Specialisation: r.specialisation_name || r.specialisation || "",
-  "Playstyle+": r.spec_bonus_playstyleplus || r["playstyle+"] || "",
-  Attr1: r.spec_req_attr1 || r.attr1 || "",
-  Val1: r.spec_req_val1 || r.val1 || "",
-  Attr2: r.spec_req_attr2 || r.attr2 || "",
-  Val2: r.spec_req_val2 || r.val2 || "",
-  Attr3: r.spec_req_attr3 || r.attr3 || "",
-  Val3: r.spec_req_val3 || r.val3 || "",
-})).filter(s => s.Specialisation);
+let FC27_CACHE: {
+  profiles: ArchetypeProfile[];
+  specialisations: Specialisation[];
+  playstyles: PlaystyleReq[];
+  playstyleInfo: PlaystyleInfo[];
+  baseStats: ArchetypeAttribute[];
+  costs: CostRow[];
+  costDict: CostDict;
+} | null = null;
 
-const rawPlaystyles27 = parseCSV(DATA_DIR_27, "FC27_PLAYSTYLES.csv");
-export const PLAYSTYLES_27: PlaystyleReq[] = rawPlaystyles27.map(r => ({
-  Playstyle: r.playstyle || "",
-  Attr1: r.req_attr1 || r.attr1 || "",
-  Val1: r.req_val1 || r.val1 || "",
-  Attr2: r.req_attr2 || r.attr2 || "",
-  Val2: r.req_val2 || r.val2 || "",
-  Attr3: r.req_attr3 || r.attr3 || "",
-  Val3: r.req_val3 || r.val3 || "",
-}));
+function loadFC27Data() {
+  if (FC27_CACHE) return FC27_CACHE;
 
-export const PLAYSTYLE_INFO_27: PlaystyleInfo[] = rawPlaystyles27.map(r => ({
-  Name: r.playstyle || r.name || "",
-  Info: r.description || r.info || "",
-  Playstyle: r.playstyle || "",
-  "Playstyle+": r.playstyleplus_name || r["playstyle+"] || ""
-}));
+  console.log("\n🔄 ----------------------------------------");
+  console.log("🔄 INITIATING FC27 DYNAMIC DATA LOAD...");
+  
+  const rawArch27 = parseCSV(DATA_DIR_27, "FC27_ARCHETYPES.csv");
+  const profiles: ArchetypeProfile[] = rawArch27.map(r => ({
+    Archetype: r.archetype || r.build || r.name || "",
+    MinH: r.minheight || r.minh || "",
+    MaxH: r.maxheight || r.maxh || "",
+    MinW: r.minweight || r.minw || "",
+    MaxW: r.maxweight || r.maxw || "",
+    Signature_PlayStyles: r.signature_playstyles || r.signatureplaystyles || r.signatures || "",
+    Recommended_Positions: r.recommended_positions || r.recommendedpositions || "",
+    Key_Attributes: r.key_attributes || r.keyattributes || "",
+    Specialisations: r.specialisation_name || r.specialisations || "",
+  }));
 
-const rawBase27 = parseCSV(DATA_DIR_27, "FC27_BASE_STATS.csv");
-export const ALL_ARCHETYPES_27: ArchetypeAttribute[] = rawBase27.map(r => ({
-  Archetype: r.archetype || "",
-  Attribute: r.attribute || "",
-  "Base Value": r["base value"] || r.basevalue || r.base || "0",
-  "Max Value": r["max value"] || r.maxvalue || r.max || "99",
-}));
+  const specialisations: Specialisation[] = rawArch27.map(r => ({
+    Archetype: r.archetype || r.build || r.name || "",
+    Specialisation: r.specialisation_name || r.specialisation || "",
+    "Playstyle+": r.spec_bonus_playstyleplus || r["playstyle+"] || "",
+    Attr1: r.spec_req_attr1 || r.attr1 || "",
+    Val1: r.spec_req_val1 || r.val1 || "",
+    Attr2: r.spec_req_attr2 || r.attr2 || "",
+    Val2: r.spec_req_val2 || r.val2 || "",
+    Attr3: r.spec_req_attr3 || r.attr3 || "",
+    Val3: r.spec_req_val3 || r.val3 || "",
+  })).filter(s => s.Specialisation);
 
-const rawCosts27 = parseCSV(DATA_DIR_27, "FC27_UPGRADE_COSTS.csv");
-export const MASTER_COST_DATA_27: CostRow[] = rawCosts27.map(r => ({
-  Archetype: r.archetype || "",
-  Attribute: r.attribute || "",
-  Level: r.level || r.lvl || "0",
-  Cost: r.cost || r.ap || "0",
-}));
+  const rawPlaystyles27 = parseCSV(DATA_DIR_27, "FC27_PLAYSTYLES.csv");
+  const playstyles: PlaystyleReq[] = rawPlaystyles27.map(r => ({
+    Playstyle: r.playstyle || "",
+    Attr1: r.req_attr1 || r.attr1 || "",
+    Val1: r.req_val1 || r.val1 || "",
+    Attr2: r.req_attr2 || r.attr2 || "",
+    Val2: r.req_val2 || r.val2 || "",
+    Attr3: r.req_attr3 || r.attr3 || "",
+    Val3: r.req_val3 || r.val3 || "",
+  }));
+
+  const playstyleInfo: PlaystyleInfo[] = rawPlaystyles27.map(r => ({
+    Name: r.playstyle || r.name || "",
+    Info: r.description || r.info || "",
+    Playstyle: r.playstyle || "",
+    "Playstyle+": r.playstyleplus_name || r["playstyle+"] || ""
+  }));
+
+  const rawBase27 = parseCSV(DATA_DIR_27, "FC27_BASE_STATS.csv");
+  const baseStats: ArchetypeAttribute[] = rawBase27.map(r => ({
+    Archetype: r.archetype || r.build || r.name || "",
+    Attribute: r.attribute || r.stat || "",
+    "Base Value": r["base value"] || r.basevalue || r.base || "0",
+    "Max Value": r["max value"] || r.maxvalue || r.max || "99",
+  }));
+
+  const rawCosts27 = parseCSV(DATA_DIR_27, "FC27_UPGRADE_COSTS.csv");
+  const costs: CostRow[] = rawCosts27.map(r => ({
+    Archetype: r.archetype || r.build || r.name || "",
+    Attribute: r.attribute || r.stat || "",
+    Level: r.level || r.lvl || "0",
+    Cost: r.cost || r.ap || "0",
+  }));
+
+  const costDict = buildCostDict(costs);
+
+  FC27_CACHE = { profiles, specialisations, playstyles, playstyleInfo, baseStats, costs, costDict };
+  console.log(`✅ LOAD COMPLETE! Found ${baseStats.length} base stat rows.`);
+  console.log("🔄 ----------------------------------------\n");
+  
+  return FC27_CACHE;
+}
 
 // ── Dynamic Getters for the Math Engine ───────────────────────────────────────
 
 export function getArchetypeProfiles(version: "FC26" | "FC27" = "FC26"): ArchetypeProfile[] {
-  return version === "FC27" ? ARCHETYPE_PROFILES_27 : ARCHETYPE_PROFILES_26;
+  return version === "FC27" ? loadFC27Data().profiles : ARCHETYPE_PROFILES_26;
 }
 
 export function getPlaystyles(version: "FC26" | "FC27" = "FC26"): PlaystyleReq[] {
-  return version === "FC27" ? PLAYSTYLES_27 : PLAYSTYLES_26;
+  return version === "FC27" ? loadFC27Data().playstyles : PLAYSTYLES_26;
 }
 
 export function getSpecialisations(version: "FC26" | "FC27" = "FC26"): Specialisation[] {
-  return version === "FC27" ? SPECIALISATIONS_27 : SPECIALISATIONS_26;
+  return version === "FC27" ? loadFC27Data().specialisations : SPECIALISATIONS_26;
 }
 
 export function getAllArchetypes(version: "FC26" | "FC27" = "FC26"): ArchetypeAttribute[] {
-  return version === "FC27" ? ALL_ARCHETYPES_27 : ALL_ARCHETYPES_26;
+  return version === "FC27" ? loadFC27Data().baseStats : ALL_ARCHETYPES_26;
 }
-
-// ── Pre-built cost dictionaries ───────────────────────────────────────────────
-
-export type CostDict = Record<string, Record<string, Record<number, number>>>;
-
-function buildCostDict(data: CostRow[]): CostDict {
-  const dict: CostDict = {};
-  for (const row of data) {
-    if (!row.Archetype || !row.Attribute || !row.Level || !row.Cost) continue;
-    const arch = row.Archetype.trim().toLowerCase();
-    const attr = row.Attribute.trim().toLowerCase().replace(/\s+/g, "");
-    const level = parseInt(row.Level, 10);
-    const cost = parseInt(row.Cost, 10);
-    if (!dict[arch]) dict[arch] = {};
-    if (!dict[arch][attr]) dict[arch][attr] = {};
-    dict[arch][attr][level] = cost;
-  }
-  return dict;
-}
-
-export const COST_DICT_26: CostDict = buildCostDict(MASTER_COST_DATA_26);
-export const COST_DICT_27: CostDict = buildCostDict(MASTER_COST_DATA_27);
 
 export function getCostDict(version: "FC26" | "FC27" = "FC26"): CostDict {
-  return version === "FC27" ? COST_DICT_27 : COST_DICT_26;
+  return version === "FC27" ? loadFC27Data().costDict : COST_DICT_26;
 }
 
 // ── Helper: normalise attribute name for lookup ───────────────────────────────
