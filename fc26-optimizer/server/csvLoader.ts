@@ -1,10 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR_26 = path.join(__dirname, "data");
-const DATA_DIR_27 = path.join(__dirname, "data27");
+// 👉 FIX: Use process.cwd() to force the server to look in the root source folders, skipping the compiled 'dist' folder.
+const DATA_DIR_26 = path.join(process.cwd(), "server", "data");
+const DATA_DIR_27 = path.join(process.cwd(), "server", "data27");
 
 function parseCSV(dir: string, filename: string): Record<string, string>[] {
   try {
