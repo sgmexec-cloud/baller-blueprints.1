@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-// 👉 FIX: Use process.cwd() to force the server to look in the root source folders, skipping the compiled 'dist' folder.
+// Use process.cwd() to force the server to look in the root source folders
 const DATA_DIR_26 = path.join(process.cwd(), "server", "data");
 const DATA_DIR_27 = path.join(process.cwd(), "server", "data27");
 
@@ -14,14 +14,13 @@ function parseCSV(dir: string, filename: string): Record<string, string>[] {
     }
 
     let content = fs.readFileSync(fullPath, "utf-8");
-    content = content.replace(/^\uFEFF/, ""); // Strip invisible Excel characters (BOM)
+    content = content.replace(/^\uFEFF/, ""); // Strip invisible Excel characters
     
     const lines = content.trim().split("\n");
     if (lines.length < 2) return [];
     
     const headers = parseCSVLine(lines[0]);
     
-    // 👉 VITAL DEV LOG: Prints exactly how the server sees your column headers
     if (dir.includes("data27")) {
        console.log(`[FC27 DATA] ${filename} Headers:`, headers);
     }
@@ -30,6 +29,7 @@ function parseCSV(dir: string, filename: string): Record<string, string>[] {
       const values = parseCSVLine(line);
       const row: Record<string, string> = {};
       headers.forEach((h, i) => {
+        // Map everything to lowercase for bulletproof lookups
         row[h.trim().toLowerCase()] = (values[i] ?? "").trim();
       });
       return row;
@@ -213,9 +213,6 @@ let FC27_CACHE: {
 
 function loadFC27Data() {
   if (FC27_CACHE) return FC27_CACHE;
-
-  console.log("\n🔄 ----------------------------------------");
-  console.log("🔄 INITIATING FC27 DYNAMIC DATA LOAD...");
   
   const rawArch27 = parseCSV(DATA_DIR_27, "FC27_ARCHETYPES.csv");
   const profiles: ArchetypeProfile[] = rawArch27.map(r => ({
@@ -224,40 +221,41 @@ function loadFC27Data() {
     MaxH: r.maxheight || r.maxh || "",
     MinW: r.minweight || r.minw || "",
     MaxW: r.maxweight || r.maxw || "",
-    Signature_PlayStyles: r.signature_playstyles || r.signatureplaystyles || r.signatures || "",
-    Recommended_Positions: r.recommended_positions || r.recommendedpositions || "",
-    Key_Attributes: r.key_attributes || r.keyattributes || "",
-    Specialisations: r.specialisation_name || r.specialisations || "",
+    // 👉 ADDED: Full support for spaced headers
+    Signature_PlayStyles: r["signature playstyles"] || r.signature_playstyles || r.signatureplaystyles || r.signatures || "",
+    Recommended_Positions: r["recommended positions"] || r.recommended_positions || r.recommendedpositions || r.positions || "",
+    Key_Attributes: r["key attributes"] || r.key_attributes || r.keyattributes || "",
+    Specialisations: r["specialisation name"] || r.specialisation_name || r.specialisations || "",
   }));
 
   const specialisations: Specialisation[] = rawArch27.map(r => ({
     Archetype: r.archetype || r.build || r.name || "",
-    Specialisation: r.specialisation_name || r.specialisation || "",
-    "Playstyle+": r.spec_bonus_playstyleplus || r["playstyle+"] || "",
-    Attr1: r.spec_req_attr1 || r.attr1 || "",
-    Val1: r.spec_req_val1 || r.val1 || "",
-    Attr2: r.spec_req_attr2 || r.attr2 || "",
-    Val2: r.spec_req_val2 || r.val2 || "",
-    Attr3: r.spec_req_attr3 || r.attr3 || "",
-    Val3: r.spec_req_val3 || r.val3 || "",
+    Specialisation: r["specialisation name"] || r.specialisation_name || r.specialisation || "",
+    "Playstyle+": r["spec bonus playstyleplus"] || r.spec_bonus_playstyleplus || r["playstyle+"] || "",
+    Attr1: r["spec req attr1"] || r.spec_req_attr1 || r.attr1 || "",
+    Val1: r["spec req val1"] || r.spec_req_val1 || r.val1 || "",
+    Attr2: r["spec req attr2"] || r.spec_req_attr2 || r.attr2 || "",
+    Val2: r["spec req val2"] || r.spec_req_val2 || r.val2 || "",
+    Attr3: r["spec req attr3"] || r.spec_req_attr3 || r.attr3 || "",
+    Val3: r["spec req val3"] || r.spec_req_val3 || r.val3 || "",
   })).filter(s => s.Specialisation);
 
   const rawPlaystyles27 = parseCSV(DATA_DIR_27, "FC27_PLAYSTYLES.csv");
   const playstyles: PlaystyleReq[] = rawPlaystyles27.map(r => ({
     Playstyle: r.playstyle || "",
-    Attr1: r.req_attr1 || r.attr1 || "",
-    Val1: r.req_val1 || r.val1 || "",
-    Attr2: r.req_attr2 || r.attr2 || "",
-    Val2: r.req_val2 || r.val2 || "",
-    Attr3: r.req_attr3 || r.attr3 || "",
-    Val3: r.req_val3 || r.val3 || "",
+    Attr1: r.req_attr1 || r["req attr1"] || r.attr1 || "",
+    Val1: r.req_val1 || r["req val1"] || r.val1 || "",
+    Attr2: r.req_attr2 || r["req attr2"] || r.attr2 || "",
+    Val2: r.req_val2 || r["req val2"] || r.val2 || "",
+    Attr3: r.req_attr3 || r["req attr3"] || r.attr3 || "",
+    Val3: r.req_val3 || r["req val3"] || r.val3 || "",
   }));
 
   const playstyleInfo: PlaystyleInfo[] = rawPlaystyles27.map(r => ({
     Name: r.playstyle || r.name || "",
     Info: r.description || r.info || "",
     Playstyle: r.playstyle || "",
-    "Playstyle+": r.playstyleplus_name || r["playstyle+"] || ""
+    "Playstyle+": r.playstyleplus_name || r["playstyleplus name"] || r["playstyle+"] || ""
   }));
 
   const rawBase27 = parseCSV(DATA_DIR_27, "FC27_BASE_STATS.csv");
@@ -278,10 +276,7 @@ function loadFC27Data() {
 
   const costDict = buildCostDict(costs);
 
-  FC27_CACHE = { profiles, specialisations, playstyles, playstyleInfo, baseStats, costs, costDict };
-  console.log(`✅ LOAD COMPLETE! Found ${baseStats.length} base stat rows.`);
-  console.log("🔄 ----------------------------------------\n");
-  
+  FC27_CACHE = { profiles, specialisations, playstyles, playstyleInfo, baseStats, costs, costDict };  
   return FC27_CACHE;
 }
 
@@ -307,12 +302,11 @@ export function getCostDict(version: "FC26" | "FC27" = "FC26"): CostDict {
   return version === "FC27" ? loadFC27Data().costDict : COST_DICT_26;
 }
 
-// ── Helper: normalise attribute name for lookup ───────────────────────────────
 export function normAttr(attr: string): string {
   return attr.trim().toLowerCase().replace(/\s+/g, "");
 }
 
-// ── Legacy Exports (To prevent breaking old code) ────────────────────────────
+// ── Legacy Exports ────────────────────────────────────────────────────────────
 export const ARCHETYPE_PROFILES = ARCHETYPE_PROFILES_26;
 export const PLAYSTYLE_INFO = PLAYSTYLE_INFO_26;
 export const PLAYSTYLES = PLAYSTYLES_26;
