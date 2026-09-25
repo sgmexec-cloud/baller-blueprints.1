@@ -67,6 +67,7 @@ export const scoutRouter = router({
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
       customPlaystyles: z.array(z.string()).optional(), 
+      isDevMode: z.boolean().optional(), // 👉 ADDED: Developer mode bypass
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -75,7 +76,7 @@ export const scoutRouter = router({
       const rawUserId = (ctx as any).user?.id || (ctx as any).userId || (ctx as any).user?.openId;
       const userId = rawUserId ? String(rawUserId) : null;
       
-      let buildLimit = 2; 
+      let buildLimit = input.isDevMode ? Infinity : 2; 
       let currentUser = null;
 
       if (userId) {
@@ -93,27 +94,28 @@ export const scoutRouter = router({
         }
 
         if (currentUser) {
-          if (currentUser.tier === "owner") buildLimit = Infinity; 
+          if (input.isDevMode || currentUser.tier === "owner") buildLimit = Infinity; 
           else if (currentUser.tier === "vip") buildLimit = 500;   
           else if (currentUser.tier === "premium_plus") buildLimit = 250;
           else if (currentUser.tier === "premium") buildLimit = 100;
           else buildLimit = 5; 
         } else {
           currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
-          buildLimit = 5;
+          buildLimit = input.isDevMode ? Infinity : 5;
         }
       }
 
       const currentBuilds = currentUser?.monthlyBuilds || 0;
 
-      if (currentUser && currentBuilds >= buildLimit) {
+      // 👉 Skip limit check completely if in dev mode
+      if (!input.isDevMode && currentUser && currentBuilds >= buildLimit) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "LIMIT_REACHED",
         });
       }
 
-      const isProTier = currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus" || currentUser?.tier === "premium";
+      const isProTier = input.isDevMode || currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus" || currentUser?.tier === "premium";
       const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
 
       const stage1Response = await invokeLLM({
@@ -200,7 +202,8 @@ ${filterRules.join("\n")}
         parsed.specialisationMinAttrs = [];
       }
 
-      if (currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
+      // 👉 Skip incrementing builds count if in dev mode
+      if (!input.isDevMode && currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
         const nextBuilds = currentBuilds + 1;
         await db.execute(
           sql`UPDATE users SET "monthlyBuilds" = ${nextBuilds} WHERE id::text = ${userId} OR "openId"::text = ${userId}`
@@ -224,7 +227,6 @@ ${filterRules.join("\n")}
       let customSlots = input.standardSlots || 0;
       let signatureUpgrades = input.signatureSlots || 0;
 
-      // 👉 UPDATED: Dynamically checks FC27 progression limits
       if (!customSlots || !signatureUpgrades) {
         try {
           const progFileName = input.gameVersion === "FC27" ? "FC27_PROGRESSION.csv" : "progression.csv";
@@ -266,7 +268,6 @@ ${filterRules.join("\n")}
         input.unlockedMasteries
       );
 
-      // 👉 UPDATED: Passes the version argument down
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
