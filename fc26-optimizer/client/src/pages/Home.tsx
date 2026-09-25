@@ -576,8 +576,8 @@ export default function Home() {
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC26");
   const [isDevUnlocked, setIsDevUnlocked] = useState(false);
 
-  // 👉 NEW: State to track which masteries the user has checked
-  const [unlockedMasteries, setUnlockedMasteries] = useState<string[]>([]);
+  // 👉 UPDATED: Store mastery name AND level (10 or 30)
+  const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, number>>({});
 
   const [playerIdentity, setPlayerIdentity] = useState("");
   const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
@@ -616,11 +616,17 @@ export default function Home() {
     }
   }, [user, isUserLoading]);
 
-  // 👉 NEW: Handle checking/unchecking a mastery
-  const handleMasteryToggle = (mastery: string) => {
-    setUnlockedMasteries((prev) => 
-      prev.includes(mastery) ? prev.filter(m => m !== mastery) : [...prev, mastery]
-    );
+  // 👉 UPDATED: Handle dropdown selection for Masteries
+  const handleMasteryChange = (mastery: string, level: number | null) => {
+    setUnlockedMasteries((prev) => {
+      const next = { ...prev };
+      if (level === null) {
+        delete next[mastery];
+      } else {
+        next[mastery] = level;
+      }
+      return next;
+    });
   };
 
   const apBudget = progressionData?.[level]?.apAvailable ?? 0;
@@ -700,11 +706,11 @@ export default function Home() {
     calcMutation.mutate({ 
       blueprint, 
       apBudget,
-      gameVersion, // Sends FC26 or FC27
+      gameVersion, 
       signatureSlots: sigSlots,
       standardSlots: stdSlots,
       preferredAttributes: preferredAttributes,
-      unlockedMasteries: gameVersion === "FC27" ? unlockedMasteries : undefined // 👉 Pass Masteries!
+      unlockedMasteries: gameVersion === "FC27" ? unlockedMasteries : undefined 
     } as any); 
   };
 
@@ -715,7 +721,7 @@ export default function Home() {
     setPlayerIdentity("");
     setForcedArchetype("");
     setPreferredAttributes([]);
-    setUnlockedMasteries([]); // Reset masteries on new build
+    setUnlockedMasteries({}); // Reset masteries on new build
     setLevel(1);
   };
 
@@ -902,28 +908,33 @@ export default function Home() {
                 onUpgradeClick={() => setShowPricingModal(true)}
               />
 
-              {/* 👉 NEW: FC27 DEV UI - Masteries Checklist */}
+              {/* 👉 UPDATED: FC27 DEV UI - Masteries Dropdowns */}
               {gameVersion === "FC27" && isDevUnlocked && (
                 <div className="w-full mt-4 p-4 bg-green-950/20 rounded-xl border border-green-500/30">
                   <div className="mb-3">
                     <h3 className="text-[13px] font-bold text-green-400 mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                       🛠️ DEV: Unlocked Masteries
                     </h3>
-                    <p className="text-[10px] text-gray-400">
-                      Select maxed archetypes to apply their global +1 stat boosts.
+                    <p className="text-[10px] text-gray-400 mb-4">
+                      Select mastery levels to apply their global stat boosts.
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+                  <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                     {FC27_MASTERIES.map(mastery => (
-                      <label key={mastery} className="flex items-center gap-2 text-[11px] font-bold tracking-wide text-gray-300 cursor-pointer hover:text-white transition-colors uppercase">
-                        <input 
-                          type="checkbox" 
-                          className="w-3.5 h-3.5 rounded border-white/20 bg-black/50 text-green-500 focus:ring-green-500/50 focus:ring-offset-0"
-                          checked={unlockedMasteries.includes(mastery)}
-                          onChange={() => handleMasteryToggle(mastery)}
-                        />
-                        {mastery}
-                      </label>
+                      <div key={mastery} className="flex flex-col gap-1">
+                        <label className="text-[10px] font-bold tracking-wide text-gray-300 uppercase">
+                          {mastery}
+                        </label>
+                        <select
+                          className="w-full bg-black/50 border border-white/20 rounded-md text-xs text-white p-1.5 focus:border-green-500 focus:outline-none appearance-none"
+                          value={unlockedMasteries[mastery] || ""}
+                          onChange={(e) => handleMasteryChange(mastery, e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">Locked</option>
+                          <option value="10">Level 10</option>
+                          <option value="30">Level 30</option>
+                        </select>
+                      </div>
                     ))}
                   </div>
                 </div>
