@@ -1104,8 +1104,8 @@ export default function Home() {
                 )}
               </button>
             </div>
-          )}
-        </section>
+          </section>
+        )}
 
         {calcMutation.isPending && (
           <Spinner label="Running Math Engine..." />
