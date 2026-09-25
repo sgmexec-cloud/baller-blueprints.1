@@ -2,8 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, ALL_ARCHETYPES } from "../csvLoader";
-import { runMathEngine as runMathEngine26, ScoutingBlueprint, resolveSignaturePlaystyles as resolveSignatures26 } from "../mathEngine";
-import { runMathEngine as runMathEngine27, resolveSignaturePlaystyles as resolveSignatures27 } from "../mathEngine27";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
@@ -219,7 +218,8 @@ ${filterRules.join("\n")}
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
-      unlockedMasteries: z.array(z.string()).optional() // 👉 ADDED: Receives masteries from frontend
+      // 👉 UPDATED: Receives object mapping Mastery -> Level
+      unlockedMasteries: z.record(z.string(), z.number()).optional().default({}) 
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
@@ -255,25 +255,21 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      let result;
-      let resolvedSignatures;
+      // 👉 UPDATED: unified the engine call to pass the version and masteries directly
+      const result = runMathEngine(
+        engineBlueprint, 
+        input.apBudget, 
+        customSlots, 
+        input.preferredAttributes || [], 
+        input.gameVersion,
+        input.unlockedMasteries
+      );
 
-      if (input.gameVersion === "FC27") {
-        // 👉 PASS THE MASTERIES ARRAY INTO mathEngine27!
-        result = runMathEngine27(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || [], input.unlockedMasteries || []);
-        resolvedSignatures = resolveSignatures27(
-          input.blueprint.archetype,
-          signatureUpgrades,
-          input.blueprint.specialisationPlaystylePlus
-        );
-      } else {
-        result = runMathEngine26(engineBlueprint, input.apBudget, customSlots, input.preferredAttributes || []);
-        resolvedSignatures = resolveSignatures26(
-          input.blueprint.archetype,
-          signatureUpgrades,
-          input.blueprint.specialisationPlaystylePlus
-        );
-      }
+      const resolvedSignatures = resolveSignaturePlaystyles(
+        input.blueprint.archetype,
+        signatureUpgrades,
+        input.blueprint.specialisationPlaystylePlus
+      );
 
       const standardPlaystyles = input.blueprint.playstyles
         .map(ps => ps.name)
