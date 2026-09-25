@@ -11,6 +11,23 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   "Weak Foot": ["WeakFoot"],
 };
 
+// 👉 NEW: FC27 Masteries Data Mapping (Level 10 gives +1 to both, Level 30 gives an extra +1 to attr2)
+const FC27_MASTERIES_DATA: Record<string, { attr1: string; attr2: string }> = {
+  "marauder": { attr1: "slidingtackle", attr2: "sprintspeed" },
+  "shot stopper": { attr1: "gkpositioning", attr2: "gkreflexes" },
+  "sweeper keeper": { attr1: "gkhandling", attr2: "gkdiving" },
+  "progressor": { attr1: "longpassing", attr2: "standingtackle" },
+  "boss": { attr1: "aggression", attr2: "strength" },
+  "disruptor": { attr1: "stamina", attr2: "interceptions" },
+  "recycler": { attr1: "defawareness", attr2: "shortpassing" },
+  "maestro": { attr1: "reactions", attr2: "ballcontrol" },
+  "creator": { attr1: "fkaccuracy", attr2: "vision" },
+  "spark": { attr1: "crossing", attr2: "dribbling" },
+  "magician": { attr1: "curve", attr2: "acceleration" },
+  "finisher": { attr1: "composure", attr2: "finishing" },
+  "target": { attr1: "balance", attr2: "jumping" },
+};
+
 export interface StatResult {
   attribute: string;
   base: number;
@@ -57,7 +74,9 @@ export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
   customSlots: number = 0,
-  preferredAttributes: string[] = [] // 👉 ADDED: Focus Attributes Array
+  preferredAttributes: string[] = [], // Focus Attributes Array
+  gameVersion: "FC26" | "FC27" = "FC26",         // 👉 NEW: Version Toggle
+  unlockedMasteries: Record<string, number> = {} // 👉 NEW: Maps mastery name to level (10 or 30)
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
@@ -75,7 +94,6 @@ export function runMathEngine(
 
   let remainingAP = apBudget;
 
-  // 👉 HELPER: Removes caps for preferred Focus Attributes so they can hit 99
   function getHardCap(attrName: string, defaultCap: number): number {
     const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
     return isPreferred ? 99 : defaultCap;
@@ -114,7 +132,7 @@ export function runMathEngine(
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
 
-  // 👉 1.5 NEW: Focus Attributes VIP Pass
+  // 1.5 Focus Attributes VIP Pass
   // Dedicate up to 25% of post-tax AP exclusively to driving up the user's selected stats
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
@@ -239,10 +257,38 @@ export function runMathEngine(
     }
   }
 
+  // 👉 NEW: Calculate active FC27 Mastery Modifiers based on EXACT level
+  const activeMasteryModifiers: Record<string, number> = {};
+  if (gameVersion === "FC27" && unlockedMasteries) {
+    for (const [m, level] of Object.entries(unlockedMasteries)) {
+      const masteryConfig = FC27_MASTERIES_DATA[m.toLowerCase()];
+      if (masteryConfig) {
+        // Level 10 grants +1 to BOTH attributes
+        if (level >= 10) {
+          activeMasteryModifiers[masteryConfig.attr1] = (activeMasteryModifiers[masteryConfig.attr1] || 0) + 1;
+          activeMasteryModifiers[masteryConfig.attr2] = (activeMasteryModifiers[masteryConfig.attr2] || 0) + 1;
+        }
+        // Level 30 grants an ADDITIONAL +1 to the second attribute only
+        if (level >= 30) {
+          activeMasteryModifiers[masteryConfig.attr2] = (activeMasteryModifiers[masteryConfig.attr2] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // 👉 UPDATED: Apply Mastery modifiers to final output
   const statResults: StatResult[] = attrNames.map((attr) => {
     const s = stats[attr];
-    const cat = Object.entries(ATTR_CATEGORIES).find(([_, list]) => list.some(a => normAttr(a) === normAttr(attr)))?.[0] ?? "Other";
-    return { attribute: attr, base: s.base, final: s.current, max: s.max, apSpent: s.apSpent, category: cat };
+    const normalizedAttr = normAttr(attr);
+    let finalVal = s.current;
+
+    // Add any mastery bonus directly to the final computed value
+    if (activeMasteryModifiers[normalizedAttr]) {
+      finalVal += activeMasteryModifiers[normalizedAttr];
+    }
+
+    const cat = Object.entries(ATTR_CATEGORIES).find(([_, list]) => list.some(a => normAttr(a) === normalizedAttr))?.[0] ?? "Other";
+    return { attribute: attr, base: s.base, final: finalVal, max: s.max, apSpent: s.apSpent, category: cat };
   });
 
   return {
