@@ -655,6 +655,7 @@ export default function Home() {
     }
   });
 
+  // 👉 UPDATED: Added onError handler to see what breaks during calculation
   const calcMutation = trpc.scout.calculateStats.useMutation({
     onSuccess: (data) => {
       setPlayerCard(data);
@@ -662,6 +663,10 @@ export default function Home() {
         cardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     },
+    onError: (error) => {
+      alert(`Calculation failed: ${error.message}`);
+      console.error("Calculation Error:", error);
+    }
   });
 
   const handleScout = () => {
