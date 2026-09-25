@@ -598,7 +598,10 @@ export default function Home() {
   const utils = trpc.useUtils();
 
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
-  const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery();
+  
+  // 👉 UPDATED: Passing { gameVersion } dynamically so progression data swaps!
+  const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery({ gameVersion });
+  
   const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
 
   useEffect(() => {
