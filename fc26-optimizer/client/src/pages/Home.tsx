@@ -6,7 +6,6 @@ import ExportPoster from "@/components/ExportPoster";
 import type { Blueprint } from "../../../server/routers/scout";
 import type { MathEngineResult } from "../../../server/mathEngine";
 
-// ── Icons ──────────────────────────────────────────────────────────────────────
 const LockIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
@@ -14,7 +13,6 @@ const LockIcon = () => (
   </svg>
 );
 
-// ── Constants & Helpers ────────────────────────────────────────────────────────
 const ALL_ATTRIBUTES = [
   "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
   "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
@@ -24,7 +22,6 @@ const ALL_ATTRIBUTES = [
   "Strength", "Aggression"
 ];
 
-// 👉 NEW: FC27 Masteries List for the UI
 const FC27_MASTERIES = [
   "Shot Stopper", "Sweeper Keeper", "Progressor", "Boss", "Marauder", "Disruptor", 
   "Recycler", "Maestro", "Creator", "Spark", "Magician", "Finisher", "Target"
@@ -32,7 +29,6 @@ const FC27_MASTERIES = [
 
 type Tier = "free" | "premium" | "premium_plus" | "vip" | "owner";
 
-// ── Email OTP Login Component ────────────────────────────────────────────────
 function EmailLogin() {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -158,7 +154,6 @@ function EmailLogin() {
   );
 }
 
-// ── Preferred Attributes Dropdown Component ──────────────────────────────────
 function PreferredAttributes({
   userTier,
   selectedAttributes,
@@ -173,7 +168,7 @@ function PreferredAttributes({
   const getMaxAllowed = () => {
     if (userTier === "owner" || userTier === "vip" || userTier === "premium_plus") return 3;
     if (userTier === "premium") return 1;
-    return 0; // Free
+    return 0;
   };
 
   const maxAllowed = getMaxAllowed();
@@ -270,7 +265,6 @@ function PreferredAttributes({
   );
 }
 
-// ── Loading spinner ────────────────────────────────────────────────────────────
 function Spinner({ label }: { label: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-12">
@@ -308,7 +302,6 @@ function Spinner({ label }: { label: string }) {
   );
 }
 
-// ── Hero header ────────────────────────────────────────────────────────────────
 function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, setShowPricing: (v: boolean) => void }) {
   const { data: user, isLoading } = trpc.auth.getMe.useQuery(undefined, {
     retry: false,
@@ -513,7 +506,6 @@ function HeroHeader({ showPricing, setShowPricing }: { showPricing: boolean, set
   );
 }
 
-// ── Phase indicator ────────────────────────────────────────────────────────────
 function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
   return (
     <div className="flex items-center gap-2 mb-4 px-1">
@@ -571,35 +563,30 @@ function PhaseIndicator({ phase }: { phase: 1 | 2 }) {
   );
 }
 
-// ── Main page ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC26");
   const [isDevUnlocked, setIsDevUnlocked] = useState(false);
-
-  // 👉 UPDATED: Store mastery name AND level (10 or 30)
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, number>>({});
-
   const [playerIdentity, setPlayerIdentity] = useState("");
   const [forcedArchetype, setForcedArchetype] = useState<string>(""); 
   const [preferredAttributes, setPreferredAttributes] = useState<string[]>([]);
-  
   const [level, setLevel] = useState<number>(1);
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const [playerCard, setPlayerCard] = useState<MathEngineResult | null>(null);
   const [phase, setPhase] = useState<1 | 2>(1);
   const [isExporting, setIsExporting] = useState(false);
   const [showPricingModal, setShowPricingModal] = useState(false);
-
   const [guestBuildCount, setGuestBuildCount] = useState(0);
 
   const reportRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-
   const utils = trpc.useUtils();
 
   const { data: user, isLoading: isUserLoading } = trpc.auth.getMe.useQuery();
   const { data: progressionData, isLoading: isProgressionLoading } = trpc.build.getProgression.useQuery({ gameVersion });
-  const { data: archetypesList } = trpc.scout.getArchetypes.useQuery(); 
+  
+  // 👉 ADDED { gameVersion } here to fetch FC27 archetypes dynamically
+  const { data: archetypesList } = trpc.scout.getArchetypes.useQuery({ gameVersion }); 
 
   useEffect(() => {
     if (playerIdentity.trim().toUpperCase() === "DEV27") {
@@ -616,7 +603,6 @@ export default function Home() {
     }
   }, [user, isUserLoading]);
 
-  // 👉 UPDATED: Handle dropdown selection for Masteries
   const handleMasteryChange = (mastery: string, level: number | null) => {
     setUnlockedMasteries((prev) => {
       const next = { ...prev };
@@ -655,7 +641,6 @@ export default function Home() {
     }
   });
 
-  // 👉 UPDATED: Added onError handler to see what breaks during calculation
   const calcMutation = trpc.scout.calculateStats.useMutation({
     onSuccess: (data) => {
       setPlayerCard(data);
@@ -674,7 +659,6 @@ export default function Home() {
     
     const isGuest = !user;
 
-    // 👉 Bypass guest / free limits if Dev Mode is unlocked
     if (!isDevUnlocked) {
       if (isGuest && guestBuildCount >= 2) {
         alert("Guest limit reached! Please create an account to get 5 free builds.");
@@ -702,7 +686,8 @@ export default function Home() {
     scoutMutation.mutate({ 
       playerIdentity: finalIdentity, 
       forcedArchetype: secureForcedArchetype || undefined,
-      isDevMode: isDevUnlocked // 👉 Send dev flag to server
+      isDevMode: isDevUnlocked,
+      gameVersion: gameVersion // 👉 ADDED: Send version to AI prompt
     } as any);
   };
 
@@ -921,7 +906,6 @@ export default function Home() {
                 onUpgradeClick={() => setShowPricingModal(true)}
               />
 
-              {/* 👉 UPDATED: FC27 DEV UI - Masteries Dropdowns */}
               {gameVersion === "FC27" && isDevUnlocked && (
                 <div className="w-full mt-4 p-4 bg-green-950/20 rounded-xl border border-green-500/30">
                   <div className="mb-3">
@@ -1120,8 +1104,8 @@ export default function Home() {
                 )}
               </button>
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
         {calcMutation.isPending && (
           <Spinner label="Running Math Engine..." />
