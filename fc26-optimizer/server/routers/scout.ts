@@ -218,16 +218,18 @@ ${filterRules.join("\n")}
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
-      // 👉 UPDATED: Receives object mapping Mastery -> Level
       unlockedMasteries: z.record(z.string(), z.number()).optional().default({}) 
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
       let signatureUpgrades = input.signatureSlots || 0;
 
+      // 👉 UPDATED: Dynamically checks FC27 progression limits
       if (!customSlots || !signatureUpgrades) {
         try {
-          const progPath = path.join(process.cwd(), "server", "data", "progression.csv");
+          const progFileName = input.gameVersion === "FC27" ? "FC27_PROGRESSION.csv" : "progression.csv";
+          const progDir = input.gameVersion === "FC27" ? "data27" : "data";
+          const progPath = path.join(process.cwd(), "server", progDir, progFileName);
           const progContent = await fs.readFile(progPath, "utf-8");
           const lines = progContent.trim().split("\n");
           for (let i = 1; i < lines.length; i++) {
@@ -255,7 +257,6 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      // 👉 UPDATED: unified the engine call to pass the version and masteries directly
       const result = runMathEngine(
         engineBlueprint, 
         input.apBudget, 
@@ -265,10 +266,12 @@ ${filterRules.join("\n")}
         input.unlockedMasteries
       );
 
+      // 👉 UPDATED: Passes the version argument down
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
-        input.blueprint.specialisationPlaystylePlus
+        input.blueprint.specialisationPlaystylePlus,
+        input.gameVersion
       );
 
       const standardPlaystyles = input.blueprint.playstyles
