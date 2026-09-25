@@ -1,4 +1,4 @@
-import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT, PLAYSTYLES } from "./csvLoader";
+import { getArchetypeProfiles, getPlaystyles, getAllArchetypes, getCostDict } from "./csvLoader";
 
 export const ATTR_CATEGORIES: Record<string, string[]> = {
   Pace: ["Acceleration", "SprintSpeed"],
@@ -11,7 +11,6 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   "Weak Foot": ["WeakFoot"],
 };
 
-// 👉 NEW: FC27 Masteries Data Mapping (Level 10 gives +1 to both, Level 30 gives an extra +1 to attr2)
 const FC27_MASTERIES_DATA: Record<string, { attr1: string; attr2: string }> = {
   "marauder": { attr1: "slidingtackle", attr2: "sprintspeed" },
   "shot stopper": { attr1: "gkpositioning", attr2: "gkreflexes" },
@@ -66,18 +65,24 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-function getUpgradeCost(archKey: string, attrKey: string, fromLevel: number): number {
-  return COST_DICT[archKey]?.[attrKey]?.[fromLevel + 1] ?? 999999;
+function getUpgradeCost(costDict: any, archKey: string, attrKey: string, fromLevel: number): number {
+  return costDict[archKey]?.[attrKey]?.[fromLevel + 1] ?? 999999;
 }
 
 export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
   customSlots: number = 0,
-  preferredAttributes: string[] = [], // Focus Attributes Array
-  gameVersion: "FC26" | "FC27" = "FC26",         // 👉 NEW: Version Toggle
-  unlockedMasteries: Record<string, number> = {} // 👉 NEW: Maps mastery name to level (10 or 30)
+  preferredAttributes: string[] = [],
+  gameVersion: "FC26" | "FC27" = "FC26",
+  unlockedMasteries: Record<string, number> = {}
 ): MathEngineResult {
+
+  // 👉 DYNAMIC LOAD: Pulls FC26 or FC27 data based on version passed
+  const ALL_ARCHETYPES = getAllArchetypes(gameVersion);
+  const PLAYSTYLES = getPlaystyles(gameVersion);
+  const COST_DICT = getCostDict(gameVersion);
+
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
 
@@ -104,7 +109,7 @@ export function runMathEngine(
     if (!matched) return false;
     const s = stats[matched];
     if (s.current >= Math.min(s.max, hardCap)) return false;
-    const cost = getUpgradeCost(archKey, normAttr(matched), s.current);
+    const cost = getUpgradeCost(COST_DICT, archKey, normAttr(matched), s.current);
     if (cost > remainingAP) return false;
     s.current += 1; s.apSpent += cost; remainingAP -= cost;
     return true;
@@ -118,10 +123,9 @@ export function runMathEngine(
     }
   }
 
-  // 1. Initial Tax (Playstyles & Skill Moves)
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
   for (const ps of activePlaystyles) {
-    const realReqs = PLAYSTYLES.find((p) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
+    const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle.toLowerCase() === ps.name.toLowerCase());
     if (realReqs) {
       if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
       if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
@@ -132,36 +136,26 @@ export function runMathEngine(
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
 
-  // 1.5 Focus Attributes VIP Pass
-  // Dedicate up to 25% of post-tax AP exclusively to driving up the user's selected stats
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
     let focusSpent = 0;
     let focusProgress = true;
-    
     while (focusProgress && focusSpent < focusBudget) {
       focusProgress = false;
-      
       const candidates = preferredAttributes
         .map(a => matchAttr(a, attrNames))
         .filter(m => m !== null && stats[m!].current < Math.min(99, stats[m!].max))
         .sort((a, b) => stats[a!].current - stats[b!].current);
-        
       for (const matched of candidates) {
-        const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
+        const cost = getUpgradeCost(COST_DICT, archKey, normAttr(matched!), stats[matched!].current);
         if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
           const success = upgradeOne(matched!, 99);
-          if (success) {
-            focusSpent += cost;
-            focusProgress = true;
-            break;
-          }
+          if (success) { focusSpent += cost; focusProgress = true; break; }
         }
       }
     }
   }
 
-  // 2. The 55/30/15 Bucket Logic
   const postTaxAP = remainingAP;
   const primaryBudget = postTaxAP * 0.55;
   const secondaryBudget = postTaxAP * 0.30;
@@ -171,28 +165,20 @@ export function runMathEngine(
     let progress = true;
     while (progress && bucketSpent < budgetLimit) {
       progress = false;
-      
       const candidates = attrs
         .map(a => matchAttr(a, attrNames))
         .filter(m => {
           if (!m) return false;
-          // Apply Limit Breaker cap if it's a focus attribute
           const dynamicCap = getHardCap(m, baseHardCap);
           return stats[m].current < Math.min(dynamicCap, stats[m].max);
         })
         .sort((a, b) => stats[a!].current - stats[b!].current);
-      
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
-        const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
-        
+        const cost = getUpgradeCost(COST_DICT, archKey, normAttr(matched!), stats[matched!].current);
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, dynamicCap);
-          if (success) {
-            bucketSpent += cost;
-            progress = true;
-            break;
-          }
+          if (success) { bucketSpent += cost; progress = true; break; }
         }
       }
     }
@@ -202,73 +188,58 @@ export function runMathEngine(
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. Identity Bonus Pass
   let progress = true;
   while (progress && remainingAP > 0) {
     progress = false;
-    
     const bonusCandidates = [
-      ...preferredAttributes.map(a => ({ attr: a, cap: 99 })), // Prioritize Focus Attributes again
+      ...preferredAttributes.map(a => ({ attr: a, cap: 99 })),
       ...blueprint.coreAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) })),
       ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 95) })),
       ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 90) }))
     ];
-
     const options = bonusCandidates
       .map(c => {
         const matched = matchAttr(c.attr, attrNames);
         if (!matched) return null;
         const s = stats[matched];
         if (s.current >= c.cap || s.current >= s.max) return null;
-        return { matched, cost: getUpgradeCost(archKey, normAttr(matched), s.current), cap: c.cap };
+        return { matched, cost: getUpgradeCost(COST_DICT, archKey, normAttr(matched), s.current), cap: c.cap };
       })
       .filter((o): o is { matched: string; cost: number; cap: number } => o !== null && o.cost <= remainingAP)
       .sort((a, b) => a.cost - b.cost); 
-
     if (options.length > 0) {
       const success = upgradeOne(options[0].matched, options[0].cap);
-      if (success) {
-        progress = true;
-      }
+      if (success) progress = true;
     }
   }
 
-  // 4. Hero Spillover Pass (Forces 99-100% Efficiency)
   let spilloverProgress = true;
   while (spilloverProgress && remainingAP > 0) {
     spilloverProgress = false;
-    
     const spilloverOptions = attrNames
       .map(attr => {
         const s = stats[attr];
-        // We cap spillover stats at 83 so they don't overtake the player's core identity stats
         const dynamicCap = getHardCap(attr, 83);
         if (s.current >= dynamicCap || s.current >= s.max) return null; 
-        return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current), cap: dynamicCap };
+        return { attr, cost: getUpgradeCost(COST_DICT, archKey, normAttr(attr), s.current), cap: dynamicCap };
       })
       .filter((o): o is { attr: string; cost: number, cap: number } => o !== null && o.cost <= remainingAP)
       .sort((a, b) => a.cost - b.cost); 
-      
     if (spilloverOptions.length > 0) {
       const success = upgradeOne(spilloverOptions[0].attr, spilloverOptions[0].cap);
-      if (success) {
-        spilloverProgress = true;
-      }
+      if (success) spilloverProgress = true;
     }
   }
 
-  // 👉 NEW: Calculate active FC27 Mastery Modifiers based on EXACT level
   const activeMasteryModifiers: Record<string, number> = {};
   if (gameVersion === "FC27" && unlockedMasteries) {
     for (const [m, level] of Object.entries(unlockedMasteries)) {
       const masteryConfig = FC27_MASTERIES_DATA[m.toLowerCase()];
       if (masteryConfig) {
-        // Level 10 grants +1 to BOTH attributes
         if (level >= 10) {
           activeMasteryModifiers[masteryConfig.attr1] = (activeMasteryModifiers[masteryConfig.attr1] || 0) + 1;
           activeMasteryModifiers[masteryConfig.attr2] = (activeMasteryModifiers[masteryConfig.attr2] || 0) + 1;
         }
-        // Level 30 grants an ADDITIONAL +1 to the second attribute only
         if (level >= 30) {
           activeMasteryModifiers[masteryConfig.attr2] = (activeMasteryModifiers[masteryConfig.attr2] || 0) + 1;
         }
@@ -276,13 +247,11 @@ export function runMathEngine(
     }
   }
 
-  // 👉 UPDATED: Apply Mastery modifiers to final output
   const statResults: StatResult[] = attrNames.map((attr) => {
     const s = stats[attr];
     const normalizedAttr = normAttr(attr);
     let finalVal = s.current;
 
-    // Add any mastery bonus directly to the final computed value
     if (activeMasteryModifiers[normalizedAttr]) {
       finalVal += activeMasteryModifiers[normalizedAttr];
     }
@@ -302,11 +271,13 @@ export function runMathEngine(
   };
 }
 
-export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string): string[] {
-  const arch = ARCHETYPE_PROFILES.find((a) => a.Archetype.toLowerCase() === archetypeName.toLowerCase());
+export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string, gameVersion: "FC26" | "FC27" = "FC26"): string[] {
+  // 👉 Load correct version of Archetypes
+  const ARCHETYPE_PROFILES = getArchetypeProfiles(gameVersion);
+  const arch = ARCHETYPE_PROFILES.find((a: any) => a.Archetype.toLowerCase() === archetypeName.toLowerCase());
   if (!arch) return [];
-  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s) => s.trim());
-  const upgradedSignatures = baseSignatures.map((ps, index) => index < signatureUpgrades ? `${ps}+` : ps);
+  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s: string) => s.trim());
+  const upgradedSignatures = baseSignatures.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
   if (specialisationBonusPlus) upgradedSignatures[3] = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
   return upgradedSignatures.slice(0, 4);
 }
