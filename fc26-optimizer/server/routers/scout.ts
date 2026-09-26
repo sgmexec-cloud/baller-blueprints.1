@@ -263,6 +263,7 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
+      // 1. Run the Math Engine first
       const result = runMathEngine(
         engineBlueprint, 
         input.apBudget, 
@@ -272,10 +273,33 @@ ${filterRules.join("\n")}
         input.unlockedMasteries
       );
 
+      // 2. Strictly verify if the Math Engine ACTUALLY hit the required stats for the specialisation
+      let earnedSpecPlaystyle: string | undefined = undefined;
+      let earnedSpecName: string | undefined = undefined;
+
+      if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
+        
+        // Check if every single required attribute threshold was met by the calculated stats
+        const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
+          // Normalize the string matching just in case (e.g. "Standing Tackle" vs "standing tackle")
+          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === req.attr.toLowerCase());
+          const finalStatValue = attrKey ? result.stats[attrKey] : 0;
+          return finalStatValue >= req.val;
+        });
+
+        if (hasEarnedSpecialisation) {
+          earnedSpecPlaystyle = input.blueprint.specialisationPlaystylePlus;
+          earnedSpecName = input.blueprint.specialisation;
+        } else {
+          console.log(`🚨 SPECIALISATION DENIED: Failed to reach stat requirements for ${input.blueprint.specialisationPlaystylePlus}`);
+        }
+      }
+
+      // 3. Resolve signatures using ONLY the earned specialisation (if any)
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
-        input.blueprint.specialisationPlaystylePlus,
+        earnedSpecPlaystyle, 
         input.gameVersion
       );
 
@@ -294,7 +318,7 @@ ${filterRules.join("\n")}
         playstyles: {
           signatures: resolvedSignatures,
           standard: standardPlaystyles,
-          specialisation: input.blueprint.specialisation || null
+          specialisation: earnedSpecName || null
         }
       };
     }),
