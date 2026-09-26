@@ -1,35 +1,34 @@
-Archetype,MinHeight,MaxHeight,MinWeight,MaxWeight,Signature_PlayStyles,Recommended_Positions,Specialisation_Name,Spec_Bonus_PlaystylePlus,Spec_Req_Attr1,Spec_Req_Val1,Spec_Req_Attr2,Spec_Req_Val2,Spec_Req_Attr3,Spec_Req_Val3
-Boss,5'11",6'5",176,220,Bruiser,"Fullback, Stopper, Holding, Defender, Centre-Half",BOSS+,Slide Tackle+,Strength,90,Aggression,90,Sliding Tackle,92
-Boss,5'11",6'5",176,220,Bruiser,"Fullback, Stopper, Holding, Defender, Centre-Half",ENFORCER,Press Proven+,Composure,92,Vision,90,Ball Control,90
-Boss,5'11",6'5",176,220,Bruiser,"Fullback, Stopper, Holding, Defender, Centre-Half",CAPITANO,Block+,Defensive Awareness,92,Reactions,90,Agility,90
-Progressor,5'10",6'5",165,209,Long Ball Pass,"Fullback, Defender, Ball-Playing Defender, Holding, Falseback, Stopper, Centre-Half, Deep-Lying Playmaker",PROGRESSOR+,Jockey+,Long Passing,90,Defensive Awareness,90,Standing Tackle,92
-Progressor,5'10",6'5",165,209,Long Ball Pass,"Fullback, Defender, Ball-Playing Defender, Holding, Falseback, Stopper, Centre-Half, Deep-Lying Playmaker",PIONEER,Pinged Pass+,Dribbling,92,Long Passing,90,Short Passing,90
-Progressor,5'10",6'5",165,209,Long Ball Pass,"Fullback, Defender, Ball-Playing Defender, Holding, Falseback, Stopper, Centre-Half, Deep-Lying Playmaker",JANITOR,Quick Step+,Acceleration,92,Sprint Speed,90,Sliding Tackle,90
-Marauder,5'6",6'2",143,187,Quick Step,"Fullback, Falseback, Winger, Wide Midfielder, Wingback, Attacking Wingback, Wide Playmaker, Wide Half",MARAUDER+,Slide Tackle+,Sprint Speed,92,Aggression,90,Sliding Tackle,90
-Marauder,5'6",6'2",143,187,Quick Step,"Fullback, Falseback, Winger, Wide Midfielder, Wingback, Attacking Wingback, Wide Playmaker, Wide Half",SPEEDSTER,Rapid+,Dribbling,92,Sprint Speed,92,Acceleration,90
-Marauder,5'6",6'2",143,187,Quick Step,"Fullback, Falseback, Winger, Wide Midfielder, Wingback, Attacking Wingback, Wide Playmaker, Wide Half",ATHLETE,Bruiser+,Strength,92,Aggression,90,Defensive Awareness,90
-Maestro,5'4",6'2",143,187,Pinged Pass,"Holding, Box-to-Box, Wide Playmaker, Deep-Lying Playmaker, Playmaker",MAESTRO+,Technical+,Balance,90,Vision,92,Dribbling,90
-Maestro,5'4",6'2",143,187,Pinged Pass,"Holding, Box-to-Box, Wide Playmaker, Deep-Lying Playmaker, Playmaker",CRASHER,First Touch+,Finishing,90,Ball Control,90,Composure,92
-Maestro,5'4",6'2",143,187,Pinged Pass,"Holding, Box-to-Box, Wide Playmaker, Deep-Lying Playmaker, Playmaker",HEARTBEAT,Relentless+,Agility,92,Stamina,90,Aggression,90
-Creator,5'4",6'2",143,187,Incisive Pass,"Box-to-Box, Half-Winger, Wide Midfielder, Classic 10, Playmaker, Wide Playmaker, Shadow Striker",CREATOR+,Whipped Pass+,Vision,92,Crossing,90,Long Passing,90
-Creator,5'4",6'2",143,187,Incisive Pass,"Box-to-Box, Half-Winger, Wide Midfielder, Classic 10, Playmaker, Wide Playmaker, Shadow Striker",ARCHITECT,Dead Ball+,Crossing,92,FK Accuracy,90,Shot Power,90
-Creator,5'4",6'2",143,187,Incisive Pass,"Box-to-Box, Half-Winger, Wide Midfielder, Classic 10, Playmaker, Wide Playmaker, Shadow Striker",SNIPER,Power Shot+,Finishing,90,Shot Power,92,Long Shots,90
-Recycler,5'8",6'4",143,187,Intercept,"Stopper, Centre-Half, Deep-Lying Playmaker, Playmaker, Ball-Playing Defender, Holding, Box-to-Box, Wide Half",RECYCLER+,Pinged Pass+,Strength,90,Long Passing,90,Short Passing,92
-Recycler,5'8",6'4",143,187,Intercept,"Stopper, Centre-Half, Deep-Lying Playmaker, Playmaker, Ball-Playing Defender, Holding, Box-to-Box, Wide Half",DRIVER,Enforcer+,Sprint Speed,90,Balance,92,Strength,90
-Recycler,5'8",6'4",143,187,Intercept,"Stopper, Centre-Half, Deep-Lying Playmaker, Playmaker, Ball-Playing Defender, Holding, Box-to-Box, Wide Half",THIEF,Anticipate+,Interceptions,90,Defensive Awareness,90,Standing Tackle,92
-Disruptor,5'6",6'2",143,187,Jockey,"Fullback, Falseback, Box-to-Box, Wide Midfielder, Wingback, Holding, Winger",DISRUPTOR+,Intercept+,Balance,90,Reactions,90,Interceptions,92
-Disruptor,5'6",6'2",143,187,Jockey,"Fullback, Falseback, Box-to-Box, Wide Midfielder, Wingback, Holding, Winger",DESTROYER,Slide Tackle+,Sprint Speed,90,Strength,92,Sliding Tackle,90
-Disruptor,5'6",6'2",143,187,Jockey,"Fullback, Falseback, Box-to-Box, Wide Midfielder, Wingback, Holding, Winger",ANCHOR,Bruiser+,Ball Control,90,Dribbling,90,Short Passing,90
-Magician,5'4",6'2",132,176,Technical,"Playmaker, Wide Playmaker, Shadow Striker, Poacher, Classic 10, Winger, Inside Forward, False 9, Advanced Forward",MAGICIAN+,First Touch+,Acceleration,90,Composure,90,Ball Control,92
-Magician,5'4",6'2",132,176,Technical,"Playmaker, Wide Playmaker, Shadow Striker, Poacher, Classic 10, Winger, Inside Forward, False 9, Advanced Forward",HOTSHOT,Power Shot+,Finishing,90,Shot Power,92,Long Shots,90
-Magician,5'4",6'2",132,176,Technical,"Playmaker, Wide Playmaker, Shadow Striker, Poacher, Classic 10, Winger, Inside Forward, False 9, Advanced Forward",INVADER,Incisive Pass+,Attack Positioning,90,Vision,92,Long Passing,90
-Finisher,5'5",6'3",154,198,Low Driven Shot,"Playmaker, Shadow Striker, False 9, Advanced Forward, Inside Forward, Target Forward, Poacher, Classic 10",FINISHER+,Chip Shot+,Ball Control,90,Composure,92,Reactions,90
-Finisher,5'5",6'3",154,198,Low Driven Shot,"Playmaker, Shadow Striker, False 9, Advanced Forward, Inside Forward, Target Forward, Poacher, Classic 10",PRESSER,Relentless+,Agility,90,Stamina,92,Aggression,90
-Finisher,5'5",6'3",154,198,Low Driven Shot,"Playmaker, Shadow Striker, False 9, Advanced Forward, Inside Forward, Target Forward, Poacher, Classic 10",HUNTER,Gamechanger+,Attack Positioning,90,Finishing,90,Curve,92
-Spark,5'4",6'2",132,176,Trickster,"Half-Winger, Wide Playmaker, Inside Forward, Winger, Wide Midfielder",SPARK+,Quick Step+,Agility,92,Sprint Speed,90,Acceleration,90
-Spark,5'4",6'2",132,176,Trickster,"Half-Winger, Wide Playmaker, Inside Forward, Winger, Wide Midfielder",JOKER,Whipped Pass+,Attack Positioning,90,Crossing,92,Long Passing,90
-Spark,5'4",6'2",132,176,Trickster,"Half-Winger, Wide Playmaker, Inside Forward, Winger, Wide Midfielder",ACE,Chip Shot+,Reactions,90,Ball Control,90,Finishing,92
-Target,5'10",6'5",176,220,Precision Header,"Playmaker, Shadow Striker, False 9, Advanced Forward, Winger, Target Forward, Poacher, Classic 10",TARGET+,Acrobatic+,Agility,90,Jumping,92,Volleys,90
-Target,5'10",6'5",176,220,Precision Header,"Playmaker, Shadow Striker, False 9, Advanced Forward, Winger, Target Forward, Poacher, Classic 10",ROAMER,Incisive Pass+,Vision,90,Long Passing,90,Short Passing,92
-Target,5'10",6'5",176,220,Precision Header,"Playmaker, Shadow Striker, False 9, Advanced Forward, Winger, Target Forward, Poacher, Classic 10",RUNNER,Enforcer+,Sprint Speed,92,Strength,90,Attack Positioning,90
-
+Archetype,MinHeight,MaxHeight,MinWeight,MaxWeight,Signature_PlayStyles,Specialisation_Name,Spec_Bonus_PlaystylePlus,Spec_Req_Attr1,Spec_Req_Val1,Spec_Req_Attr2,Spec_Req_Val2,Spec_Req_Attr3,Spec_Req_Val3
+Boss,"5'11""","6'5""",176,220,Bruiser,BOSS+,Slide Tackle+,Strength,90,Aggression,90,Sliding Tackle,92
+Boss,"5'11""","6'5""",176,220,Bruiser,ENFORCER,Press Proven+,Composure,92,Vision,90,Ball Control,90
+Boss,"5'11""","6'5""",176,220,Bruiser,CAPITANO,Block+,Defensive Awareness,92,Reactions,90,Agility,90
+Progressor,"5'10""","6'5""",165,209,Long Ball Pass,PROGRESSOR+,Jockey+,Long Passing,90,Defensive Awareness,90,Standing Tackle,92
+Progressor,"5'10""","6'5""",165,209,Long Ball Pass,PIONEER,Pinged Pass+,Dribbling,92,Long Passing,90,Short Passing,90
+Progressor,"5'10""","6'5""",165,209,Long Ball Pass,JANITOR,Quick Step+,Acceleration,92,Sprint Speed,90,Sliding Tackle,90
+Marauder,"5'6""","6'2""",143,187,Quick Step,MARAUDER+,Slide Tackle+,Sprint Speed,92,Aggression,90,Sliding Tackle,90
+Marauder,"5'6""","6'2""",143,187,Quick Step,SPEEDSTER,Rapid+,Dribbling,92,Sprint Speed,92,Acceleration,90
+Marauder,"5'6""","6'2""",143,187,Quick Step,ATHLETE,Bruiser+,Strength,92,Aggression,90,Defensive Awareness,90
+Maestro,"5'4""","6'2""",143,187,Pinged Pass,MAESTRO+,Technical+,Balance,90,Vision,92,Dribbling,90
+Maestro,"5'4""","6'2""",143,187,Pinged Pass,CRASHER,First Touch+,Finishing,90,Ball Control,90,Composure,92
+Maestro,"5'4""","6'2""",143,187,Pinged Pass,HEARTBEAT,Relentless+,Agility,92,Stamina,90,Aggression,90
+Creator,"5'4""","6'2""",143,187,Incisive Pass,CREATOR+,Whipped Pass+,Vision,92,Crossing,90,Long Passing,90
+Creator,"5'4""","6'2""",143,187,Incisive Pass,ARCHITECT,Dead Ball+,Crossing,92,FK Accuracy,90,Shot Power,90
+Creator,"5'4""","6'2""",143,187,Incisive Pass,SNIPER,Power Shot+,Finishing,90,Shot Power,92,Long Shots,90
+Recycler,"5'8""","6'4""",143,187,Intercept,RECYCLER+,Pinged Pass+,Strength,90,Long Passing,90,Short Passing,92
+Recycler,"5'8""","6'4""",143,187,Intercept,DRIVER,Enforcer+,Sprint Speed,90,Balance,92,Strength,90
+Recycler,"5'8""","6'4""",143,187,Intercept,THIEF,Anticipate+,Interceptions,90,Defensive Awareness,90,Standing Tackle,92
+Disruptor,"5'6""","6'2""",143,187,Jockey,DISRUPTOR+,Intercept+,Balance,90,Reactions,90,Interceptions,92
+Disruptor,"5'6""","6'2""",143,187,Jockey,DESTROYER,Slide Tackle+,Sprint Speed,90,Strength,92,Sliding Tackle,90
+Disruptor,"5'6""","6'2""",143,187,Jockey,ANCHOR,Bruiser+,Ball Control,90,Dribbling,90,Short Passing,90
+Magician,"5'4""","6'2""",132,176,Technical,MAGICIAN+,First Touch+,Acceleration,90,Composure,90,Ball Control,92
+Magician,"5'4""","6'2""",132,176,Technical,HOTSHOT,Power Shot+,Finishing,90,Shot Power,92,Long Shots,90
+Magician,"5'4""","6'2""",132,176,Technical,INVADER,Incisive Pass+,Attack Positioning,90,Vision,92,Long Passing,90
+Finisher,"5'5""","6'3""",154,198,Low Driven Shot,FINISHER+,Chip Shot+,Ball Control,90,Composure,92,Reactions,90
+Finisher,"5'5""","6'3""",154,198,Low Driven Shot,PRESSER,Relentless+,Agility,90,Stamina,92,Aggression,90
+Finisher,"5'5""","6'3""",154,198,Low Driven Shot,HUNTER,Gamechanger+,Attack Positioning,90,Finishing,90,Curve,92
+Spark,"5'4""","6'2""",132,176,Trickster,SPARK+,Quick Step+,Agility,92,Sprint Speed,90,Acceleration,90
+Spark,"5'4""","6'2""",132,176,Trickster,JOKER,Whipped Pass+,Attack Positioning,90,Crossing,92,Long Passing,90
+Spark,"5'4""","6'2""",132,176,Trickster,ACE,Chip Shot+,Reactions,90,Ball Control,90,Finishing,92
+Target,"5'10""","6'5""",176,220,Precision Header,TARGET+,Acrobatic+,Agility,90,Jumping,92,Volleys,90
+Target,"5'10""","6'5""",176,220,Precision Header,ROAMER,Incisive Pass+,Vision,90,Long Passing,90,Short Passing,92
+Target,"5'10""","6'5""",176,220,Precision Header,RUNNER,Enforcer+,Sprint Speed,92,Strength,90,Attack Positioning,90
