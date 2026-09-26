@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { getScoutingContext, getArchetypeProfiles } from "../csvLoader";
+import { getScoutingContext, getArchetypeProfiles, getPlaystyles } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -278,11 +278,8 @@ ${filterRules.join("\n")}
       let earnedSpecName: string | undefined = undefined;
 
       if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
-        
-        // Check if every single required attribute threshold was met by the calculated stats
         const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
-          // Normalize the string matching just in case (e.g. "Standing Tackle" vs "standing tackle")
-          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === req.attr.toLowerCase());
+          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === req.attr.replace(/\s+/g, '').toLowerCase());
           const finalStatValue = attrKey ? result.stats[attrKey] : 0;
           return finalStatValue >= req.val;
         });
@@ -303,11 +300,39 @@ ${filterRules.join("\n")}
         input.gameVersion
       );
 
+      // 4. Strictly verify ALL standard playstyles directly against the CSV data
+      const PLAYSTYLES = getPlaystyles(input.gameVersion);
+
       const standardPlaystyles = input.blueprint.playstyles
-        .map(ps => ps.name)
         .filter(ps => {
-          return !resolvedSignatures.some((sig: string) => sig.replace('+', '').toLowerCase() === ps.toLowerCase());
+          // Rule A: Cannot equip a standard playstyle if it's already a signature
+          const isSignature = resolvedSignatures.some((sig: string) => sig.replace('+', '').toLowerCase() === ps.name.toLowerCase());
+          if (isSignature) return false;
+
+          // Rule B: Fetch the actual required minimum stats from the CSV
+          const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle?.toLowerCase() === ps.name.toLowerCase());
+          if (!realReqs) return false; 
+
+          // Rule C: Verify that the math engine reached ALL stat thresholds for this specific playstyle
+          const checkReq = (attrName: string | undefined, reqVal: string | number | undefined) => {
+             if (!attrName || !reqVal) return true; // If no requirement exists, it automatically passes
+             const target = Number(reqVal);
+             const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === attrName.replace(/\s+/g, '').toLowerCase());
+             return statObj ? statObj.final >= target : false;
+          };
+
+          const met1 = checkReq(realReqs.Req_Attr1 || realReqs.Attr1, realReqs.Req_Val1 || realReqs.Val1);
+          const met2 = checkReq(realReqs.Req_Attr2 || realReqs.Attr2, realReqs.Req_Val2 || realReqs.Val2);
+          const met3 = checkReq(realReqs.Req_Attr3 || realReqs.Attr3, realReqs.Req_Val3 || realReqs.Val3);
+
+          if (!(met1 && met2 && met3)) {
+            console.log(`🚨 PLAYSTYLE DENIED: Failed to reach stat requirements for ${ps.name}`);
+            return false;
+          }
+
+          return true; // The math engine successfully bought enough stats to afford this!
         })
+        .map(ps => ps.name)
         .slice(0, customSlots); 
       
       return {
