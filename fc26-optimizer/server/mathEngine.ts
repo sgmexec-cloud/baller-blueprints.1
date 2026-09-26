@@ -130,11 +130,20 @@ export function runMathEngine(
   for (const ps of activePlaystyles) {
     const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle?.toLowerCase() === ps.name.toLowerCase());
     if (realReqs) {
-      if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
-      if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
-      if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10));
+      const a1 = realReqs.Req_Attr1 || realReqs.Attr1;
+      const v1 = realReqs.Req_Val1 || realReqs.Val1;
+      if (a1 && v1) upgradeToMin(a1, parseInt(v1, 10));
+      
+      const a2 = realReqs.Req_Attr2 || realReqs.Attr2;
+      const v2 = realReqs.Req_Val2 || realReqs.Val2;
+      if (a2 && v2) upgradeToMin(a2, parseInt(v2, 10));
+
+      const a3 = realReqs.Req_Attr3 || realReqs.Attr3;
+      const v3 = realReqs.Req_Val3 || realReqs.Val3;
+      if (a3 && v3) upgradeToMin(a3, parseInt(v3, 10));
     }
   }
+  
   if (blueprint.specialisationMinAttrs) blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
