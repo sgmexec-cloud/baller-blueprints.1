@@ -1,30 +1,31 @@
 Playstyle,Description,PlaystylePlus_Name,Req_Attr1,Req_Val1,Req_Attr2,Req_Val2,Req_Attr3,Req_Val3
-Power Header,Increased power and accuracy when performing headers.,Power Header+,Jumping,75,Heading Accuracy,80,,
-Dead Ball,"Set pieces are delivered with increased speed, curve and accuracy. Ball trajectory line includes a longer preview.",Dead Ball+,Shot Power,75,FK Accuracy,80,Curve,80
-Pinged Pass,Passes travel faster along the ground without impacting the trapping difficulty of the receiver.,Pinged Pass+,Vision,75,Short Passing,80,,
-Long Ball Pass,"Lob and lofted through passes are more accurate, travel faster and are more difficult to intercept.",Long Ball Pass+,Vision,75,Long Passing,80,,
-Incisive Pass,"Through passes are more accurate, swerve passes are delivered with more curve, and precision passes travel faster to the destination.",Incisive Pass+,Vision,80,Short Passing,75,,
-Finesse Shot,Performs finesse shots with additional curve and improved accuracy.,Finesse Shot+,Finishing,80,Curve,80,,
-Power Shot,Performs power shots faster and with increased speed.,Power Shot+,Shot Power,80,Long Shots,80,,
-Rapid,Reaches a higher sprint speed while dribbling and has a reduced chance of an error when sprinting or performing knock-ons.,Rapid+,Sprint Speed,80,Dribbling,80,,
-Chip Shot,Performs chip shots with improved accuracy.,Chip Shot+,Finishing,75,Composure,80,,
+Finesse Shot,Performs Finesse Shots with slightly more curve and accuracy.,Finesse Shot+,Vision,80,Finishing,75,Curve,80
+Chip Shot,Performs Chip Shots faster and with slightly better accuracy.,Chip Shot+,Reactions,75,Composure,80,Ball Control,80
+Power Shot,Performs Power Shots faster and with slightly increased speed.,Power Shot+,Finishing,80,Shot Power,75,Long Shots,80
+Dead Ball,"Set pieces are delivered with slightly increased speed, curve, and accuracy. Ball trajectory preview line is longer.",Dead Ball+,Crossing,80,FK Accuracy,75,Shot Power,80
+Precision Header,"Performs headers with slightly increased power, accuracy and has access to unique Precision Header animations.",Precision Header+,Jumping,80,Aggression,80,Heading Accuracy,75
+Acrobatic,Performs volleys with slightly increased accuracy and has access to Acrobatic volley animations.,Acrobatic+,Agility,80,Reactions,80,Volleys,75
+Low Driven Shot,Performs Low Driven Shots with increased accuracy and quicker shot execution.,Low Driven Shot+,Composure,80,Finishing,75,Shot Power,80
+Inventive,"Performs Lofted and Fancy passes with improved accuracy and access to outside-of-the-foot passes and contextual Inventive passes.",Inventive+,Composure,80,Long Passing,75,Curve,80
+Whipped Pass,Crosses travel faster and with more curve and accuracy.,Whipped Pass+,Crossing,80,Long Passing,75,,
+Tiki Taka,Executes difficult first-time Ground Passes with slightly increased accuracy. Short distance Ground Passes are slightly more accurate.,Tiki Taka+,Reactions,80,Ball Control,80,Short Passing,75
+Long Ball Pass,"Performs Lob and Lofted Through Passes with slightly increased accuracy and speed, making them more difficult to intercept.",Long Ball Pass+,Vision,85,Long Passing,80,,
+Pinged Pass,Performs Ground Passes with increased speed and Driven Passes with improved accuracy.,Pinged Pass+,Long Passing,85,Short Passing,80,,
+Incisive Pass,"Performs Through Passes with slightly increased accuracy, Swerve Passes with added curve, and Precision Passes that travel faster.",Incisive Pass+,Vision,75,Long Passing,80,Curve,80
+Jockey,Increased max speed of Sprint Jockey and improved transition speed from jockey to sprint.,Jockey+,Agility,75,Defensive Awareness,80,Standing Tackle,80
 Block,Increased reach when performing blocks and improved ability to make a successful block.,Block+,Agility,80,Strength,75,Reactions,80
+Anticipate,Increases the chances of standing tackle success and grants the ability to stop the ball directly at the player's feet when performing a tackle.,Anticipate+,Balance,80,Defensive Awareness,75,Standing Tackle,80
 Slide Tackle,Grants the ability to stop the ball directly at their feet when performing a slide tackle.,Slide Tackle+,Aggression,80,Sliding Tackle,75,,
-Intercept,Increased reach and improved chances of retaining possession of the ball when performing interceptions.,Intercept+,Interceptions,80,Aggression,80,,
+Aerial Fortress,Performs higher jumps and has improved defensive aerial presence.,Aerial Fortress+,Jumping,75,Heading Accuracy,75,,
 Press Proven,Keeps close control of the ball while dribbling at jog speed and can shield the ball more effectively from stronger opponents.,Press Proven+,Strength,80,Composure,80,Ball Control,80
-Anticipate,"Improved chances of standing tackle success and grants the ability to stop the ball directly at their feet when performing a standing tackle.",Anticipate+,Balance,80,Standing Tackle,80,Defensive Awareness,75
-First Touch,Has reduced error when trapping the ball and is able to transition to dribbling faster with greater control.,First Touch+,Composure,75,Ball Control,75,,
-Technical,Reaches a higher sprint speed when performing controlled sprint and performs wide turns while dribbling with more precision.,Technical+,Dribbling,80,Ball Control,80,,
-Quick Step,Accelerates faster during explosive sprint.,Quick Step+,Acceleration,75,Sprint Speed,80,Stamina,80
-Flair,Fancy passes and shots are performed with improved accuracy. Performs flair animations when contextually appropriate.,Flair+,Agility,80,Vision,80,,
+Trickster,Grants the ability to perform unique ground and flick Skill Moves.,Trickster+,Acceleration,80,Agility,75,Dribbling,80
+First Touch,Has reduced error when trapping the ball and is able to transition to dribbling faster with greater control.,First Touch+,Composure,80,Ball Control,75,,
+Rapid,Reaches a higher sprint speed while dribbling and has reduced chance of an error when sprinting or performing knock-ons.,Rapid+,Acceleration,75,Sprint Speed,80,Dribbling,80
+Quick Step,Accelerates faster during Explosive Sprint.,Quick Step+,Acceleration,75,Sprint Speed,80,Stamina,80
+Long Throw,Performs throw-ins with increased power to cover a greater distance.,Long Throw+,Strength,80,Vision,75,,
 Bruiser,Greater strength when performing physical tackles.,Bruiser+,Strength,75,Aggression,80,Defensive Awareness,80
-Jockey,Increased max speed of sprint jockey and improved transition speed from jockey to sprint.,Jockey+,Agility,80,Defensive Awareness,80,,
-Trickster,Grants the ability to perform unique flick-ups.,Trickster+,Agility,80,Dribbling,80,,
-Relentless,Increases stamina recovery during halftime and reduces fatigue effects on attributes.,Relentless+,Agility,80,Stamina,80,,
-Acrobatic,Performs volleys with improved accuracy and has access to acrobatic volley animations.,Acrobatic+,Agility,80,Volleys,80,,
-Aerial,Performs higher jumps and has improved aerial physical presence.,Aerial+,Jumping,80,Strength,80,,
-Whipped Pass,"All crosses are highly accurate, travel faster and with more curve.",Whipped Pass+,Crossing,80,Curve,80,,
-Trivela,"Contextually triggers ""outside of the foot"" passes and shots.",Trivela+,Curve,80,Finishing,75,Short Passing,75
-Tiki Taka,"Executes difficult first-time Ground Passes with high accuracy, using backheels when contextually appropriate. Short distance Ground Passes are highly accurate.",Tiki Taka+,Short Passing,80,Attack Positioning,80,,
-Far Throw,Throws the ball further than average.,Far Throw+,Strength,80,Vision,80,Long Passing,75
-Long Throw,Throws the ball further than Far Throw.,Long Throw+,Strength,85,Vision,85,Long Passing,80
+Enforcer,Greater strength when performing shield dribbles.,Enforcer+,Balance,80,Strength,75,Ball Control,80
+Technical,Reaches a higher speed when performing Controlled Sprint and performs wide turns while dribbling with more precision.,Technical+,Balance,80,Ball Control,75,Dribbling,80
+Intercept,Increased reach and improved chances of retaining possession of the ball when performing interceptions.,Intercept+,Aggression,80,Interceptions,80,,
+Relentless,Increases stamina regeneration speed. Increases the duration of teammate contain and partial team press.,Relentless+,Agility,80,Stamina,80,,
+Gamechanger,"Fancy shots are performed with slightly increased accuracy, with access to Trivela shots and Gamechanger animations.",Gamechanger+,Composure,80,Finishing,75,Curve,80
