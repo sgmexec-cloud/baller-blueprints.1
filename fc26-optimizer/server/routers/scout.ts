@@ -62,6 +62,36 @@ export const scoutRouter = router({
       }
     }),
 
+  getArchetypeBaseStats: publicProcedure
+    .input(z.object({ gameVersion: z.enum(["FC26", "FC27"]).default("FC26") }).optional())
+    .query(async ({ input }) => {
+      try {
+        const version = input?.gameVersion || "FC26";
+        const profiles = getArchetypeProfiles(version);
+        
+        const builderData: Record<string, { pos: string, base: any }> = {};
+        
+        for (const row of profiles) {
+          if (!row.Archetype) continue;
+          builderData[row.Archetype.trim()] = {
+            pos: row.Position || 'Unknown',
+            base: {
+              Pace: Number(row.Pace || row.PAC || 70),
+              Shooting: Number(row.Shooting || row.SHO || 70),
+              Passing: Number(row.Passing || row.PAS || 70),
+              Dribbling: Number(row.Dribbling || row.DRI || 70),
+              Defending: Number(row.Defending || row.DEF || 70),
+              Physical: Number(row.Physical || row.PHY || 70),
+            }
+          };
+        }
+        return builderData;
+      } catch (e) {
+        console.error("Failed to load archetype base stats:", e);
+        return {};
+      }
+    }),
+
   generateReport: publicProcedure
     .input(z.object({ 
       playerIdentity: z.string().min(1).max(1000), 
