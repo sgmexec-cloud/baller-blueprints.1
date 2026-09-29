@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+// We will import your trpc hooks here in the next step to replace the hardcoded stats!
+// import { trpc } from "@/lib/trpc"; 
 
 interface BaseStats {
   Pace: number;
@@ -14,6 +16,7 @@ interface ArchetypeData {
   base: BaseStats;
 }
 
+// TEMP HARDCODED DATA - We will swap this for your FC27 CSV backend data next!
 const ARCHETYPES: Record<string, ArchetypeData> = {
   Finisher: { pos: 'Attacker', base: { Pace: 75, Shooting: 82, Passing: 65, Dribbling: 78, Defending: 40, Physical: 70 } },
   'Target Forward': { pos: 'Attacker', base: { Pace: 70, Shooting: 80, Passing: 60, Dribbling: 70, Defending: 45, Physical: 85 } },
@@ -78,110 +81,159 @@ export default function ManualBuilder() {
   else if (height <= 69 && stats.Dribbling >= 80) accelerate = 'Explosive';
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 font-sans">
-      <div className="max-w-md mx-auto bg-slate-900 rounded-xl p-6 border border-slate-800 shadow-xl mb-6">
-        <h1 className="text-2xl font-bold text-center text-cyan-400 mb-4">Manual Build Creator</h1>
-        <div className="flex justify-between items-center bg-slate-950 p-4 rounded-lg border border-slate-800">
-          <div>
-            <p className="text-xs text-slate-400 font-semibold uppercase">Player Level</p>
-            <input 
-              type="range" min="1" max="100" value={level} 
-              onChange={(e) => {
-                setLevel(Number(e.target.value));
-                setSpentAp(0);
-                setStats(ARCHETYPES[archetype].base);
-              }}
-              className="w-24 accent-cyan-500 mt-2"
-            />
-            <span className="ml-2 font-bold text-lg">{level}</span>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-slate-400 font-semibold uppercase">Available AP</p>
-            <p className="text-3xl font-black text-cyan-400">{availableAp}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-md mx-auto bg-slate-900 rounded-xl p-6 border border-slate-800 shadow-xl mb-6">
-        <label className="block text-xs text-slate-400 font-semibold mb-2 uppercase">Archetype</label>
-        <select 
-          className="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-lg mb-6 outline-none"
-          value={archetype}
-          onChange={(e) => setArchetype(e.target.value)}
-        >
-          {Object.keys(ARCHETYPES).map(arch => (
-            <option key={arch} value={arch}>{arch} ({ARCHETYPES[arch].pos})</option>
-          ))}
-        </select>
-
-        <div className="flex gap-4 mb-6">
-          <div className="flex-1">
-            <label className="block text-xs text-slate-400 font-semibold mb-2 uppercase">Height</label>
-            <input 
-              type="range" min="64" max="79" value={height} 
-              onChange={(e) => setHeight(Number(e.target.value))}
-              className="w-full accent-cyan-500"
-            />
-            <p className="text-center mt-1 font-bold">{Math.floor(height / 12)}'{height % 12}"</p>
-          </div>
-          <div className="flex-1">
-            <label className="block text-xs text-slate-400 font-semibold mb-2 uppercase">Weight</label>
-            <input 
-              type="range" min="99" max="253" value={weight} 
-              onChange={(e) => setWeight(Number(e.target.value))}
-              className="w-full accent-cyan-500"
-            />
-            <p className="text-center mt-1 font-bold">{weight} lbs</p>
-          </div>
+    <div className="min-h-screen relative overflow-hidden pt-8 pb-16 px-4">
+      <div className="max-w-lg mx-auto">
+        
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider drop-shadow-2xl" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+            Manual Builder
+          </h1>
+          <p className="text-sm mt-2" style={{ color: "oklch(0.55 0.01 240)", fontFamily: "'Inter', sans-serif" }}>
+            Fine-tune attributes exactly how you want them.
+          </p>
         </div>
 
-        <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 flex justify-between items-center">
-          <span className="text-slate-400 font-semibold">AccelerATE</span>
-          <span className={`font-black uppercase tracking-wider ${
-            accelerate === 'Lengthy' ? 'text-orange-400' : 
-            accelerate === 'Explosive' ? 'text-yellow-400' : 'text-cyan-400'
-          }`}>
-            {accelerate}
-          </span>
-        </div>
-      </div>
+        {/* Level & AP Overview Card */}
+        <section className="mb-6 animate-fade-in">
+          <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.75 0.22 142 / 0.08)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.75 0.22 142)" }} />
+              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.75 0.22 142)", fontFamily: "'Rajdhani', sans-serif" }}>
+                Player Foundation
+              </span>
+            </div>
 
-      <div className="max-w-md mx-auto grid grid-cols-1 gap-3">
-        {(Object.keys(stats) as Array<keyof BaseStats>).map((stat) => {
-          const value = stats[stat];
-          const base = ARCHETYPES[archetype].base[stat];
-          const nextCost = getApCost(value, true);
-          
-          return (
-            <div key={stat} className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-              <div className="w-1/3">
-                <p className="font-bold text-slate-200">{stat}</p>
-                <p className="text-xs text-slate-500">Base: {base}</p>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => handleStatChange(stat, false)}
-                  disabled={value <= base}
-                  className="w-10 h-10 rounded-full bg-slate-800 text-white font-bold disabled:opacity-30 active:bg-slate-700"
-                >-</button>
-                
-                <div className="w-12 text-center">
-                  <p className="text-2xl font-black text-white">{value}</p>
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-xl">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                    PLAYER LEVEL
+                  </label>
+                  <input 
+                    type="range" min="1" max="100" value={level} 
+                    onChange={(e) => {
+                      setLevel(Number(e.target.value));
+                      setSpentAp(0);
+                      setStats(ARCHETYPES[archetype].base);
+                    }}
+                    className="w-full accent-green-500"
+                  />
+                  <div className="text-white font-bold text-lg mt-1">{level}</div>
                 </div>
-                
-                <button 
-                  onClick={() => handleStatChange(stat, true)}
-                  disabled={availableAp < nextCost || value >= 99}
-                  className="w-10 h-10 rounded-full bg-cyan-600 text-white font-bold disabled:opacity-30 active:bg-cyan-500 flex items-center justify-center flex-col leading-none"
+                <div className="flex-1 text-right border-l border-white/10 pl-4">
+                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                    AVAILABLE AP
+                  </label>
+                  <div className="text-3xl font-black text-green-400 drop-shadow-md">{availableAp}</div>
+                </div>
+              </div>
+
+              <div className="bg-black/40 border border-white/5 p-4 rounded-xl">
+                <label className="block text-xs font-medium mb-2 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                  Archetype Selection
+                </label>
+                <select 
+                  className="w-full bg-black/60 border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors appearance-none"
+                  value={archetype}
+                  onChange={(e) => setArchetype(e.target.value)}
                 >
-                  <span>+</span>
-                  <span className="text-[9px] font-normal opacity-80 mt-0.5">({nextCost})</span>
-                </button>
+                  {Object.keys(ARCHETYPES).map(arch => (
+                    <option key={arch} value={arch}>{arch} ({ARCHETYPES[arch].pos})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex gap-4">
+                <div className="flex-1 bg-black/40 border border-white/5 p-4 rounded-xl">
+                  <label className="block text-xs font-medium mb-2 uppercase text-center" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
+                  <input 
+                    type="range" min="64" max="79" value={height} 
+                    onChange={(e) => setHeight(Number(e.target.value))}
+                    className="w-full accent-green-500"
+                  />
+                  <p className="text-center mt-1 font-bold text-white">{Math.floor(height / 12)}'{height % 12}"</p>
+                </div>
+                <div className="flex-1 bg-black/40 border border-white/5 p-4 rounded-xl">
+                  <label className="block text-xs font-medium mb-2 uppercase text-center" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
+                  <input 
+                    type="range" min="99" max="253" value={weight} 
+                    onChange={(e) => setWeight(Number(e.target.value))}
+                    className="w-full accent-green-500"
+                  />
+                  <p className="text-center mt-1 font-bold text-white">{weight} lbs</p>
+                </div>
+              </div>
+
+              <div className="bg-green-950/20 p-4 rounded-xl border border-green-900/30 flex justify-between items-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none bg-green-500" />
+                <span className="text-xs font-bold uppercase tracking-widest text-green-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  AccelerATE Style
+                </span>
+                <span className="text-lg font-black text-white uppercase tracking-wider z-10" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                  {accelerate}
+                </span>
               </div>
             </div>
-          );
-        })}
+          </div>
+        </section>
+
+        {/* Attribute Distribution Card */}
+        <section className="animate-fade-up">
+          <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.06)" }}>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.78 0.18 85)" }} />
+              <span className="text-xs font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.78 0.18 85)" }}>
+                Attribute Tuning
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
+              {(Object.keys(stats) as Array<keyof BaseStats>).map((stat) => {
+                const value = stats[stat];
+                const base = ARCHETYPES[archetype].base[stat];
+                const nextCost = getApCost(value, true);
+                
+                return (
+                  <div key={stat} className="bg-black/40 p-4 rounded-xl border border-white/5 flex items-center justify-between transition-colors hover:border-white/10">
+                    <div className="w-1/3">
+                      <p className="font-bold text-white text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Base: {base}</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => handleStatChange(stat, false)}
+                        disabled={value <= base}
+                        className="w-10 h-10 rounded-lg bg-zinc-900 border border-white/10 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all"
+                      >
+                        -
+                      </button>
+                      
+                      <div className="w-10 text-center">
+                        <p className="text-xl font-black text-white">{value}</p>
+                      </div>
+                      
+                      <button 
+                        onClick={() => handleStatChange(stat, true)}
+                        disabled={availableAp < nextCost || value >= 99}
+                        className="w-10 h-10 rounded-lg text-black font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center flex-col leading-none transition-all"
+                        style={{
+                          background: availableAp < nextCost || value >= 99 ? "oklch(0.20 0.02 240)" : "oklch(0.75 0.22 142)",
+                          color: availableAp < nextCost || value >= 99 ? "oklch(0.45 0.01 240)" : "oklch(0.08 0.01 240)",
+                        }}
+                      >
+                        <span className="text-lg">+</span>
+                        <span className="text-[8px] font-bold uppercase opacity-80 mt-0.5 tracking-wider">{nextCost} AP</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
       </div>
     </div>
   );
