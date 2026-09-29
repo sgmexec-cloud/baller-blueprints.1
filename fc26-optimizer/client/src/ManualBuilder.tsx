@@ -10,7 +10,6 @@ const STAT_GROUPS: Record<string, string[]> = {
   "Physical": ["Jumping", "Stamina", "Strength", "Aggression"]
 };
 
-// Defined physical boundaries and base sizes for each archetype
 const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number, baseW: number, minW: number, maxW: number, type: 'DEF' | 'MID_ATT' | 'GK' }> = {
   'Shot Stopper': { baseH: 188, minH: 179, maxH: 197, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
   'Sweeper Keeper': { baseH: 192, minH: 184, maxH: 200, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
@@ -28,7 +27,6 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
-// The tiered AP Cost system
 const getApCost = (currentVal: number, isAdding: boolean): number => {
   const target = isAdding ? currentVal + 1 : currentVal;
   if (target <= 70) return 1;
@@ -36,7 +34,14 @@ const getApCost = (currentVal: number, isAdding: boolean): number => {
   return 3;
 };
 
-// The "qe" Formula logic
+const getCostForPoints = (startValue: number, pointsToAdd: number): number => {
+  let cost = 0;
+  for(let i = 0; i < pointsToAdd; i++) {
+    cost += getApCost(startValue + i, true);
+  }
+  return cost;
+};
+
 const getModifier = (current: number, base: number, step: number): number => {
   const diff = current - base;
   const absDiff = Math.abs(diff);
@@ -51,30 +56,23 @@ export default function ManualBuilder() {
   const [height, setHeight] = useState<number>(175);
   const [weight, setWeight] = useState<number>(75);
   
-  // State to track user's point investments per attribute
   const [addedPoints, setAddedPoints] = useState<Record<string, number>>({});
-  const [spentAp, setSpentAp] = useState<number>(0);
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC27");
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
-  const availableAp = maxAp - spentAp;
-
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
 
-  // Initialize and handle archetype switching
   useEffect(() => {
     if (serverArchetypes && Object.keys(serverArchetypes).length > 0) {
       const targetArch = serverArchetypes[archetype] ? archetype : Object.keys(serverArchetypes)[0];
       setArchetype(targetArch);
-      
       const bounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
       setHeight(bounds.baseH);
       setWeight(bounds.baseW);
       setAddedPoints({});
-      setSpentAp(0);
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -84,10 +82,8 @@ export default function ManualBuilder() {
     setHeight(bounds.baseH);
     setWeight(bounds.baseW);
     setAddedPoints({});
-    setSpentAp(0);
   };
 
-  // Dynamically calculate attribute modifiers based on height/weight deltas
   const physicalModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
     const hModRaw = getModifier(height, activeBounds.baseH, 4);
@@ -109,39 +105,80 @@ export default function ManualBuilder() {
     return mods;
   }, [height, weight, activeBounds]);
 
-  // Compute final attributes on the fly
   const currentStats = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
     const baseObj = serverArchetypes[archetype].base;
-    
     for (const statKey in baseObj) {
       const baseVal = baseObj[statKey] || 70;
       const modVal = physicalModifiers[statKey] || 0;
       const invested = addedPoints[statKey] || 0;
-      // Ensure stats don't drop below 1 or exceed 99
       computed[statKey] = Math.max(1, Math.min(99, baseVal + modVal + invested));
     }
     return computed;
   }, [serverArchetypes, archetype, physicalModifiers, addedPoints]);
 
-  const handleStatChange = (statKey: string, isAdding: boolean) => {
-    if (!currentStats) return;
-    const currentVal = currentStats[statKey];
-    
-    if (isAdding) {
-      const cost = getApCost(currentVal, true);
-      if (availableAp >= cost && currentVal < 99) {
-        setAddedPoints(prev => ({ ...prev, [statKey]: (prev[statKey] || 0) + 1 }));
-        setSpentAp(prev => prev + cost);
-      }
-    } else {
-      if ((addedPoints[statKey] || 0) > 0) {
-        const cost = getApCost(currentVal - 1, false);
-        setAddedPoints(prev => ({ ...prev, [statKey]: prev[statKey] - 1 }));
-        setSpentAp(prev => prev - cost);
-      }
+  const spentAp = useMemo(() => {
+    if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
+    let total = 0;
+    for (const statKey in addedPoints) {
+      const base = (serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
+      total += getCostForPoints(base, addedPoints[statKey]);
     }
+    return total;
+  }, [addedPoints, serverArchetypes, archetype, physicalModifiers]);
+
+  const availableAp = maxAp - spentAp;
+
+  const handleSliderChange = (statKey: string, targetValue: number) => {
+    if (!serverArchetypes || !serverArchetypes[archetype]) return;
+    const baseVal = Math.max(1, (serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0));
+    
+    let safeTarget = Math.max(baseVal, Math.min(99, targetValue));
+    let newPointsAdded = safeTarget - baseVal;
+    
+    const currentInvestedPts = addedPoints[statKey] || 0;
+    const currentCost = getCostForPoints(baseVal, currentInvestedPts);
+    const targetCost = getCostForPoints(baseVal, newPointsAdded);
+
+    if (targetCost - currentCost > availableAp) {
+      let affordablePoints = currentInvestedPts;
+      let costAccumulator = currentCost;
+      for (let i = currentInvestedPts; i < newPointsAdded; i++) {
+        let stepCost = getApCost(baseVal + affordablePoints, true);
+        if (costAccumulator + stepCost <= currentCost + availableAp) {
+          affordablePoints++;
+          costAccumulator += stepCost;
+        } else {
+          break;
+        }
+      }
+      newPointsAdded = affordablePoints;
+    }
+
+    setAddedPoints(prev => {
+      const next = { ...prev };
+      if (newPointsAdded <= 0) delete next[statKey];
+      else next[statKey] = newPointsAdded;
+      return next;
+    });
+  };
+
+  // UPDATED COLOR LOGIC TO MATCH EXACT TIERS
+  const getStatColor = (val: number) => {
+    if (val >= 90) return "text-emerald-500"; // Dark Green
+    if (val >= 80) return "text-green-400";   // Light Green
+    if (val >= 65) return "text-yellow-400";  // Yellow / Amber
+    if (val >= 50) return "text-orange-500";  // Orange
+    return "text-red-500";                    // Red
+  };
+
+  const getAccentColor = (val: number) => {
+    if (val >= 90) return "accent-emerald-500";
+    if (val >= 80) return "accent-green-400";
+    if (val >= 65) return "accent-yellow-400";
+    if (val >= 50) return "accent-orange-500";
+    return "accent-red-500";
   };
 
   let accelerate = 'Controlled';
@@ -149,12 +186,8 @@ export default function ManualBuilder() {
     const acc = currentStats["Acceleration"] || 70;
     const agi = currentStats["Agility"] || 70;
     const str = currentStats["Strength"] || 70;
-
-    if (height >= 185 && str >= 65 && (str - agi) >= 4 && acc >= 40) {
-      accelerate = 'Lengthy';
-    } else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) {
-      accelerate = 'Explosive';
-    }
+    if (height >= 185 && str >= 65 && (str - agi) >= 4 && acc >= 40) accelerate = 'Lengthy';
+    else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
 
   const leagueWarning = useMemo(() => {
@@ -185,24 +218,20 @@ export default function ManualBuilder() {
           </p>
         </div>
 
-        <div className="flex bg-black/60 border border-white/10 p-1 rounded-xl mb-6">
+        <div className="flex bg-[#1a1d24] border border-white/5 p-1 rounded-xl mb-6">
           <button
-            onClick={() => { setGameVersion("FC26"); setAddedPoints({}); setSpentAp(0); }}
+            onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
-              gameVersion === "FC26"
-                ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                : "text-gray-500 hover:text-white"
+              gameVersion === "FC26" ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]" : "text-gray-500 hover:text-white"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
             FC 26 DATA
           </button>
           <button
-            onClick={() => { setGameVersion("FC27"); setAddedPoints({}); setSpentAp(0); }}
+            onClick={() => { setGameVersion("FC27"); setAddedPoints({}); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
-              gameVersion === "FC27"
-                ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
-                : "text-gray-500 hover:text-white"
+              gameVersion === "FC27" ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]" : "text-gray-500 hover:text-white"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
@@ -211,14 +240,13 @@ export default function ManualBuilder() {
         </div>
 
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.75 0.22 142 / 0.08)" }}>
-            
+          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
             {leagueWarning && (
               <div className="mb-4 bg-yellow-950/40 border border-yellow-500/50 text-yellow-400 p-3 rounded-xl text-center text-xs font-bold uppercase tracking-widest">
                 ⚠️ League Warning: {leagueWarning}
               </div>
             )}
-
+            
             <div className="flex items-center gap-2 mb-4">
               <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.75 0.22 142)" }} />
               <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.75 0.22 142)", fontFamily: "'Rajdhani', sans-serif" }}>
@@ -227,23 +255,19 @@ export default function ManualBuilder() {
             </div>
 
             <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-xl">
+              <div className="flex justify-between items-center bg-black/30 border border-white/5 p-4 rounded-xl">
                 <div className="flex-1">
                   <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
                     PLAYER LEVEL
                   </label>
                   <input 
                     type="range" min="1" max="100" value={level} 
-                    onChange={(e) => {
-                      setLevel(Number(e.target.value));
-                      setAddedPoints({});
-                      setSpentAp(0);
-                    }}
+                    onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
                     className="w-full accent-green-500"
                   />
                   <div className="text-white font-bold text-lg mt-1">{level}</div>
                 </div>
-                <div className="flex-1 text-right border-l border-white/10 pl-4">
+                <div className="flex-1 text-right border-l border-white/5 pl-4">
                   <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
                     AVAILABLE AP
                   </label>
@@ -251,12 +275,12 @@ export default function ManualBuilder() {
                 </div>
               </div>
 
-              <div className="bg-black/40 border border-white/5 p-4 rounded-xl">
+              <div className="bg-black/30 border border-white/5 p-4 rounded-xl">
                 <label className="block text-xs font-medium mb-2 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
                   Archetype Selection
                 </label>
                 <select 
-                  className="w-full bg-black/60 border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors appearance-none"
+                  className="w-full bg-black/60 border border-white/5 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors appearance-none"
                   value={archetype}
                   onChange={(e) => handleArchetypeChange(e.target.value)}
                 >
@@ -267,7 +291,7 @@ export default function ManualBuilder() {
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-1 bg-black/40 border border-white/5 p-4 rounded-xl">
+                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl">
                   <div className="flex justify-between mb-2">
                     <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
                     <span className="text-[10px] text-gray-500">{activeBounds.minH}-{activeBounds.maxH}cm</span>
@@ -279,7 +303,7 @@ export default function ManualBuilder() {
                   />
                   <p className="text-center mt-1 font-bold text-white">{height} cm</p>
                 </div>
-                <div className="flex-1 bg-black/40 border border-white/5 p-4 rounded-xl">
+                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl">
                   <div className="flex justify-between mb-2">
                     <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
                     <span className="text-[10px] text-gray-500">{activeBounds.minW}-{activeBounds.maxW}kg</span>
@@ -293,8 +317,8 @@ export default function ManualBuilder() {
                 </div>
               </div>
 
-              <div className="bg-green-950/20 p-4 rounded-xl border border-green-900/30 flex justify-between items-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-20 pointer-events-none bg-green-500" />
+              <div className="bg-[#111827] p-4 rounded-xl border border-white/5 flex justify-between items-center relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 pointer-events-none bg-green-500" />
                 <span className="text-xs font-bold uppercase tracking-widest text-green-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   AccelerATE Style
                 </span>
@@ -310,66 +334,66 @@ export default function ManualBuilder() {
 
         {currentStats && serverArchetypes && (
           <section className="animate-fade-up">
-            <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.06)" }}>
-              
-              {Object.entries(STAT_GROUPS).map(([category, attributes]) => (
-                <div key={category} className="mb-6 last:mb-0">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1 h-4 rounded-full" style={{ background: "oklch(0.78 0.18 85)" }} />
-                    <h3 className="text-sm font-bold uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.78 0.18 85)" }}>
-                      {category}
-                    </h3>
+            {Object.entries(STAT_GROUPS).map(([category, attributes]) => {
+              const catTotal = attributes.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
+              const catAvg = Math.round(catTotal / attributes.length);
+
+              return (
+                <div key={category} className="mb-6 rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-xl">
+                  <div className="flex items-center justify-between mb-5 border-b border-white/5 pb-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1 h-4 rounded-full bg-gray-500" />
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-gray-300" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                        {category}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2 border border-white/10 rounded px-2 py-1 bg-black/30">
+                      <span className="text-[10px] text-gray-500 font-bold tracking-widest">AVG</span>
+                      <span className={`text-sm font-bold ${getStatColor(catAvg)}`}>{catAvg}</span>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-1 gap-5">
                     {attributes.map(stat => {
                       const value = currentStats[stat] || 70;
+                      const baseVal = Math.max(1, (serverArchetypes[archetype]?.base?.[stat] || 70) + (physicalModifiers[stat] || 0));
                       const invested = addedPoints[stat] || 0;
-                      const nextCost = getApCost(value, true);
-                      
-                      const rawBase = serverArchetypes[archetype]?.base?.[stat] || 70;
-                      const mod = physicalModifiers[stat] || 0;
-                      const modifiedBase = rawBase + mod;
-                      const isModified = mod !== 0;
-                      
+                      const statApSpent = getCostForPoints(baseVal, invested);
+
                       return (
-                        <div key={stat} className="bg-black/40 p-3 rounded-xl border border-white/5 flex items-center justify-between transition-colors hover:border-white/10">
-                          <div className="w-1/2">
-                            <p className="font-bold text-white text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</p>
-                            <div className="flex gap-2 text-[10px] uppercase tracking-wider font-bold">
-                               <span className="text-gray-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Base: {rawBase}</span>
-                               {isModified && (
-                                 <span className={mod > 0 ? "text-green-500" : "text-red-500"} style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                                   {mod > 0 ? "+" : ""}{mod}
-                                 </span>
-                               )}
+                        <div key={stat} className="flex flex-col">
+                          <div className="flex justify-between items-end mb-2">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
+                              <span className="text-[10px] text-gray-500 font-bold">{statApSpent} AP</span>
                             </div>
+                            <span className={`text-xl font-black ${getStatColor(value)}`}>{value}</span>
                           </div>
                           
                           <div className="flex items-center gap-3">
                             <button 
-                              onClick={() => handleStatChange(stat, false)}
+                              onClick={() => handleSliderChange(stat, value - 1)}
                               disabled={invested <= 0}
-                              className="w-9 h-9 rounded-lg bg-zinc-900 border border-white/10 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all"
+                              className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all pb-1"
                             >
                               -
                             </button>
                             
-                            <div className="w-8 text-center relative">
-                              <p className={`text-lg font-black ${invested > 0 ? 'text-green-400' : 'text-white'}`}>{value}</p>
-                            </div>
+                            <input 
+                              type="range" 
+                              min={baseVal} 
+                              max="99" 
+                              value={value} 
+                              onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
+                              className={`flex-1 h-1.5 rounded-lg appearance-none bg-black/60 cursor-pointer ${getAccentColor(value)}`}
+                            />
                             
                             <button 
-                              onClick={() => handleStatChange(stat, true)}
-                              disabled={availableAp < nextCost || value >= 99}
-                              className="w-9 h-9 rounded-lg text-black font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center flex-col leading-none transition-all"
-                              style={{
-                                background: availableAp < nextCost || value >= 99 ? "oklch(0.20 0.02 240)" : "oklch(0.75 0.22 142)",
-                                color: availableAp < nextCost || value >= 99 ? "oklch(0.45 0.01 240)" : "oklch(0.08 0.01 240)",
-                              }}
+                              onClick={() => handleSliderChange(stat, value + 1)}
+                              disabled={value >= 99 || availableAp < getApCost(value, true)}
+                              className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
                             >
-                              <span className="text-base leading-[0.5]">+</span>
-                              <span className="text-[7px] font-bold uppercase opacity-80 mt-1 tracking-wider">{nextCost}AP</span>
+                              +
                             </button>
                           </div>
                         </div>
@@ -377,9 +401,8 @@ export default function ManualBuilder() {
                     })}
                   </div>
                 </div>
-              ))}
-
-            </div>
+              );
+            })}
           </section>
         )}
 
