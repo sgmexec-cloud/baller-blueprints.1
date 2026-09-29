@@ -69,20 +69,33 @@ export const scoutRouter = router({
         const version = input?.gameVersion || "FC26";
         const profiles = getArchetypeProfiles(version);
         
-        const builderData: Record<string, { pos: string, base: any }> = {};
+        const ALL_ATTRS = [
+          "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
+          "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
+          "Short Passing", "Long Passing", "Curve", "Agility", "Balance", "Reactions",
+          "Ball Control", "Dribbling", "Composure", "Interceptions", "Heading Accuracy",
+          "Def Awareness", "Standing Tackle", "Sliding Tackle", "Jumping", "Stamina",
+          "Strength", "Aggression"
+        ];
+
+        const builderData: Record<string, { pos: string, base: Record<string, number> }> = {};
         
         for (const row of profiles) {
           if (!row.Archetype) continue;
+          
+          const baseStats: Record<string, number> = {};
+          const rowKeys = Object.keys(row);
+          
+          // Match CSV column names (ignoring spaces/case) to pull exact 29 stats
+          for (const attr of ALL_ATTRS) {
+             const searchAttr = attr.toLowerCase().replace(/\s+/g, '');
+             const matchedKey = rowKeys.find(k => k.toLowerCase().replace(/\s+/g, '') === searchAttr);
+             baseStats[attr] = matchedKey ? Number(row[matchedKey] || 70) : 70;
+          }
+
           builderData[row.Archetype.trim()] = {
             pos: row.Position || 'Unknown',
-            base: {
-              Pace: Number(row.Pace || row.PAC || 70),
-              Shooting: Number(row.Shooting || row.SHO || 70),
-              Passing: Number(row.Passing || row.PAS || 70),
-              Dribbling: Number(row.Dribbling || row.DRI || 70),
-              Defending: Number(row.Defending || row.DEF || 70),
-              Physical: Number(row.Physical || row.PHY || 70),
-            }
+            base: baseStats
           };
         }
         return builderData;
