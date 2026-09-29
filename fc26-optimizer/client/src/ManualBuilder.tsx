@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// We will import your trpc hooks here in the next step to replace the hardcoded stats!
-// import { trpc } from "@/lib/trpc"; 
+import { trpc } from "@/lib/trpc"; 
 
 interface BaseStats {
   Pace: number;
@@ -11,26 +10,6 @@ interface BaseStats {
   Physical: number;
 }
 
-interface ArchetypeData {
-  pos: string;
-  base: BaseStats;
-}
-
-// TEMP HARDCODED DATA - We will swap this for your FC27 CSV backend data next!
-const ARCHETYPES: Record<string, ArchetypeData> = {
-  Finisher: { pos: 'Attacker', base: { Pace: 75, Shooting: 82, Passing: 65, Dribbling: 78, Defending: 40, Physical: 70 } },
-  'Target Forward': { pos: 'Attacker', base: { Pace: 70, Shooting: 80, Passing: 60, Dribbling: 70, Defending: 45, Physical: 85 } },
-  Spark: { pos: 'Attacker', base: { Pace: 85, Shooting: 75, Passing: 70, Dribbling: 82, Defending: 35, Physical: 60 } },
-  Maestro: { pos: 'Midfielder', base: { Pace: 72, Shooting: 72, Passing: 82, Dribbling: 82, Defending: 50, Physical: 65 } },
-  Creator: { pos: 'Midfielder', base: { Pace: 75, Shooting: 70, Passing: 85, Dribbling: 80, Defending: 55, Physical: 60 } },
-  Disruptor: { pos: 'Midfielder', base: { Pace: 70, Shooting: 60, Passing: 70, Dribbling: 65, Defending: 82, Physical: 82 } },
-  Boss: { pos: 'Defender', base: { Pace: 65, Shooting: 40, Passing: 60, Dribbling: 55, Defending: 85, Physical: 85 } },
-  Marauder: { pos: 'Defender', base: { Pace: 80, Shooting: 50, Passing: 70, Dribbling: 70, Defending: 80, Physical: 75 } },
-  Progressor: { pos: 'Defender', base: { Pace: 72, Shooting: 55, Passing: 78, Dribbling: 72, Defending: 82, Physical: 70 } },
-  'Shot Stopper': { pos: 'Goalkeeper', base: { Pace: 50, Shooting: 30, Passing: 60, Dribbling: 40, Defending: 85, Physical: 75 } },
-  'Sweeper Keeper': { pos: 'Goalkeeper', base: { Pace: 60, Shooting: 30, Passing: 70, Dribbling: 45, Defending: 80, Physical: 70 } },
-};
-
 const getApCost = (currentVal: number, isAdding: boolean): number => {
   const target = isAdding ? currentVal + 1 : currentVal;
   if (target <= 70) return 1;
@@ -40,26 +19,46 @@ const getApCost = (currentVal: number, isAdding: boolean): number => {
 
 export default function ManualBuilder() {
   const [level, setLevel] = useState<number>(25);
-  const [archetype, setArchetype] = useState<string>('Finisher');
+  const [archetype, setArchetype] = useState<string>('');
   const [height, setHeight] = useState<number>(69);
   const [weight, setWeight] = useState<number>(160);
-  const [stats, setStats] = useState<BaseStats>(ARCHETYPES.Finisher.base);
+  const [stats, setStats] = useState<BaseStats | null>(null);
   const [spentAp, setSpentAp] = useState<number>(0);
+  const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC27");
 
-  const maxAp = Math.floor(level * 1.5) + 10;
+  // Fetch real data from your CSV backend
+  const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
+  const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
+
+  // Use real server AP limits, fallback to standard math if loading
+  const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
   const availableAp = maxAp - spentAp;
 
+  // Initialize stats once server data loads
   useEffect(() => {
-    if (ARCHETYPES[archetype]) {
-      setStats(ARCHETYPES[archetype].base);
+    if (serverArchetypes && Object.keys(serverArchetypes).length > 0) {
+      // If the currently selected archetype exists in the new data, use it. Otherwise default to the first one.
+      const targetArch = serverArchetypes[archetype] ? archetype : Object.keys(serverArchetypes)[0];
+      setArchetype(targetArch);
+      setStats(serverArchetypes[targetArch].base);
       setSpentAp(0);
     }
-  }, [archetype]);
+  }, [serverArchetypes, gameVersion]);
+
+  // Handle stat resets when user manually changes archetype
+  const handleArchetypeChange = (newArch: string) => {
+    setArchetype(newArch);
+    if (serverArchetypes?.[newArch]) {
+      setStats(serverArchetypes[newArch].base);
+      setSpentAp(0);
+    }
+  };
 
   const handleStatChange = (statKey: string, isAdding: boolean) => {
+    if (!stats || !serverArchetypes) return;
     const key = statKey as keyof BaseStats;
     const current = stats[key];
-    const base = ARCHETYPES[archetype].base[key];
+    const base = serverArchetypes[archetype].base[key];
     
     if (isAdding) {
       const cost = getApCost(current, true);
@@ -77,24 +76,59 @@ export default function ManualBuilder() {
   };
 
   let accelerate = 'Controlled';
-  if (height >= 71 && weight >= 165 && stats.Physical >= 65) accelerate = 'Lengthy';
-  else if (height <= 69 && stats.Dribbling >= 80) accelerate = 'Explosive';
+  if (stats) {
+    if (height >= 71 && weight >= 165 && stats.Physical >= 65) accelerate = 'Lengthy';
+    else if (height <= 69 && stats.Dribbling >= 80) accelerate = 'Explosive';
+  }
+
+  if (isArchLoading || isProgLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
+        <div className="w-12 h-12 rounded-full border-4 border-t-green-500 border-green-900 animate-spin mb-4"></div>
+        <p className="text-green-500 font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Loading Engine Data...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden pt-8 pb-16 px-4">
       <div className="max-w-lg mx-auto">
         
-        {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider drop-shadow-2xl" style={{ fontFamily: "'Orbitron', sans-serif" }}>
             Manual Builder
           </h1>
           <p className="text-sm mt-2" style={{ color: "oklch(0.55 0.01 240)", fontFamily: "'Inter', sans-serif" }}>
-            Fine-tune attributes exactly how you want them.
+            Powered by live engine parameters.
           </p>
         </div>
 
-        {/* Level & AP Overview Card */}
+        {/* Engine Toggle */}
+        <div className="flex bg-black/60 border border-white/10 p-1 rounded-xl mb-6">
+          <button
+            onClick={() => { setGameVersion("FC26"); setSpentAp(0); }}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
+              gameVersion === "FC26"
+                ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                : "text-gray-500 hover:text-white"
+            }`}
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >
+            FC 26 DATA
+          </button>
+          <button
+            onClick={() => { setGameVersion("FC27"); setSpentAp(0); }}
+            className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
+              gameVersion === "FC27"
+                ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]"
+                : "text-gray-500 hover:text-white"
+            }`}
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >
+            FC 27 DATA
+          </button>
+        </div>
+
         <section className="mb-6 animate-fade-in">
           <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.75 0.22 142 / 0.08)" }}>
             <div className="flex items-center gap-2 mb-4">
@@ -115,7 +149,9 @@ export default function ManualBuilder() {
                     onChange={(e) => {
                       setLevel(Number(e.target.value));
                       setSpentAp(0);
-                      setStats(ARCHETYPES[archetype].base);
+                      if (serverArchetypes && serverArchetypes[archetype]) {
+                        setStats(serverArchetypes[archetype].base);
+                      }
                     }}
                     className="w-full accent-green-500"
                   />
@@ -136,10 +172,10 @@ export default function ManualBuilder() {
                 <select 
                   className="w-full bg-black/60 border border-white/10 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors appearance-none"
                   value={archetype}
-                  onChange={(e) => setArchetype(e.target.value)}
+                  onChange={(e) => handleArchetypeChange(e.target.value)}
                 >
-                  {Object.keys(ARCHETYPES).map(arch => (
-                    <option key={arch} value={arch}>{arch} ({ARCHETYPES[arch].pos})</option>
+                  {serverArchetypes && Object.keys(serverArchetypes).map(arch => (
+                    <option key={arch} value={arch}>{arch} ({serverArchetypes[arch].pos})</option>
                   ))}
                 </select>
               </div>
@@ -178,61 +214,62 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* Attribute Distribution Card */}
-        <section className="animate-fade-up">
-          <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.06)" }}>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.78 0.18 85)" }} />
-              <span className="text-xs font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.78 0.18 85)" }}>
-                Attribute Tuning
-              </span>
-            </div>
+        {stats && serverArchetypes && (
+          <section className="animate-fade-up">
+            <div className="rounded-xl p-4 border bg-black/60 border-white/10 shadow-2xl" style={{ boxShadow: "0 0 20px oklch(0.78 0.18 85 / 0.06)" }}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.78 0.18 85)" }} />
+                <span className="text-xs font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif", color: "oklch(0.78 0.18 85)" }}>
+                  Attribute Tuning
+                </span>
+              </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {(Object.keys(stats) as Array<keyof BaseStats>).map((stat) => {
-                const value = stats[stat];
-                const base = ARCHETYPES[archetype].base[stat];
-                const nextCost = getApCost(value, true);
-                
-                return (
-                  <div key={stat} className="bg-black/40 p-4 rounded-xl border border-white/5 flex items-center justify-between transition-colors hover:border-white/10">
-                    <div className="w-1/3">
-                      <p className="font-bold text-white text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</p>
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Base: {base}</p>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => handleStatChange(stat, false)}
-                        disabled={value <= base}
-                        className="w-10 h-10 rounded-lg bg-zinc-900 border border-white/10 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all"
-                      >
-                        -
-                      </button>
-                      
-                      <div className="w-10 text-center">
-                        <p className="text-xl font-black text-white">{value}</p>
+              <div className="grid grid-cols-1 gap-3">
+                {(Object.keys(stats) as Array<keyof BaseStats>).map((stat) => {
+                  const value = stats[stat];
+                  const base = serverArchetypes[archetype].base[stat];
+                  const nextCost = getApCost(value, true);
+                  
+                  return (
+                    <div key={stat} className="bg-black/40 p-4 rounded-xl border border-white/5 flex items-center justify-between transition-colors hover:border-white/10">
+                      <div className="w-1/3">
+                        <p className="font-bold text-white text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</p>
+                        <p className="text-[10px] uppercase tracking-wider text-gray-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Base: {base}</p>
                       </div>
                       
-                      <button 
-                        onClick={() => handleStatChange(stat, true)}
-                        disabled={availableAp < nextCost || value >= 99}
-                        className="w-10 h-10 rounded-lg text-black font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center flex-col leading-none transition-all"
-                        style={{
-                          background: availableAp < nextCost || value >= 99 ? "oklch(0.20 0.02 240)" : "oklch(0.75 0.22 142)",
-                          color: availableAp < nextCost || value >= 99 ? "oklch(0.45 0.01 240)" : "oklch(0.08 0.01 240)",
-                        }}
-                      >
-                        <span className="text-lg">+</span>
-                        <span className="text-[8px] font-bold uppercase opacity-80 mt-0.5 tracking-wider">{nextCost} AP</span>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button 
+                          onClick={() => handleStatChange(stat, false)}
+                          disabled={value <= base}
+                          className="w-10 h-10 rounded-lg bg-zinc-900 border border-white/10 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all"
+                        >
+                          -
+                        </button>
+                        
+                        <div className="w-10 text-center">
+                          <p className="text-xl font-black text-white">{value}</p>
+                        </div>
+                        
+                        <button 
+                          onClick={() => handleStatChange(stat, true)}
+                          disabled={availableAp < nextCost || value >= 99}
+                          className="w-10 h-10 rounded-lg text-black font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center flex-col leading-none transition-all"
+                          style={{
+                            background: availableAp < nextCost || value >= 99 ? "oklch(0.20 0.02 240)" : "oklch(0.75 0.22 142)",
+                            color: availableAp < nextCost || value >= 99 ? "oklch(0.45 0.01 240)" : "oklch(0.08 0.01 240)",
+                          }}
+                        >
+                          <span className="text-lg">+</span>
+                          <span className="text-[8px] font-bold uppercase opacity-80 mt-0.5 tracking-wider">{nextCost} AP</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
       </div>
     </div>
