@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/lib/trpc"; 
 // Adjust this path slightly if the relative folder depth to 'server' is different
-import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../../server/data27/archetypeCaps';
+import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../server/data27/archetypeCaps';
 
 const STAT_GROUPS: Record<string, string[]> = {
   "Pace": ["Acceleration", "Sprint Speed"],
