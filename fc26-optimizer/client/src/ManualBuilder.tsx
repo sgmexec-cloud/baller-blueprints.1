@@ -94,6 +94,32 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
+// --- Star Ratings Config ---
+const STAR_UPGRADE_COSTS: Record<string, number[]> = {
+  star0: [0, 0, 5, 10, 25, 40],
+  star1: [0, 0, 8, 15, 25, 40],
+  star2: [0, 0, 10, 10, 20, 35],
+  star3: [0, 0, 10, 20, 35, 50],
+  star4: [0, 0, 10, 8, 15, 25],
+};
+
+const ARCHETYPE_STAR_CAPS: Record<string, { sm: { min: number, max: number, tier: string }, wf: { min: number, max: number, tier: string } }> = {
+  'Shot Stopper': { sm: { min: 1, max: 2, tier: 'star0' }, wf: { min: 1, max: 3, tier: 'star3' } },
+  'Sweeper Keeper': { sm: { min: 1, max: 3, tier: 'star0' }, wf: { min: 1, max: 4, tier: 'star1' } },
+  'Progressor': { sm: { min: 2, max: 4, tier: 'star2' }, wf: { min: 3, max: 4, tier: 'star1' } },
+  'Boss': { sm: { min: 2, max: 3, tier: 'star0' }, wf: { min: 2, max: 4, tier: 'star3' } },
+  'Disruptor': { sm: { min: 2, max: 4, tier: 'star2' }, wf: { min: 3, max: 5, tier: 'star3' } },
+  'Marauder': { sm: { min: 2, max: 5, tier: 'star2' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Recycler': { sm: { min: 2, max: 4, tier: 'star4' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Maestro': { sm: { min: 2, max: 5, tier: 'star2' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Creator': { sm: { min: 2, max: 5, tier: 'star2' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Spark': { sm: { min: 3, max: 5, tier: 'star4' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Magician': { sm: { min: 3, max: 5, tier: 'star2' }, wf: { min: 3, max: 5, tier: 'star1' } },
+  'Finisher': { sm: { min: 3, max: 5, tier: 'star4' }, wf: { min: 3, max: 5, tier: 'star3' } },
+  'Target': { sm: { min: 2, max: 5, tier: 'star4' }, wf: { min: 2, max: 5, tier: 'star3' } },
+  'Target Forward': { sm: { min: 2, max: 5, tier: 'star4' }, wf: { min: 2, max: 5, tier: 'star3' } }
+};
+
 // --- Helper Utilities ---
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
@@ -116,6 +142,16 @@ const getCostForPoints = (archName: string, statName: string, startValue: number
   return totalCost;
 };
 
+const getTotalStarCost = (tier: string, minLevel: number, currentLevel: number): number => {
+  let total = 0;
+  const costs = STAR_UPGRADE_COSTS[tier];
+  if (!costs) return 0;
+  for (let i = minLevel + 1; i <= currentLevel; i++) {
+    total += costs[i];
+  }
+  return total;
+};
+
 const getModifier = (current: number, base: number, step: number): number => {
   const diff = current - base;
   const absDiff = Math.abs(diff);
@@ -124,7 +160,6 @@ const getModifier = (current: number, base: number, step: number): number => {
   return diff > 0 ? magnitude : -magnitude;
 };
 
-// Dynamically fetch min/max caps for a specific archetype and stat
 const getStatCaps = (archName: string, statName: string) => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
   
@@ -145,6 +180,8 @@ export default function ManualBuilder() {
   const [weight, setWeight] = useState<number>(75);
   
   const [addedPoints, setAddedPoints] = useState<Record<string, number>>({});
+  const [smLevel, setSmLevel] = useState<number>(3);
+  const [wfLevel, setWfLevel] = useState<number>(3);
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC27");
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -152,6 +189,7 @@ export default function ManualBuilder() {
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
+  const activeStarCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
 
   useEffect(() => {
     if (serverArchetypes && Object.keys(serverArchetypes).length > 0) {
@@ -161,6 +199,10 @@ export default function ManualBuilder() {
       setHeight(bounds.baseH);
       setWeight(bounds.baseW);
       setAddedPoints({});
+      
+      const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
+      setSmLevel(starCaps.sm.min);
+      setWfLevel(starCaps.wf.min);
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -170,6 +212,10 @@ export default function ManualBuilder() {
     setHeight(bounds.baseH);
     setWeight(bounds.baseW);
     setAddedPoints({});
+
+    const starCaps = ARCHETYPE_STAR_CAPS[newArch] || ARCHETYPE_STAR_CAPS['Finisher'];
+    setSmLevel(starCaps.sm.min);
+    setWfLevel(starCaps.wf.min);
   };
 
   const physicalModifiers = useMemo(() => {
@@ -214,15 +260,52 @@ export default function ManualBuilder() {
   const spentAp = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
+    
+    // Sum standard stat AP
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
       const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
       total += getCostForPoints(archetype, statKey, base, addedPoints[statKey]);
     }
+
+    // Sum SM / WF AP
+    const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
+    total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
+    total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
+
     return total;
-  }, [addedPoints, serverArchetypes, archetype, physicalModifiers]);
+  }, [addedPoints, serverArchetypes, archetype, physicalModifiers, smLevel, wfLevel]);
 
   const availableAp = maxAp - spentAp;
+
+  const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
+    const caps = activeStarCaps[type];
+    let safeTarget = Math.max(caps.min, Math.min(caps.max, targetValue));
+    
+    const currentLevel = type === 'sm' ? smLevel : wfLevel;
+    const currentCost = getTotalStarCost(caps.tier, caps.min, currentLevel);
+    const targetCost = getTotalStarCost(caps.tier, caps.min, safeTarget);
+    
+    if (targetCost - currentCost > availableAp) {
+       let affordableLevel = currentLevel;
+       let costAccumulator = currentCost;
+       const costs = STAR_UPGRADE_COSTS[caps.tier];
+       
+       for (let i = currentLevel + 1; i <= safeTarget; i++) {
+         let stepCost = costs[i];
+         if (costAccumulator + stepCost <= currentCost + availableAp) {
+           affordableLevel++;
+           costAccumulator += stepCost;
+         } else {
+           break;
+         }
+       }
+       safeTarget = affordableLevel;
+    }
+    
+    if (type === 'sm') setSmLevel(safeTarget);
+    else setWfLevel(safeTarget);
+  };
 
   const handleSliderChange = (statKey: string, targetValue: number) => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return;
@@ -410,6 +493,61 @@ export default function ManualBuilder() {
                     className="w-full accent-green-500"
                   />
                   <p className="text-center mt-1 font-bold text-white">{weight} kg</p>
+                </div>
+              </div>
+
+              {/* Skill Moves & Weak Foot */}
+              <div className="flex gap-4">
+                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col justify-between">
+                  <div className="flex justify-between mb-2">
+                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Skill Moves</label>
+                    <span className="text-[10px] text-gray-500 font-bold">{activeStarCaps.sm.min}-{activeStarCaps.sm.max} ★</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-black/60 rounded-lg p-1 border border-white/5">
+                    <button 
+                      onClick={() => handleStarChange('sm', smLevel - 1)}
+                      disabled={smLevel <= activeStarCaps.sm.min}
+                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                    >
+                      -
+                    </button>
+                    <span className="text-yellow-400 font-black text-lg px-2">
+                      {smLevel} <span className="text-sm opacity-80">★</span>
+                    </span>
+                    <button 
+                      onClick={() => handleStarChange('sm', smLevel + 1)}
+                      disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]}
+                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col justify-between">
+                  <div className="flex justify-between mb-2">
+                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Weak Foot</label>
+                    <span className="text-[10px] text-gray-500 font-bold">{activeStarCaps.wf.min}-{activeStarCaps.wf.max} ★</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-black/60 rounded-lg p-1 border border-white/5">
+                    <button 
+                      onClick={() => handleStarChange('wf', wfLevel - 1)}
+                      disabled={wfLevel <= activeStarCaps.wf.min}
+                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                    >
+                      -
+                    </button>
+                    <span className="text-yellow-400 font-black text-lg px-2">
+                      {wfLevel} <span className="text-sm opacity-80">★</span>
+                    </span>
+                    <button 
+                      onClick={() => handleStarChange('wf', wfLevel + 1)}
+                      disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]}
+                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
 
