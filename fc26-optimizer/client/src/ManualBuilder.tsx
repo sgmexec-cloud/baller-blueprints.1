@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/lib/trpc"; 
-// Adjust this path slightly if the relative folder depth to 'server' is different
 import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../server/data27/archetypeCaps';
+import { UPGRADE_COSTS } from '../../server/data27/upgradeCosts';
 
 const STAT_GROUPS: Record<string, string[]> = {
   "Pace": ["Acceleration", "Sprint Speed"],
@@ -45,6 +45,38 @@ const STAT_KEY_MAP: Record<string, string> = {
   "Aggression": "aggression"
 };
 
+const CSV_STAT_MAP: Record<string, string> = {
+  "Acceleration": "Acceleration",
+  "Sprint Speed": "Sprint Speed",
+  "Attack Positioning": "Att. Position",
+  "Finishing": "Finishing",
+  "Shot Power": "Shot Power",
+  "Long Shots": "Long Shots",
+  "Volleys": "Volleys",
+  "Penalties": "Penalties",
+  "Vision": "Vision",
+  "Crossing": "Crossing",
+  "FK Accuracy": "FK Acc.",
+  "Short Passing": "Short Pass",
+  "Long Passing": "Long Pass",
+  "Curve": "Curve",
+  "Agility": "Agility",
+  "Balance": "Balance",
+  "Reactions": "Reactions",
+  "Ball Control": "Ball Control",
+  "Dribbling": "Dribbling",
+  "Composure": "Composure",
+  "Interceptions": "Interceptions",
+  "Heading Accuracy": "Heading Acc.",
+  "Def Awareness": "Def. Aware",
+  "Standing Tackle": "Stand Tackle",
+  "Sliding Tackle": "Slide Tackle",
+  "Jumping": "Jumping",
+  "Stamina": "Stamina",
+  "Strength": "Strength",
+  "Aggression": "Aggression"
+};
+
 const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number, baseW: number, minW: number, maxW: number, type: 'DEF' | 'MID_ATT' | 'GK' }> = {
   'Shot Stopper': { baseH: 188, minH: 179, maxH: 197, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
   'Sweeper Keeper': { baseH: 192, minH: 184, maxH: 200, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
@@ -63,19 +95,25 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
 };
 
 // --- Helper Utilities ---
-const getApCost = (currentVal: number, isAdding: boolean): number => {
-  const target = isAdding ? currentVal + 1 : currentVal;
-  if (target <= 70) return 1;
-  if (target <= 85) return 2;
-  return 3;
+const getApCost = (archName: string, statName: string, targetLevel: number): number => {
+  const normalizedArch = archName.split(' ')[0].toLowerCase();
+  const csvStatName = CSV_STAT_MAP[statName];
+  
+  try {
+    const cost = UPGRADE_COSTS[normalizedArch]?.[csvStatName]?.[targetLevel];
+    return cost !== undefined ? cost : 1; 
+  } catch (error) {
+    return 1; 
+  }
 };
 
-const getCostForPoints = (startValue: number, pointsToAdd: number): number => {
-  let cost = 0;
-  for(let i = 0; i < pointsToAdd; i++) {
-    cost += getApCost(startValue + i, true);
+const getCostForPoints = (archName: string, statName: string, startValue: number, pointsToAdd: number): number => {
+  let totalCost = 0;
+  for(let i = 1; i <= pointsToAdd; i++) {
+    const targetLvl = startValue + i;
+    totalCost += getApCost(archName, statName, targetLvl);
   }
-  return cost;
+  return totalCost;
 };
 
 const getModifier = (current: number, base: number, step: number): number => {
@@ -88,12 +126,11 @@ const getModifier = (current: number, base: number, step: number): number => {
 
 // Dynamically fetch min/max caps for a specific archetype and stat
 const getStatCaps = (archName: string, statName: string) => {
-  // Normalize names like 'Target Forward' -> 'target' to match caps object keys
   const normalizedArch = archName.split(' ')[0].toLowerCase();
   
   // @ts-ignore
   const capData = ARCHETYPE_ATTRIBUTE_CAPS[normalizedArch];
-  if (!capData) return { min: 70, max: 99 }; // Fallback for Goalkeepers or missing archetypes
+  if (!capData) return { min: 70, max: 99 }; 
 
   const camelStat = STAT_KEY_MAP[statName];
   if (!camelStat || !capData[camelStat]) return { min: 70, max: 99 };
@@ -166,7 +203,6 @@ export default function ManualBuilder() {
       const modVal = physicalModifiers[statKey] || 0;
       const invested = addedPoints[statKey] || 0;
       
-      // Calculate start value combining explicit archetype caps + physical modifiers
       const dynamicBase = (caps.min || baseObj[statKey] || 70) + modVal;
       const capMax = caps.max || 99;
       
@@ -181,7 +217,7 @@ export default function ManualBuilder() {
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
       const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
-      total += getCostForPoints(base, addedPoints[statKey]);
+      total += getCostForPoints(archetype, statKey, base, addedPoints[statKey]);
     }
     return total;
   }, [addedPoints, serverArchetypes, archetype, physicalModifiers]);
@@ -195,19 +231,18 @@ export default function ManualBuilder() {
     const capMax = caps.max || 99;
     const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0));
     
-    // Clamp targets within explicit archetype boundaries
     let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
     let newPointsAdded = safeTarget - baseVal;
     
     const currentInvestedPts = addedPoints[statKey] || 0;
-    const currentCost = getCostForPoints(baseVal, currentInvestedPts);
-    const targetCost = getCostForPoints(baseVal, newPointsAdded);
+    const currentCost = getCostForPoints(archetype, statKey, baseVal, currentInvestedPts);
+    const targetCost = getCostForPoints(archetype, statKey, baseVal, newPointsAdded);
 
     if (targetCost - currentCost > availableAp) {
       let affordablePoints = currentInvestedPts;
       let costAccumulator = currentCost;
       for (let i = currentInvestedPts; i < newPointsAdded; i++) {
-        let stepCost = getApCost(baseVal + affordablePoints, true);
+        let stepCost = getApCost(archetype, statKey, baseVal + affordablePoints + 1);
         if (costAccumulator + stepCost <= currentCost + availableAp) {
           affordablePoints++;
           costAccumulator += stepCost;
@@ -423,7 +458,7 @@ export default function ManualBuilder() {
                       const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + (physicalModifiers[stat] || 0));
                       
                       const invested = addedPoints[stat] || 0;
-                      const statApSpent = getCostForPoints(baseVal, invested);
+                      const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
 
                       return (
                         <div key={stat} className="flex flex-col">
@@ -455,7 +490,7 @@ export default function ManualBuilder() {
                             
                             <button 
                               onClick={() => handleSliderChange(stat, value + 1)}
-                              disabled={value >= capMax || availableAp < getApCost(value, true)}
+                              disabled={value >= capMax || availableAp < getApCost(archetype, stat, value + 1)}
                               className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
                             >
                               +
