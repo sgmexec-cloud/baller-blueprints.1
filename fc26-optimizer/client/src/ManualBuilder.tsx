@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { trpc } from "@/lib/trpc"; 
+// Adjust this path slightly if the relative folder depth to 'server' is different
+import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../../server/data27/archetypeCaps';
 
 const STAT_GROUPS: Record<string, string[]> = {
   "Pace": ["Acceleration", "Sprint Speed"],
@@ -8,6 +10,39 @@ const STAT_GROUPS: Record<string, string[]> = {
   "Dribbling": ["Agility", "Balance", "Reactions", "Ball Control", "Dribbling", "Composure"],
   "Defending": ["Interceptions", "Heading Accuracy", "Def Awareness", "Standing Tackle", "Sliding Tackle"],
   "Physical": ["Jumping", "Stamina", "Strength", "Aggression"]
+};
+
+// Maps TRPC readable names to the camelCase keys used in the caps configuration
+const STAT_KEY_MAP: Record<string, string> = {
+  "Acceleration": "acceleration",
+  "Sprint Speed": "sprintSpeed",
+  "Attack Positioning": "attPosition",
+  "Finishing": "finishing",
+  "Shot Power": "shotPower",
+  "Long Shots": "longShots",
+  "Volleys": "volleys",
+  "Penalties": "penalties",
+  "Vision": "vision",
+  "Crossing": "crossing",
+  "FK Accuracy": "fkAccuracy",
+  "Short Passing": "shortPassing",
+  "Long Passing": "longPassing",
+  "Curve": "curve",
+  "Agility": "agility",
+  "Balance": "balance",
+  "Reactions": "reactions",
+  "Ball Control": "ballControl",
+  "Dribbling": "dribbling",
+  "Composure": "composure",
+  "Interceptions": "interceptions",
+  "Heading Accuracy": "headingAcc",
+  "Def Awareness": "defAware",
+  "Standing Tackle": "standingTackle",
+  "Sliding Tackle": "slidingTackle",
+  "Jumping": "jumping",
+  "Stamina": "stamina",
+  "Strength": "strength",
+  "Aggression": "aggression"
 };
 
 const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number, baseW: number, minW: number, maxW: number, type: 'DEF' | 'MID_ATT' | 'GK' }> = {
@@ -27,6 +62,7 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
+// --- Helper Utilities ---
 const getApCost = (currentVal: number, isAdding: boolean): number => {
   const target = isAdding ? currentVal + 1 : currentVal;
   if (target <= 70) return 1;
@@ -48,6 +84,21 @@ const getModifier = (current: number, base: number, step: number): number => {
   if (absDiff === 0) return 0;
   const magnitude = 1 + Math.floor((absDiff - 1) / step);
   return diff > 0 ? magnitude : -magnitude;
+};
+
+// Dynamically fetch min/max caps for a specific archetype and stat
+const getStatCaps = (archName: string, statName: string) => {
+  // Normalize names like 'Target Forward' -> 'target' to match caps object keys
+  const normalizedArch = archName.split(' ')[0].toLowerCase();
+  
+  // @ts-ignore
+  const capData = ARCHETYPE_ATTRIBUTE_CAPS[normalizedArch];
+  if (!capData) return { min: 70, max: 99 }; // Fallback for Goalkeepers or missing archetypes
+
+  const camelStat = STAT_KEY_MAP[statName];
+  if (!camelStat || !capData[camelStat]) return { min: 70, max: 99 };
+
+  return capData[camelStat];
 };
 
 export default function ManualBuilder() {
@@ -109,11 +160,17 @@ export default function ManualBuilder() {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
     const baseObj = serverArchetypes[archetype].base;
+    
     for (const statKey in baseObj) {
-      const baseVal = baseObj[statKey] || 70;
+      const caps = getStatCaps(archetype, statKey);
       const modVal = physicalModifiers[statKey] || 0;
       const invested = addedPoints[statKey] || 0;
-      computed[statKey] = Math.max(1, Math.min(99, baseVal + modVal + invested));
+      
+      // Calculate start value combining explicit archetype caps + physical modifiers
+      const dynamicBase = (caps.min || baseObj[statKey] || 70) + modVal;
+      const capMax = caps.max || 99;
+      
+      computed[statKey] = Math.max(dynamicBase, Math.min(capMax, dynamicBase + invested));
     }
     return computed;
   }, [serverArchetypes, archetype, physicalModifiers, addedPoints]);
@@ -122,7 +179,8 @@ export default function ManualBuilder() {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
     for (const statKey in addedPoints) {
-      const base = (serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
+      const caps = getStatCaps(archetype, statKey);
+      const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
       total += getCostForPoints(base, addedPoints[statKey]);
     }
     return total;
@@ -132,9 +190,13 @@ export default function ManualBuilder() {
 
   const handleSliderChange = (statKey: string, targetValue: number) => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return;
-    const baseVal = Math.max(1, (serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0));
     
-    let safeTarget = Math.max(baseVal, Math.min(99, targetValue));
+    const caps = getStatCaps(archetype, statKey);
+    const capMax = caps.max || 99;
+    const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0));
+    
+    // Clamp targets within explicit archetype boundaries
+    let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
     let newPointsAdded = safeTarget - baseVal;
     
     const currentInvestedPts = addedPoints[statKey] || 0;
@@ -164,13 +226,12 @@ export default function ManualBuilder() {
     });
   };
 
-  // UPDATED COLOR LOGIC TO MATCH EXACT TIERS
   const getStatColor = (val: number) => {
-    if (val >= 90) return "text-emerald-500"; // Dark Green
-    if (val >= 80) return "text-green-400";   // Light Green
-    if (val >= 65) return "text-yellow-400";  // Yellow / Amber
-    if (val >= 50) return "text-orange-500";  // Orange
-    return "text-red-500";                    // Red
+    if (val >= 90) return "text-emerald-500";
+    if (val >= 80) return "text-green-400";   
+    if (val >= 65) return "text-yellow-400";  
+    if (val >= 50) return "text-orange-500";  
+    return "text-red-500";                    
   };
 
   const getAccentColor = (val: number) => {
@@ -356,7 +417,11 @@ export default function ManualBuilder() {
                   <div className="grid grid-cols-1 gap-5">
                     {attributes.map(stat => {
                       const value = currentStats[stat] || 70;
-                      const baseVal = Math.max(1, (serverArchetypes[archetype]?.base?.[stat] || 70) + (physicalModifiers[stat] || 0));
+                      
+                      const caps = getStatCaps(archetype, stat);
+                      const capMax = caps.max || 99;
+                      const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + (physicalModifiers[stat] || 0));
+                      
                       const invested = addedPoints[stat] || 0;
                       const statApSpent = getCostForPoints(baseVal, invested);
 
@@ -365,7 +430,7 @@ export default function ManualBuilder() {
                           <div className="flex justify-between items-end mb-2">
                             <div className="flex items-baseline gap-2">
                               <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
-                              <span className="text-[10px] text-gray-500 font-bold">{statApSpent} AP</span>
+                              <span className="text-[10px] text-gray-500 font-bold">({baseVal} - {capMax}) • {statApSpent} AP</span>
                             </div>
                             <span className={`text-xl font-black ${getStatColor(value)}`}>{value}</span>
                           </div>
@@ -382,7 +447,7 @@ export default function ManualBuilder() {
                             <input 
                               type="range" 
                               min={baseVal} 
-                              max="99" 
+                              max={capMax} 
                               value={value} 
                               onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
                               className={`flex-1 h-1.5 rounded-lg appearance-none bg-black/60 cursor-pointer ${getAccentColor(value)}`}
@@ -390,7 +455,7 @@ export default function ManualBuilder() {
                             
                             <button 
                               onClick={() => handleSliderChange(stat, value + 1)}
-                              disabled={value >= 99 || availableAp < getApCost(value, true)}
+                              disabled={value >= capMax || availableAp < getApCost(value, true)}
                               className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
                             >
                               +
