@@ -1,4 +1,4 @@
-const ARCHETYPE_ATTRIBUTE_CAPS = {
+export const ARCHETYPE_ATTRIBUTE_CAPS = {
   progressor: {
     acceleration: { min: 70, max: 92 },
     sprintSpeed: { min: 72, max: 92 },
