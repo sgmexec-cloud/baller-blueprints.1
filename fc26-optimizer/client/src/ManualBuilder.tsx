@@ -357,7 +357,7 @@ export default function ManualBuilder() {
                     PLAYER LEVEL
                   </label>
                   <input 
-                    type="range" min="1" max="100" value={level} 
+                    type="range" min="1" max="40" value={level} 
                     onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
                     className="w-full accent-green-500"
                   />
