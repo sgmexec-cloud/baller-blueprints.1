@@ -231,6 +231,14 @@ const getStatCaps = (archName: string, statName: string) => {
   return capData[camelStat];
 };
 
+const getCustomColor = (val: number) => {
+  if (val >= 90) return "oklch(84.1% 0.238 128.85)";
+  if (val >= 80) return "oklch(53.2% 0.157 131.589)";
+  if (val >= 70) return "oklch(90.5% 0.182 98.111)";
+  if (val >= 50) return "oklch(75% 0.183 55.934)";
+  return "oklch(63.7% 0.237 25.331)";
+};
+
 export default function ManualBuilder() {
   const [level, setLevel] = useState<number>(25);
   const [archetype, setArchetype] = useState<string>('');
@@ -245,12 +253,10 @@ export default function ManualBuilder() {
   const [clubLevel, setClubLevel] = useState<number>(10);
   const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
 
-  // Cross-build Mastery Unlocks: { [archName]: { l10: boolean, l30: boolean } }
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
   const [isMasteriesOpen, setIsMasteriesOpen] = useState<boolean>(false);
   const [isFacilitiesOpen, setIsFacilitiesOpen] = useState<boolean>(false);
 
-  // Accordion states for attribute categories (all closed by default or open as desired)
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     "Pace": false,
     "Shooting": false,
@@ -483,6 +489,7 @@ export default function ManualBuilder() {
     const mastMod = masteryModifiers[statKey] || 0;
     const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod);
     
+    // safeTarget enforces the floor boundary even if the slider is dragged to 0
     let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
     let newPointsAdded = safeTarget - baseVal;
     
@@ -511,22 +518,6 @@ export default function ManualBuilder() {
       else next[statKey] = newPointsAdded;
       return next;
     });
-  };
-
-  const getStatColor = (val: number) => {
-    if (val >= 90) return "text-emerald-500";
-    if (val >= 80) return "text-green-400";   
-    if (val >= 65) return "text-yellow-400";  
-    if (val >= 50) return "text-orange-500";  
-    return "text-red-500";                    
-  };
-
-  const getAccentColor = (val: number) => {
-    if (val >= 90) return "accent-emerald-500";
-    if (val >= 80) return "accent-green-400";
-    if (val >= 65) return "accent-yellow-400";
-    if (val >= 50) return "accent-orange-500";
-    return "accent-red-500";
   };
 
   let accelerate = 'Controlled';
@@ -953,7 +944,7 @@ export default function ManualBuilder() {
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-2 border border-white/10 rounded px-2 py-1 bg-black/30">
                         <span className="text-[10px] text-gray-500 font-bold tracking-widest">AVG</span>
-                        <span className={`text-sm font-bold ${getStatColor(catAvg)}`}>{catAvg}</span>
+                        <span className="text-sm font-bold" style={{ color: getCustomColor(catAvg) }}>{catAvg}</span>
                       </div>
                       <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                         ▼
@@ -976,6 +967,8 @@ export default function ManualBuilder() {
                         
                         const invested = addedPoints[stat] || 0;
                         const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
+                        
+                        const customColor = getCustomColor(value);
 
                         return (
                           <div key={stat} className="flex flex-col">
@@ -984,7 +977,7 @@ export default function ManualBuilder() {
                                 <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
                                 <span className="text-[10px] text-gray-500 font-bold">({baseVal} - {capMax}) • {statApSpent} AP</span>
                               </div>
-                              <span className={`text-xl font-black ${getStatColor(value)}`}>{value}</span>
+                              <span className="text-xl font-black" style={{ color: customColor }}>{value}</span>
                             </div>
                             
                             <div className="flex items-center gap-3">
@@ -998,11 +991,12 @@ export default function ManualBuilder() {
                               
                               <input 
                                 type="range" 
-                                min={baseVal} 
-                                max={capMax} 
+                                min="0" 
+                                max="99" 
                                 value={value} 
                                 onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
-                                className={`flex-1 h-1.5 rounded-lg appearance-none bg-black/60 cursor-pointer ${getAccentColor(value)}`}
+                                className="flex-1 cursor-pointer bg-black/60 rounded-lg"
+                                style={{ accentColor: customColor }}
                               />
                               
                               <button 
