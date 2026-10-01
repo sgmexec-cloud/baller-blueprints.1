@@ -127,6 +127,8 @@ const CLUB_BUDGETS: Record<number, number> = {
 };
 
 const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<string, number> }> = {
+  'Shot Stopper': { l10: { 'GK Positioning': 1, 'GK Reflexes': 1 }, l30: { 'GK Reflexes': 1 } },
+  'Sweeper Keeper': { l10: { 'GK Handling': 1, 'GK Diving': 1 }, l30: { 'GK Diving': 1 } },
   'Progressor': { l10: { 'Long Passing': 1, 'Standing Tackle': 1 }, l30: { 'Standing Tackle': 1 } },
   'Boss': { l10: { 'Aggression': 1, 'Strength': 1 }, l30: { 'Strength': 1 } },
   'Disruptor': { l10: { 'Stamina': 1, 'Interceptions': 1 }, l30: { 'Interceptions': 1 } },
@@ -136,7 +138,7 @@ const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<strin
   'Creator': { l10: { 'FK Accuracy': 1, 'Vision': 1 }, l30: { 'Vision': 1 } },
   'Spark': { l10: { 'Crossing': 1, 'Dribbling': 1 }, l30: { 'Dribbling': 1 } },
   'Magician': { l10: { 'Curve': 1, 'Acceleration': 1 }, l30: { 'Acceleration': 1 } },
-  'Finisher': { l10: { 'Finishing': 1, 'Composure': 1 }, l30: { 'Finishing': 2 } }, 
+  'Finisher': { l10: { 'Finishing': 1, 'Composure': 1 }, l30: { 'Finishing': 1 } }, 
   'Target': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } },
   'Target Forward': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } }
 };
@@ -241,7 +243,10 @@ export default function ManualBuilder() {
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC27");
 
   const [clubLevel, setClubLevel] = useState<number>(10);
-  const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); // e.g. { 'Equipment Manager': 3 }
+  const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
+
+  // Cross-build Mastery Unlocks: { [archName]: { l10: boolean, l30: boolean } }
+  const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
@@ -281,7 +286,7 @@ export default function ManualBuilder() {
     const fac = e.target.value;
     if (!fac) return;
     setEquippedFacilities(prev => ({ ...prev, [fac]: 1 }));
-    e.target.value = ""; // reset dropdown
+    e.target.value = ""; 
   };
 
   const handleTierChange = (fac: string, tier: number) => {
@@ -293,6 +298,16 @@ export default function ManualBuilder() {
       const next = { ...prev };
       delete next[fac];
       return next;
+    });
+  };
+
+  const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30') => {
+    setUnlockedMasteries(prev => {
+      const current = prev[archName] || { l10: false, l30: false };
+      return {
+        ...prev,
+        [archName]: { ...current, [tier]: !current[tier] }
+      };
     });
   };
 
@@ -339,20 +354,26 @@ export default function ManualBuilder() {
 
   const masteryModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
-    const archMastery = MASTERIES[archetype];
     
-    if (archMastery && level >= 10) {
-      Object.entries(archMastery.l10).forEach(([stat, val]) => {
-        mods[stat] = (mods[stat] || 0) + val;
-      });
-      if (level >= 30) {
+    // Aggregate stackable bonuses from all checked archetypes across account
+    Object.entries(unlockedMasteries).forEach(([arch, status]) => {
+      const archMastery = MASTERIES[arch];
+      if (!archMastery) return;
+
+      if (status.l10 && archMastery.l10) {
+        Object.entries(archMastery.l10).forEach(([stat, val]) => {
+          mods[stat] = (mods[stat] || 0) + val;
+        });
+      }
+      if (status.l30 && archMastery.l30) {
         Object.entries(archMastery.l30).forEach(([stat, val]) => {
           mods[stat] = (mods[stat] || 0) + val;
         });
       }
-    }
+    });
+
     return mods;
-  }, [level, archetype]);
+  }, [unlockedMasteries]);
 
   const currentStats = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
@@ -782,40 +803,58 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- ARCHETYPE MASTERIES SECTION --- */}
+        {/* --- ACCOUNT MASTERIES (CROSS-BUILD) SECTION --- */}
         <section className="mb-6 animate-fade-in">
           <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.70 0.15 200)" }} />
               <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.70 0.15 200)", fontFamily: "'Rajdhani', sans-serif" }}>
-                Archetype Milestones
+                Unlocked Masteries (Cross-Build)
               </span>
             </div>
+            <p className="text-[11px] text-gray-400 mb-4 font-sans">
+              Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses.
+            </p>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Level 10 Mastery */}
-              <div className={`flex-1 p-4 rounded-xl border transition-all ${level >= 10 ? 'bg-cyan-950/30 border-cyan-500/30' : 'bg-black/30 border-white/5 opacity-50'}`}>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Level 10 Unlock</div>
-                {level >= 10 ? (
-                  <div className="text-cyan-400 font-bold text-sm">
-                    {MASTERIES[archetype]?.l10 ? Object.entries(MASTERIES[archetype].l10).map(([stat, val]) => `+${val} ${stat}`).join(' & ') : 'None'}
-                  </div>
-                ) : (
-                  <div className="text-gray-600 text-xs font-medium italic">Locked (Requires Lvl 10)</div>
-                )}
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
+                const status = unlockedMasteries[arch] || { l10: false, l30: false };
+                const masteryDef = MASTERIES[arch];
+                if (!masteryDef) return null;
 
-              {/* Level 30 Mastery */}
-              <div className={`flex-1 p-4 rounded-xl border transition-all ${level >= 30 ? 'bg-purple-950/30 border-purple-500/30' : 'bg-black/30 border-white/5 opacity-50'}`}>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Level 30 Unlock</div>
-                {level >= 30 ? (
-                  <div className="text-purple-400 font-bold text-sm">
-                    {MASTERIES[archetype]?.l30 ? Object.entries(MASTERIES[archetype].l30).map(([stat, val]) => `+${val} ${stat}`).join(' & ') : 'None'}
+                const l10Text = Object.entries(masteryDef.l10).map(([s, v]) => `+${v} ${s}`).join(', ');
+                const l30Text = Object.entries(masteryDef.l30).map(([s, v]) => `+${v} ${s}`).join(', ');
+
+                return (
+                  <div key={arch} className="bg-black/40 border border-white/5 p-3 rounded-lg flex flex-col justify-between gap-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">{arch}</span>
+                    <div className="flex gap-4">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs">
+                        <input 
+                          type="checkbox" 
+                          checked={status.l10} 
+                          onChange={() => toggleMasteryUnlock(arch, 'l10')}
+                          className="accent-cyan-500 rounded w-4 h-4"
+                        />
+                        <span className={status.l10 ? 'text-cyan-400 font-bold' : 'text-gray-500'}>
+                          Lvl 10 ({l10Text})
+                        </span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer text-xs">
+                        <input 
+                          type="checkbox" 
+                          checked={status.l30} 
+                          onChange={() => toggleMasteryUnlock(arch, 'l30')}
+                          className="accent-purple-500 rounded w-4 h-4"
+                        />
+                        <span className={status.l30 ? 'text-purple-400 font-bold' : 'text-gray-500'}>
+                          Lvl 30 ({l30Text})
+                        </span>
+                      </label>
+                    </div>
                   </div>
-                ) : (
-                  <div className="text-gray-600 text-xs font-medium italic">Locked (Requires Lvl 30)</div>
-                )}
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
