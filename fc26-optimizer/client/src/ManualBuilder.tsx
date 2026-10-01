@@ -120,6 +120,62 @@ const ARCHETYPE_STAR_CAPS: Record<string, { sm: { min: number, max: number, tier
   'Target Forward': { sm: { min: 2, max: 5, tier: 'star4' }, wf: { min: 2, max: 5, tier: 'star3' } }
 };
 
+// --- Facilities & Masteries Config ---
+const CLUB_BUDGETS: Record<number, number> = {
+  1: 1000000, 2: 1100000, 3: 1200000, 4: 1300000, 5: 1500000,
+  6: 1700000, 7: 1900000, 8: 2100000, 9: 2300000, 10: 2500000
+};
+
+const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<string, number> }> = {
+  'Progressor': { l10: { 'Long Passing': 1, 'Standing Tackle': 1 }, l30: { 'Standing Tackle': 1 } },
+  'Boss': { l10: { 'Aggression': 1, 'Strength': 1 }, l30: { 'Strength': 1 } },
+  'Disruptor': { l10: { 'Stamina': 1, 'Interceptions': 1 }, l30: { 'Interceptions': 1 } },
+  'Marauder': { l10: { 'Sliding Tackle': 1, 'Sprint Speed': 1 }, l30: { 'Sprint Speed': 1 } },
+  'Recycler': { l10: { 'Def Awareness': 1, 'Short Passing': 1 }, l30: { 'Short Passing': 1 } },
+  'Maestro': { l10: { 'Reactions': 1, 'Ball Control': 1 }, l30: { 'Ball Control': 1 } },
+  'Creator': { l10: { 'FK Accuracy': 1, 'Vision': 1 }, l30: { 'Vision': 1 } },
+  'Spark': { l10: { 'Crossing': 1, 'Dribbling': 1 }, l30: { 'Dribbling': 1 } },
+  'Magician': { l10: { 'Curve': 1, 'Acceleration': 1 }, l30: { 'Acceleration': 1 } },
+  'Finisher': { l10: { 'Finishing': 1, 'Composure': 1 }, l30: { 'Finishing': 2 } }, 
+  'Target': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } },
+  'Target Forward': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } }
+};
+
+const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: number[] }> = {
+  'Equipment Manager': { stats: ['Jumping', 'Stamina'], boosts: [2, 3, 4], cost: [200000, 600000, 1200000] },
+  'Head Groundskeeper': { stats: ['Balance', 'Ball Control'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Performance Lab': { stats: ['Vision', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Scout': { stats: ['Attack Positioning', 'Def Awareness'], boosts: [2, 5, 7], cost: [100000, 400000, 1100000] },
+  'Sports Psychologist': { stats: ['Aggression', 'Composure'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
+  'Sports Scientist': { stats: ['Acceleration', 'Reactions'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Att. Tactical Coach': { stats: ['Attack Positioning', 'Vision'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
+  'Def. Tactical Coach': { stats: ['Interceptions', 'Def Awareness'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
+  'Fitness Coach': { stats: ['Jumping', 'Stamina'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Passing Coach': { stats: ['Long Passing', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Shooting Coach': { stats: ['Finishing', 'Long Shots'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Tackling Coach': { stats: ['Standing Tackle', 'Sliding Tackle'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Technical Coach': { stats: ['Ball Control', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Agility Poles': { stats: ['Agility', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Finishing Net': { stats: ['Finishing', 'Curve'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Football Tennis Net': { stats: ['Heading Accuracy', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
+  'GPS Vests': { stats: ['Stamina', 'Attack Positioning'], boosts: [2, 5, 7], cost: [200000, 600000, 1200000] },
+  'Mini Goals': { stats: ['Finishing', 'Short Passing'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
+  'Rebounders': { stats: ['Reactions', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
+  'Set Piece Mannequins': { stats: ['FK Accuracy', 'Penalties'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Speed Parachute': { stats: ['Acceleration', 'Sprint Speed'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000] },
+  'Compression Boots': { stats: ['Strength', 'Shot Power'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Running Track': { stats: ['Sprint Speed', 'Stamina'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000] }, 
+  'Training Pitch': { stats: ['Crossing', 'Long Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Weight Room': { stats: ['Jumping', 'Strength'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Yoga Instructor': { stats: ['Composure', 'Balance'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'VR Room': { stats: ['Finishing', 'Short Passing'], boosts: [2, 4, 4], cost: [200000, 600000, 1200000] },
+  'Passing Drill': { stats: ['Interceptions', 'Long Passing'], boosts: [3, 5, 5], cost: [200000, 600000, 1200000] },
+  'Low Driven Drill': { stats: ['Balance', 'Vision'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
+  'Strength Drill': { stats: ['Strength', 'Standing Tackle'], boosts: [2, 4, 4], cost: [300000, 800000, 1400000] },
+  'Agility Drill': { stats: ['Agility', 'Ball Control'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] },
+  'Quick Finishing Drill': { stats: ['Sprint Speed', 'Finishing'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] }
+};
+
 // --- Helper Utilities ---
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
@@ -184,6 +240,9 @@ export default function ManualBuilder() {
   const [wfLevel, setWfLevel] = useState<number>(3);
   const [gameVersion, setGameVersion] = useState<"FC26" | "FC27">("FC27");
 
+  const [clubLevel, setClubLevel] = useState<number>(10);
+  const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); // e.g. { 'Equipment Manager': 3 }
+
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
 
@@ -239,6 +298,43 @@ export default function ManualBuilder() {
     return mods;
   }, [height, weight, activeBounds]);
 
+  const totalFacilityCost = useMemo(() => {
+    return Object.entries(equippedFacilities).reduce((total, [name, tier]) => {
+      return total + (FACILITIES[name]?.cost[tier - 1] || 0);
+    }, 0);
+  }, [equippedFacilities]);
+
+  const facilityModifiers = useMemo(() => {
+    const mods: Record<string, number> = {};
+    Object.entries(equippedFacilities).forEach(([name, tier]) => {
+      const facility = FACILITIES[name];
+      if (facility) {
+        const boostAmount = facility.boosts[tier - 1];
+        facility.stats.forEach(stat => {
+          mods[stat] = (mods[stat] || 0) + boostAmount;
+        });
+      }
+    });
+    return mods;
+  }, [equippedFacilities]);
+
+  const masteryModifiers = useMemo(() => {
+    const mods: Record<string, number> = {};
+    const archMastery = MASTERIES[archetype];
+    
+    if (archMastery && level >= 10) {
+      Object.entries(archMastery.l10).forEach(([stat, val]) => {
+        mods[stat] = (mods[stat] || 0) + val;
+      });
+      if (level >= 30) {
+        Object.entries(archMastery.l30).forEach(([stat, val]) => {
+          mods[stat] = (mods[stat] || 0) + val;
+        });
+      }
+    }
+    return mods;
+  }, [level, archetype]);
+
   const currentStats = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
@@ -246,35 +342,40 @@ export default function ManualBuilder() {
     
     for (const statKey in baseObj) {
       const caps = getStatCaps(archetype, statKey);
-      const modVal = physicalModifiers[statKey] || 0;
+      
+      const physMod = physicalModifiers[statKey] || 0;
+      const facMod = facilityModifiers[statKey] || 0;
+      const mastMod = masteryModifiers[statKey] || 0;
       const invested = addedPoints[statKey] || 0;
       
-      const dynamicBase = (caps.min || baseObj[statKey] || 70) + modVal;
+      const dynamicBase = (caps.min || baseObj[statKey] || 70) + physMod + facMod + mastMod;
       const capMax = caps.max || 99;
       
       computed[statKey] = Math.max(dynamicBase, Math.min(capMax, dynamicBase + invested));
     }
     return computed;
-  }, [serverArchetypes, archetype, physicalModifiers, addedPoints]);
+  }, [serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, addedPoints]);
 
   const spentAp = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
     
-    // Sum standard stat AP
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
-      const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0);
+      const physMod = physicalModifiers[statKey] || 0;
+      const facMod = facilityModifiers[statKey] || 0;
+      const mastMod = masteryModifiers[statKey] || 0;
+      
+      const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod;
       total += getCostForPoints(archetype, statKey, base, addedPoints[statKey]);
     }
 
-    // Sum SM / WF AP
     const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
     total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
 
     return total;
-  }, [addedPoints, serverArchetypes, archetype, physicalModifiers, smLevel, wfLevel]);
+  }, [addedPoints, serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, smLevel, wfLevel]);
 
   const availableAp = maxAp - spentAp;
 
@@ -312,7 +413,11 @@ export default function ManualBuilder() {
     
     const caps = getStatCaps(archetype, statKey);
     const capMax = caps.max || 99;
-    const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + (physicalModifiers[statKey] || 0));
+    
+    const physMod = physicalModifiers[statKey] || 0;
+    const facMod = facilityModifiers[statKey] || 0;
+    const mastMod = masteryModifiers[statKey] || 0;
+    const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod);
     
     let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
     let newPointsAdded = safeTarget - baseVal;
@@ -365,6 +470,7 @@ export default function ManualBuilder() {
     const acc = currentStats["Acceleration"] || 70;
     const agi = currentStats["Agility"] || 70;
     const str = currentStats["Strength"] || 70;
+    
     if (height >= 185 && str >= 65 && (str - agi) >= 4 && acc >= 40) accelerate = 'Lengthy';
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
@@ -593,7 +699,11 @@ export default function ManualBuilder() {
                       
                       const caps = getStatCaps(archetype, stat);
                       const capMax = caps.max || 99;
-                      const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + (physicalModifiers[stat] || 0));
+                      
+                      const physMod = physicalModifiers[stat] || 0;
+                      const facMod = facilityModifiers[stat] || 0;
+                      const mastMod = masteryModifiers[stat] || 0;
+                      const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
                       
                       const invested = addedPoints[stat] || 0;
                       const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
