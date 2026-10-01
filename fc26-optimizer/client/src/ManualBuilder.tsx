@@ -247,6 +247,7 @@ export default function ManualBuilder() {
 
   // Cross-build Mastery Unlocks: { [archName]: { l10: boolean, l30: boolean } }
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
+  const [isMasteriesOpen, setIsMasteriesOpen] = useState<boolean>(false);
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
@@ -304,10 +305,19 @@ export default function ManualBuilder() {
   const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30') => {
     setUnlockedMasteries(prev => {
       const current = prev[archName] || { l10: false, l30: false };
-      return {
-        ...prev,
-        [archName]: { ...current, [tier]: !current[tier] }
-      };
+      if (tier === 'l30') {
+        const nextL30 = !current.l30;
+        return {
+          ...prev,
+          [archName]: { l10: nextL30 ? true : current.l10, l30: nextL30 }
+        };
+      } else {
+        const nextL10 = !current.l10;
+        return {
+          ...prev,
+          [archName]: { l10: nextL10, l30: nextL10 ? current.l30 : false }
+        };
+      }
     });
   };
 
@@ -355,7 +365,6 @@ export default function ManualBuilder() {
   const masteryModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
     
-    // Aggregate stackable bonuses from all checked archetypes across account
     Object.entries(unlockedMasteries).forEach(([arch, status]) => {
       const archMastery = MASTERIES[arch];
       if (!archMastery) return;
@@ -520,6 +529,15 @@ export default function ManualBuilder() {
     if (activeBounds.type === 'MID_ATT' && height > 182) return "Max MID/ATT height is 182cm";
     return null;
   }, [height, activeBounds]);
+
+  const activeMasteriesCount = useMemo(() => {
+    return Object.values(unlockedMasteries).reduce((count, status) => {
+      let active = 0;
+      if (status.l10) active++;
+      if (status.l30) active++;
+      return count + active;
+    }, 0);
+  }, [unlockedMasteries]);
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -803,59 +821,79 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- ACCOUNT MASTERIES (CROSS-BUILD) SECTION --- */}
+        {/* --- ACCOUNT MASTERIES (COLLAPSIBLE DROPDOWN) --- */}
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.70 0.15 200)" }} />
-              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.70 0.15 200)", fontFamily: "'Rajdhani', sans-serif" }}>
-                Unlocked Masteries (Cross-Build)
+          <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+            <button 
+              onClick={() => setIsMasteriesOpen(!isMasteriesOpen)}
+              className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.70 0.15 200)" }} />
+                <div>
+                  <span className="text-xs font-bold tracking-widest uppercase text-cyan-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                    Unlocked Masteries (Cross-Build)
+                  </span>
+                  {activeMasteriesCount > 0 && (
+                    <span className="ml-2 text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold">
+                      {activeMasteriesCount} Active Bonus{activeMasteriesCount > 1 ? 'es' : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isMasteriesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                ▼
               </span>
-            </div>
-            <p className="text-[11px] text-gray-400 mb-4 font-sans">
-              Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses.
-            </p>
+            </button>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
-                const status = unlockedMasteries[arch] || { l10: false, l30: false };
-                const masteryDef = MASTERIES[arch];
-                if (!masteryDef) return null;
+            {isMasteriesOpen && (
+              <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
+                <p className="text-[11px] text-gray-400 font-sans">
+                  Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses. Ticking Level 30 automatically unlocks Level 10.
+                </p>
 
-                const l10Text = Object.entries(masteryDef.l10).map(([s, v]) => `+${v} ${s}`).join(', ');
-                const l30Text = Object.entries(masteryDef.l30).map(([s, v]) => `+${v} ${s}`).join(', ');
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
+                    const status = unlockedMasteries[arch] || { l10: false, l30: false };
+                    const masteryDef = MASTERIES[arch];
+                    if (!masteryDef) return null;
 
-                return (
-                  <div key={arch} className="bg-black/40 border border-white/5 p-3 rounded-lg flex flex-col justify-between gap-2">
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">{arch}</span>
-                    <div className="flex gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer text-xs">
-                        <input 
-                          type="checkbox" 
-                          checked={status.l10} 
-                          onChange={() => toggleMasteryUnlock(arch, 'l10')}
-                          className="accent-cyan-500 rounded w-4 h-4"
-                        />
-                        <span className={status.l10 ? 'text-cyan-400 font-bold' : 'text-gray-500'}>
-                          Lvl 10 ({l10Text})
-                        </span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer text-xs">
-                        <input 
-                          type="checkbox" 
-                          checked={status.l30} 
-                          onChange={() => toggleMasteryUnlock(arch, 'l30')}
-                          className="accent-purple-500 rounded w-4 h-4"
-                        />
-                        <span className={status.l30 ? 'text-purple-400 font-bold' : 'text-gray-500'}>
-                          Lvl 30 ({l30Text})
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    const l10Text = Object.entries(masteryDef.l10).map(([s, v]) => `+${v} ${s}`).join(', ');
+                    const l30Text = Object.entries(masteryDef.l30).map(([s, v]) => `+${v} ${s}`).join(', ');
+
+                    return (
+                      <div key={arch} className="bg-black/50 border border-white/5 p-3 rounded-lg flex flex-col justify-between gap-2">
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">{arch}</span>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs">
+                            <input 
+                              type="checkbox" 
+                              checked={status.l10} 
+                              onChange={() => toggleMasteryUnlock(arch, 'l10')}
+                              className="accent-cyan-500 rounded w-4 h-4"
+                            />
+                            <span className={status.l10 ? 'text-cyan-400 font-bold' : 'text-gray-500'}>
+                              Lvl 10 ({l10Text})
+                            </span>
+                          </label>
+                          <label className="flex items-center gap-2 cursor-pointer text-xs">
+                            <input 
+                              type="checkbox" 
+                              checked={status.l30} 
+                              onChange={() => toggleMasteryUnlock(arch, 'l30')}
+                              className="accent-purple-500 rounded w-4 h-4"
+                            />
+                            <span className={status.l30 ? 'text-purple-400 font-bold' : 'text-gray-500'}>
+                              Lvl 30 ({l30Text})
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
