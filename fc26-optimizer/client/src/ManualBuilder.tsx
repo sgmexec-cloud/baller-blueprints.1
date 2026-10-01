@@ -248,6 +248,17 @@ export default function ManualBuilder() {
   // Cross-build Mastery Unlocks: { [archName]: { l10: boolean, l30: boolean } }
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
   const [isMasteriesOpen, setIsMasteriesOpen] = useState<boolean>(false);
+  const [isFacilitiesOpen, setIsFacilitiesOpen] = useState<boolean>(false);
+
+  // Accordion states for attribute categories (all closed by default or open as desired)
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
+    "Pace": false,
+    "Shooting": false,
+    "Passing": false,
+    "Dribbling": false,
+    "Defending": false,
+    "Physical": false
+  });
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
@@ -319,6 +330,10 @@ export default function ManualBuilder() {
         };
       }
     });
+  };
+
+  const toggleCategory = (category: string) => {
+    setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
   };
 
   const physicalModifiers = useMemo(() => {
@@ -539,6 +554,8 @@ export default function ManualBuilder() {
     }, 0);
   }, [unlockedMasteries]);
 
+  const activeFacilitiesCount = Object.keys(equippedFacilities).length;
+
   if (isArchLoading || isProgLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-black">
@@ -730,94 +747,111 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- CLUB FACILITIES SECTION --- */}
+        {/* --- CLUB FACILITIES SECTION (COLLAPSIBLE DROPDOWN) --- */}
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.65 0.25 25)" }} />
-              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.65 0.25 25)", fontFamily: "'Rajdhani', sans-serif" }}>
-                Club Facilities
+          <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+            <button 
+              onClick={() => setIsFacilitiesOpen(!isFacilitiesOpen)}
+              className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.65 0.25 25)" }} />
+                <div>
+                  <span className="text-xs font-bold tracking-widest uppercase text-orange-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                    Club Facilities
+                  </span>
+                  {activeFacilitiesCount > 0 && (
+                    <span className="ml-2 text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold">
+                      {activeFacilitiesCount} Equipped
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isFacilitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                ▼
               </span>
-            </div>
+            </button>
 
-            <div className="flex flex-col gap-4">
-              {/* Club Level & Budget Slider */}
-              <div className="bg-black/30 border border-white/5 p-4 rounded-xl">
-                <div className="flex justify-between items-end mb-2">
-                  <div>
-                    <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
-                      Club Level
-                    </label>
-                    <div className="text-white font-bold text-lg">{clubLevel}</div>
-                  </div>
-                  <div className="text-right">
-                    <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
-                      Budget Remaining
-                    </label>
-                    <div className={`text-xl font-black drop-shadow-md ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-red-500' : 'text-orange-400'}`}>
-                      {(CLUB_BUDGETS[clubLevel] - totalFacilityCost).toLocaleString()} 
-                      <span className="text-sm text-gray-500 font-normal ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
+            {isFacilitiesOpen && (
+              <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
+                {/* Club Level & Budget Slider */}
+                <div className="bg-black/40 border border-white/5 p-4 rounded-xl">
+                  <div className="flex justify-between items-end mb-2">
+                    <div>
+                      <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                        Club Level
+                      </label>
+                      <div className="text-white font-bold text-lg">{clubLevel}</div>
+                    </div>
+                    <div className="text-right">
+                      <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                        Budget Remaining
+                      </label>
+                      <div className={`text-xl font-black drop-shadow-md ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-red-500' : 'text-orange-400'}`}>
+                        {(CLUB_BUDGETS[clubLevel] - totalFacilityCost).toLocaleString()} 
+                        <span className="text-sm text-gray-500 font-normal ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
+                  <input 
+                    type="range" min="1" max="10" value={clubLevel} 
+                    onChange={(e) => setClubLevel(Number(e.target.value))}
+                    className="w-full accent-orange-500"
+                  />
                 </div>
-                <input 
-                  type="range" min="1" max="10" value={clubLevel} 
-                  onChange={(e) => setClubLevel(Number(e.target.value))}
-                  className="w-full accent-orange-500"
-                />
-              </div>
 
-              {/* Equipped Facilities List */}
-              {Object.entries(equippedFacilities).length > 0 && (
-                <div className="flex flex-col gap-2">
-                  {Object.entries(equippedFacilities).map(([facName, tier]) => {
-                    const facData = FACILITIES[facName];
-                    const cost = facData.cost[tier - 1];
-                    return (
-                      <div key={facName} className="bg-black/40 border border-white/5 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                        <div>
-                          <div className="text-sm font-bold text-white">{facName}</div>
-                          <div className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">
-                            +{facData.boosts[tier - 1]} {facData.stats.join(' & ')}
+                {/* Equipped Facilities List */}
+                {Object.entries(equippedFacilities).length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {Object.entries(equippedFacilities).map(([facName, tier]) => {
+                      const facData = FACILITIES[facName];
+                      const cost = facData.cost[tier - 1];
+                      return (
+                        <div key={facName} className="bg-black/50 border border-white/5 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                          <div>
+                            <div className="text-sm font-bold text-white">{facName}</div>
+                            <div className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">
+                              +{facData.boosts[tier - 1]} {facData.stats.join(' & ')}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-xs text-gray-400 font-mono">{cost.toLocaleString()}</div>
+                            <select 
+                              value={tier} 
+                              onChange={(e) => handleTierChange(facName, Number(e.target.value))}
+                              className="bg-black border border-white/10 text-white rounded p-1 text-xs focus:outline-none"
+                            >
+                              <option value={1}>Tier 1</option>
+                              <option value={2}>Tier 2</option>
+                              <option value={3}>Tier 3</option>
+                            </select>
+                            <button 
+                              onClick={() => handleRemoveFacility(facName)}
+                              className="w-7 h-7 rounded bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center transition-colors"
+                            >
+                              ✕
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-xs text-gray-400 font-mono">{cost.toLocaleString()}</div>
-                          <select 
-                            value={tier} 
-                            onChange={(e) => handleTierChange(facName, Number(e.target.value))}
-                            className="bg-black border border-white/10 text-white rounded p-1 text-xs focus:outline-none"
-                          >
-                            <option value={1}>Tier 1</option>
-                            <option value={2}>Tier 2</option>
-                            <option value={3}>Tier 3</option>
-                          </select>
-                          <button 
-                            onClick={() => handleRemoveFacility(facName)}
-                            className="w-7 h-7 rounded bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center transition-colors"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                )}
 
-              {/* Add Facility Dropdown */}
-              <select 
-                onChange={handleAddFacility}
-                className="w-full bg-black/60 border border-white/5 text-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
-              >
-                <option value="">+ Equip a Facility...</option>
-                {Object.keys(FACILITIES)
-                  .filter(f => !equippedFacilities[f])
-                  .map(f => (
-                    <option key={f} value={f}>{f} (+{FACILITIES[f].stats.join('/')})</option>
-                ))}
-              </select>
-            </div>
+                {/* Add Facility Dropdown */}
+                <select 
+                  onChange={handleAddFacility}
+                  className="w-full bg-black/60 border border-white/5 text-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
+                >
+                  <option value="">+ Equip a Facility...</option>
+                  {Object.keys(FACILITIES)
+                    .filter(f => !equippedFacilities[f])
+                    .map(f => (
+                      <option key={f} value={f}>{f} (+{FACILITIES[f].stats.join('/')})</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </section>
 
@@ -902,77 +936,88 @@ export default function ManualBuilder() {
             {Object.entries(STAT_GROUPS).map(([category, attributes]) => {
               const catTotal = attributes.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
               const catAvg = Math.round(catTotal / attributes.length);
+              const isOpen = openCategories[category];
 
               return (
-                <div key={category} className="mb-6 rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-xl">
-                  <div className="flex items-center justify-between mb-5 border-b border-white/5 pb-3">
+                <div key={category} className="mb-4 rounded-xl border bg-[#1a1d24] border-white/5 shadow-xl overflow-hidden">
+                  <button 
+                    onClick={() => toggleCategory(category)}
+                    className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+                  >
                     <div className="flex items-center gap-2">
                       <div className="w-1 h-4 rounded-full bg-gray-500" />
                       <h3 className="text-sm font-bold uppercase tracking-widest text-gray-300" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         {category}
                       </h3>
                     </div>
-                    <div className="flex items-center gap-2 border border-white/10 rounded px-2 py-1 bg-black/30">
-                      <span className="text-[10px] text-gray-500 font-bold tracking-widest">AVG</span>
-                      <span className={`text-sm font-bold ${getStatColor(catAvg)}`}>{catAvg}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 border border-white/10 rounded px-2 py-1 bg-black/30">
+                        <span className="text-[10px] text-gray-500 font-bold tracking-widest">AVG</span>
+                        <span className={`text-sm font-bold ${getStatColor(catAvg)}`}>{catAvg}</span>
+                      </div>
+                      <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                        ▼
+                      </span>
                     </div>
-                  </div>
+                  </button>
 
-                  <div className="grid grid-cols-1 gap-5">
-                    {attributes.map(stat => {
-                      const value = currentStats[stat] || 70;
-                      
-                      const caps = getStatCaps(archetype, stat);
-                      const capMax = caps.max || 99;
-                      
-                      const physMod = physicalModifiers[stat] || 0;
-                      const facMod = facilityModifiers[stat] || 0;
-                      const mastMod = masteryModifiers[stat] || 0;
-                      const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
-                      
-                      const invested = addedPoints[stat] || 0;
-                      const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
+                  {isOpen && (
+                    <div className="p-4 border-t border-white/5 bg-black/30 grid grid-cols-1 gap-5 animate-fade-in">
+                      {attributes.map(stat => {
+                        const value = currentStats[stat] || 70;
+                        
+                        const caps = getStatCaps(archetype, stat);
+                        const capMax = caps.max || 99;
+                        
+                        const physMod = physicalModifiers[stat] || 0;
+                        const facMod = facilityModifiers[stat] || 0;
+                        const mastMod = masteryModifiers[stat] || 0;
+                        const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
+                        
+                        const invested = addedPoints[stat] || 0;
+                        const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
 
-                      return (
-                        <div key={stat} className="flex flex-col">
-                          <div className="flex justify-between items-end mb-2">
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
-                              <span className="text-[10px] text-gray-500 font-bold">({baseVal} - {capMax}) • {statApSpent} AP</span>
+                        return (
+                          <div key={stat} className="flex flex-col">
+                            <div className="flex justify-between items-end mb-2">
+                              <div className="flex items-baseline gap-2">
+                                <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
+                                <span className="text-[10px] text-gray-500 font-bold">({baseVal} - {capMax}) • {statApSpent} AP</span>
+                              </div>
+                              <span className={`text-xl font-black ${getStatColor(value)}`}>{value}</span>
                             </div>
-                            <span className={`text-xl font-black ${getStatColor(value)}`}>{value}</span>
-                          </div>
-                          
-                          <div className="flex items-center gap-3">
-                            <button 
-                              onClick={() => handleSliderChange(stat, value - 1)}
-                              disabled={invested <= 0}
-                              className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all pb-1"
-                            >
-                              -
-                            </button>
                             
-                            <input 
-                              type="range" 
-                              min={baseVal} 
-                              max={capMax} 
-                              value={value} 
-                              onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
-                              className={`flex-1 h-1.5 rounded-lg appearance-none bg-black/60 cursor-pointer ${getAccentColor(value)}`}
-                            />
-                            
-                            <button 
-                              onClick={() => handleSliderChange(stat, value + 1)}
-                              disabled={value >= capMax || availableAp < getApCost(archetype, stat, value + 1)}
-                              className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
-                            >
-                              +
-                            </button>
+                            <div className="flex items-center gap-3">
+                              <button 
+                                onClick={() => handleSliderChange(stat, value - 1)}
+                                disabled={invested <= 0}
+                                className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all pb-1"
+                              >
+                                -
+                              </button>
+                              
+                              <input 
+                                type="range" 
+                                min={baseVal} 
+                                max={capMax} 
+                                value={value} 
+                                onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
+                                className={`flex-1 h-1.5 rounded-lg appearance-none bg-black/60 cursor-pointer ${getAccentColor(value)}`}
+                              />
+                              
+                              <button 
+                                onClick={() => handleSliderChange(stat, value + 1)}
+                                disabled={value >= capMax || availableAp < getApCost(archetype, stat, value + 1)}
+                                className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
+                              >
+                                +
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
