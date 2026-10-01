@@ -277,6 +277,25 @@ export default function ManualBuilder() {
     setWfLevel(starCaps.wf.min);
   };
 
+  const handleAddFacility = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const fac = e.target.value;
+    if (!fac) return;
+    setEquippedFacilities(prev => ({ ...prev, [fac]: 1 }));
+    e.target.value = ""; // reset dropdown
+  };
+
+  const handleTierChange = (fac: string, tier: number) => {
+    setEquippedFacilities(prev => ({ ...prev, [fac]: tier }));
+  };
+
+  const handleRemoveFacility = (fac: string) => {
+    setEquippedFacilities(prev => {
+      const next = { ...prev };
+      delete next[fac];
+      return next;
+    });
+  };
+
   const physicalModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
     const hModRaw = getModifier(height, activeBounds.baseH, 4);
@@ -667,6 +686,135 @@ export default function ManualBuilder() {
                 }`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
                   {accelerate}
                 </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* --- CLUB FACILITIES SECTION --- */}
+        <section className="mb-6 animate-fade-in">
+          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.65 0.25 25)" }} />
+              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.65 0.25 25)", fontFamily: "'Rajdhani', sans-serif" }}>
+                Club Facilities
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              {/* Club Level & Budget Slider */}
+              <div className="bg-black/30 border border-white/5 p-4 rounded-xl">
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                      Club Level
+                    </label>
+                    <div className="text-white font-bold text-lg">{clubLevel}</div>
+                  </div>
+                  <div className="text-right">
+                    <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                      Budget Remaining
+                    </label>
+                    <div className={`text-xl font-black drop-shadow-md ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-red-500' : 'text-orange-400'}`}>
+                      {(CLUB_BUDGETS[clubLevel] - totalFacilityCost).toLocaleString()} 
+                      <span className="text-sm text-gray-500 font-normal ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <input 
+                  type="range" min="1" max="10" value={clubLevel} 
+                  onChange={(e) => setClubLevel(Number(e.target.value))}
+                  className="w-full accent-orange-500"
+                />
+              </div>
+
+              {/* Equipped Facilities List */}
+              {Object.entries(equippedFacilities).length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {Object.entries(equippedFacilities).map(([facName, tier]) => {
+                    const facData = FACILITIES[facName];
+                    const cost = facData.cost[tier - 1];
+                    return (
+                      <div key={facName} className="bg-black/40 border border-white/5 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div>
+                          <div className="text-sm font-bold text-white">{facName}</div>
+                          <div className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">
+                            +{facData.boosts[tier - 1]} {facData.stats.join(' & ')}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-xs text-gray-400 font-mono">{cost.toLocaleString()}</div>
+                          <select 
+                            value={tier} 
+                            onChange={(e) => handleTierChange(facName, Number(e.target.value))}
+                            className="bg-black border border-white/10 text-white rounded p-1 text-xs focus:outline-none"
+                          >
+                            <option value={1}>Tier 1</option>
+                            <option value={2}>Tier 2</option>
+                            <option value={3}>Tier 3</option>
+                          </select>
+                          <button 
+                            onClick={() => handleRemoveFacility(facName)}
+                            className="w-7 h-7 rounded bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Add Facility Dropdown */}
+              <select 
+                onChange={handleAddFacility}
+                className="w-full bg-black/60 border border-white/5 text-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
+              >
+                <option value="">+ Equip a Facility...</option>
+                {Object.keys(FACILITIES)
+                  .filter(f => !equippedFacilities[f])
+                  .map(f => (
+                    <option key={f} value={f}>{f} (+{FACILITIES[f].stats.join('/')})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+
+        {/* --- ARCHETYPE MASTERIES SECTION --- */}
+        <section className="mb-6 animate-fade-in">
+          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.70 0.15 200)" }} />
+              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.70 0.15 200)", fontFamily: "'Rajdhani', sans-serif" }}>
+                Archetype Milestones
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Level 10 Mastery */}
+              <div className={`flex-1 p-4 rounded-xl border transition-all ${level >= 10 ? 'bg-cyan-950/30 border-cyan-500/30' : 'bg-black/30 border-white/5 opacity-50'}`}>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Level 10 Unlock</div>
+                {level >= 10 ? (
+                  <div className="text-cyan-400 font-bold text-sm">
+                    {MASTERIES[archetype]?.l10 ? Object.entries(MASTERIES[archetype].l10).map(([stat, val]) => `+${val} ${stat}`).join(' & ') : 'None'}
+                  </div>
+                ) : (
+                  <div className="text-gray-600 text-xs font-medium italic">Locked (Requires Lvl 10)</div>
+                )}
+              </div>
+
+              {/* Level 30 Mastery */}
+              <div className={`flex-1 p-4 rounded-xl border transition-all ${level >= 30 ? 'bg-purple-950/30 border-purple-500/30' : 'bg-black/30 border-white/5 opacity-50'}`}>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Level 30 Unlock</div>
+                {level >= 30 ? (
+                  <div className="text-purple-400 font-bold text-sm">
+                    {MASTERIES[archetype]?.l30 ? Object.entries(MASTERIES[archetype].l30).map(([stat, val]) => `+${val} ${stat}`).join(' & ') : 'None'}
+                  </div>
+                ) : (
+                  <div className="text-gray-600 text-xs font-medium italic">Locked (Requires Lvl 30)</div>
+                )}
               </div>
             </div>
           </div>
