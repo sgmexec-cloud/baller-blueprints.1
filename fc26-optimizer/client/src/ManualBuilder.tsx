@@ -621,31 +621,33 @@ export default function ManualBuilder() {
 
   if (isArchLoading || isProgLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-        <div className="w-12 h-12 rounded-full border-4 border-t-green-500 border-green-900 animate-spin mb-4"></div>
-        <p className="text-green-500 font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Loading Engine Data...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#080B14]">
+        <div className="w-12 h-12 rounded-full border-4 border-t-[#4D8DFF] border-[#131A2A] animate-spin mb-4"></div>
+        <p className="text-[#4D8DFF] font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Loading Engine Data...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden pt-8 pb-16 px-4">
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-hidden pt-8 pb-16 px-4">
       <div className="max-w-lg mx-auto">
         
         <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-white uppercase tracking-wider drop-shadow-2xl" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+          <h1 className="text-2xl sm:text-3xl font-black text-transparent bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] bg-clip-text uppercase tracking-wider drop-shadow-lg" style={{ fontFamily: "'Orbitron', sans-serif" }}>
             Manual Builder
           </h1>
-          <p className="text-sm mt-2" style={{ color: "oklch(0.55 0.01 240)", fontFamily: "'Inter', sans-serif" }}>
+          <p className="text-sm mt-2 text-[#8E9AAF]" style={{ fontFamily: "'Inter', sans-serif" }}>
             Powered by live engine parameters.
           </p>
         </div>
 
-        <div className="flex bg-[#1a1d24] border border-white/5 p-1 rounded-xl mb-6">
+        <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-lg">
           <button
             onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
-              gameVersion === "FC26" ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]" : "text-gray-500 hover:text-white"
+              gameVersion === "FC26" 
+                ? "bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white shadow-[0_0_15px_rgba(77,141,255,0.4)]" 
+                : "text-[#8E9AAF] hover:text-[#F4F7FB]"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
@@ -654,7 +656,9 @@ export default function ManualBuilder() {
           <button
             onClick={() => { setGameVersion("FC27"); setAddedPoints({}); }}
             className={`flex-1 py-2.5 rounded-lg text-sm font-bold tracking-widest transition-all ${
-              gameVersion === "FC27" ? "bg-green-500 text-black shadow-[0_0_15px_rgba(34,197,94,0.4)]" : "text-gray-500 hover:text-white"
+              gameVersion === "FC27" 
+                ? "bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white shadow-[0_0_15px_rgba(77,141,255,0.4)]" 
+                : "text-[#8E9AAF] hover:text-[#F4F7FB]"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
@@ -663,131 +667,146 @@ export default function ManualBuilder() {
         </div>
 
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl p-4 border bg-[#1a1d24] border-white/5 shadow-2xl">
+          <div className="rounded-xl p-4 border bg-[#131A2A] border-[#26334A] shadow-xl">
             {leagueWarning && (
-              <div className="mb-4 bg-yellow-950/40 border border-yellow-500/50 text-yellow-400 p-3 rounded-xl text-center text-xs font-bold uppercase tracking-widest">
+              <div className="mb-4 bg-[#192235] border border-yellow-500/50 text-yellow-400 p-3 rounded-xl text-center text-xs font-bold uppercase tracking-widest">
                 ⚠️ League Warning: {leagueWarning}
               </div>
             )}
             
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.75 0.22 142)" }} />
-              <span className="text-xs font-bold tracking-widest uppercase" style={{ color: "oklch(0.75 0.22 142)", fontFamily: "'Rajdhani', sans-serif" }}>
+              <div className="w-1 h-5 rounded-full bg-[#4D8DFF]" />
+              <span className="text-xs font-bold tracking-widest uppercase text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                 Player Foundation
               </span>
             </div>
 
             <div className="flex flex-col gap-4">
-              <div className="flex justify-between items-center bg-black/30 border border-white/5 p-4 rounded-xl">
+              <div className="flex justify-between items-center bg-[#0D1220] border border-[#26334A] p-5 rounded-xl shadow-inner">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                  <label className="block text-xs font-bold mb-2 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                     PLAYER LEVEL
                   </label>
                   <input 
                     type="range" min="1" max="40" value={level} 
                     onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-                    className="w-full accent-green-500"
+                    className="w-full accent-[#4D8DFF]"
                   />
-                  <div className="text-white font-bold text-lg mt-1">{level}</div>
+                  <div className="text-[#F4F7FB] font-bold text-xl mt-1">{level}</div>
                 </div>
-                <div className="flex-1 text-right border-l border-white/5 pl-4">
-                  <label className="block text-xs font-medium mb-1" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                <div className="flex-1 text-right border-l border-[#26334A] pl-5">
+                  <label className="block text-xs font-bold mb-2 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                     AVAILABLE AP
                   </label>
-                  <div className="text-3xl font-black text-green-400 drop-shadow-md">{availableAp}</div>
+                  <div className="text-4xl font-black bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-transparent bg-clip-text drop-shadow-lg inline-block">
+                    {availableAp}
+                  </div>
                 </div>
               </div>
 
-              <div className="bg-black/30 border border-white/5 p-4 rounded-xl">
-                <label className="block text-xs font-medium mb-2 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+              <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl">
+                <label className="block text-xs font-bold mb-3 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   Archetype Selection
                 </label>
-                <select 
-                  className="w-full bg-black/60 border border-white/5 text-white rounded-lg p-3 text-sm focus:outline-none focus:border-green-500 transition-colors appearance-none"
-                  value={archetype}
-                  onChange={(e) => handleArchetypeChange(e.target.value)}
-                >
-                  {serverArchetypes && Object.keys(serverArchetypes).map(arch => (
-                    <option key={arch} value={arch}>{arch} ({serverArchetypes[arch].pos})</option>
-                  ))}
-                </select>
+                <div className="flex overflow-x-auto gap-3 pb-2 snap-x">
+                  {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
+                    const isSelected = archetype === arch;
+                    return (
+                      <button
+                        key={arch}
+                        onClick={() => handleArchetypeChange(arch)}
+                        className={`flex-shrink-0 text-left p-3 rounded-lg border transition-all duration-300 snap-center ${
+                          isSelected 
+                            ? 'bg-[#131A2A] border-[#4D8DFF] shadow-[0_0_12px_rgba(139,92,246,0.3)] ring-1 ring-[#8B5CF6]/50' 
+                            : 'bg-[#192235] border-[#26334A] text-[#8E9AAF] hover:bg-[#26334A]'
+                        }`}
+                        style={{ minWidth: '140px' }}
+                      >
+                        <div className={`font-bold text-sm ${isSelected ? 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-transparent bg-clip-text' : 'text-[#8E9AAF]'}`}>
+                          {arch.toUpperCase()}
+                        </div>
+                        <div className="text-[10px] mt-1 text-[#59657A]">{serverArchetypes[arch].pos}</div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex gap-4">
-                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl">
+                <div className="flex-1 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl">
                   <div className="flex justify-between mb-2">
-                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
-                    <span className="text-[10px] text-gray-500">{activeBounds.minH}-{activeBounds.maxH}cm</span>
+                    <label className="text-xs font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
+                    <span className="text-[10px] text-[#59657A]">{activeBounds.minH}-{activeBounds.maxH}cm</span>
                   </div>
                   <input 
                     type="range" min={activeBounds.minH} max={activeBounds.maxH} value={height} 
                     onChange={(e) => setHeight(Number(e.target.value))}
-                    className="w-full accent-green-500"
+                    className="w-full accent-[#4D8DFF]"
                   />
-                  <p className="text-center mt-1 font-bold text-white">{height} cm</p>
+                  <p className="text-center mt-1 font-bold text-[#F4F7FB]">{height} cm</p>
                 </div>
-                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl">
+                <div className="flex-1 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl">
                   <div className="flex justify-between mb-2">
-                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
-                    <span className="text-[10px] text-gray-500">{activeBounds.minW}-{activeBounds.maxW}kg</span>
+                    <label className="text-xs font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
+                    <span className="text-[10px] text-[#59657A]">{activeBounds.minW}-{activeBounds.maxW}kg</span>
                   </div>
                   <input 
                     type="range" min={activeBounds.minW} max={activeBounds.maxW} value={weight} 
                     onChange={(e) => setWeight(Number(e.target.value))}
-                    className="w-full accent-green-500"
+                    className="w-full accent-[#4D8DFF]"
                   />
-                  <p className="text-center mt-1 font-bold text-white">{weight} kg</p>
+                  <p className="text-center mt-1 font-bold text-[#F4F7FB]">{weight} kg</p>
                 </div>
               </div>
 
               {/* Skill Moves & Weak Foot */}
               <div className="flex gap-4">
-                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col justify-between">
+                <div className="flex-1 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
                   <div className="flex justify-between mb-2">
-                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Skill Moves</label>
-                    <span className="text-[10px] text-gray-500 font-bold">{activeStarCaps.sm.min}-{activeStarCaps.sm.max} ★</span>
+                    <label className="text-xs font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Skill Moves</label>
+                    <span className="text-[10px] text-[#59657A] font-bold">{activeStarCaps.sm.min}-{activeStarCaps.sm.max} ★</span>
                   </div>
-                  <div className="flex items-center justify-between bg-black/60 rounded-lg p-1 border border-white/5">
+                  <div className="flex items-center justify-between bg-[#192235] rounded-lg p-1 border border-[#26334A]">
                     <button 
                       onClick={() => handleStarChange('sm', smLevel - 1)}
                       disabled={smLevel <= activeStarCaps.sm.min}
-                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                      className="w-8 h-8 rounded bg-[#131A2A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#26334A] font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all"
                     >
                       -
                     </button>
-                    <span className="text-yellow-400 font-black text-lg px-2">
+                    <span className="text-[#4D8DFF] font-black text-lg px-2">
                       {smLevel} <span className="text-sm opacity-80">★</span>
                     </span>
                     <button 
                       onClick={() => handleStarChange('sm', smLevel + 1)}
                       disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]}
-                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                      className="w-8 h-8 rounded bg-[#131A2A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#26334A] font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all"
                     >
                       +
                     </button>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col justify-between">
+                <div className="flex-1 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
                   <div className="flex justify-between mb-2">
-                    <label className="text-xs font-medium uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>Weak Foot</label>
-                    <span className="text-[10px] text-gray-500 font-bold">{activeStarCaps.wf.min}-{activeStarCaps.wf.max} ★</span>
+                    <label className="text-xs font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weak Foot</label>
+                    <span className="text-[10px] text-[#59657A] font-bold">{activeStarCaps.wf.min}-{activeStarCaps.wf.max} ★</span>
                   </div>
-                  <div className="flex items-center justify-between bg-black/60 rounded-lg p-1 border border-white/5">
+                  <div className="flex items-center justify-between bg-[#192235] rounded-lg p-1 border border-[#26334A]">
                     <button 
                       onClick={() => handleStarChange('wf', wfLevel - 1)}
                       disabled={wfLevel <= activeStarCaps.wf.min}
-                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                      className="w-8 h-8 rounded bg-[#131A2A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#26334A] font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all"
                     >
                       -
                     </button>
-                    <span className="text-yellow-400 font-black text-lg px-2">
+                    <span className="text-[#4D8DFF] font-black text-lg px-2">
                       {wfLevel} <span className="text-sm opacity-80">★</span>
                     </span>
                     <button 
                       onClick={() => handleStarChange('wf', wfLevel + 1)}
                       disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]}
-                      className="w-8 h-8 rounded bg-black/40 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center"
+                      className="w-8 h-8 rounded bg-[#131A2A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#26334A] font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all"
                     >
                       +
                     </button>
@@ -795,13 +814,13 @@ export default function ManualBuilder() {
                 </div>
               </div>
 
-              <div className="bg-[#111827] p-4 rounded-xl border border-white/5 flex justify-between items-center relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 pointer-events-none bg-green-500" />
-                <span className="text-xs font-bold uppercase tracking-widest text-green-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+              <div className="bg-[#192235] p-4 rounded-xl border border-[#26334A] flex justify-between items-center relative overflow-hidden shadow-lg">
+                <div className="absolute top-0 right-0 w-24 h-24 rounded-full blur-3xl opacity-10 pointer-events-none bg-[#8B5CF6]" />
+                <span className="text-xs font-bold uppercase tracking-widest text-[#8B5CF6]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                   AccelerATE Style
                 </span>
                 <span className={`text-lg font-black uppercase tracking-wider z-10 ${
-                  accelerate === 'Lengthy' ? 'text-orange-400' : accelerate === 'Explosive' ? 'text-yellow-400' : 'text-white'
+                  accelerate === 'Lengthy' ? 'text-[#8B5CF6]' : accelerate === 'Explosive' ? 'text-[#4D8DFF]' : 'text-[#F4F7FB]'
                 }`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
                   {accelerate}
                 </span>
@@ -812,54 +831,54 @@ export default function ManualBuilder() {
 
         {/* --- CLUB FACILITIES SECTION --- */}
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+          <div className="rounded-xl border bg-[#131A2A] border-[#26334A] shadow-xl overflow-hidden">
             <button 
               onClick={() => setIsFacilitiesOpen(!isFacilitiesOpen)}
-              className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+              className="w-full p-4 flex items-center justify-between bg-[#192235] hover:bg-[#26334A] transition-colors text-left"
             >
               <div className="flex items-center gap-2">
-                <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.65 0.25 25)" }} />
+                <div className="w-1 h-5 rounded-full bg-[#4D8DFF]" />
                 <div>
-                  <span className="text-xs font-bold tracking-widest uppercase text-orange-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  <span className="text-xs font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                     Club Facilities
                   </span>
                   {activeFacilitiesCount > 0 && (
-                    <span className="ml-2 text-[10px] bg-orange-500/20 text-orange-300 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold">
+                    <span className="ml-2 text-[10px] bg-[#4D8DFF]/20 text-[#4D8DFF] border border-[#4D8DFF]/30 px-2 py-0.5 rounded-full font-bold">
                       {activeFacilitiesCount} Equipped
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isFacilitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              <span className="text-[#8E9AAF] text-sm font-bold transform transition-transform duration-200" style={{ transform: isFacilitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                 ▼
               </span>
             </button>
 
             {isFacilitiesOpen && (
-              <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
+              <div className="p-4 border-t border-[#26334A] bg-[#0D1220] flex flex-col gap-4 animate-fade-in">
                 {/* Club Level & Budget Slider */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-xl">
+                <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl">
                   <div className="flex justify-between items-end mb-2">
                     <div>
-                      <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                      <label className="block text-xs font-bold mb-1 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         Club Level
                       </label>
-                      <div className="text-white font-bold text-lg">{clubLevel}</div>
+                      <div className="text-[#F4F7FB] font-bold text-lg">{clubLevel}</div>
                     </div>
                     <div className="text-right">
-                      <label className="block text-xs font-medium mb-1 uppercase" style={{ color: "oklch(0.75 0.01 240)", fontFamily: "'Rajdhani', sans-serif" }}>
+                      <label className="block text-xs font-bold mb-1 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         Budget Remaining
                       </label>
-                      <div className={`text-xl font-black drop-shadow-md ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-red-500' : 'text-orange-400'}`}>
+                      <div className={`text-xl font-black drop-shadow-md ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-red-400' : 'text-[#4D8DFF]'}`}>
                         {(CLUB_BUDGETS[clubLevel] - totalFacilityCost).toLocaleString()} 
-                        <span className="text-sm text-gray-500 font-normal ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
+                        <span className="text-sm text-[#59657A] font-normal ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
                       </div>
                     </div>
                   </div>
                   <input 
                     type="range" min="1" max="10" value={clubLevel} 
                     onChange={(e) => setClubLevel(Number(e.target.value))}
-                    className="w-full accent-orange-500"
+                    className="w-full accent-[#4D8DFF]"
                   />
                 </div>
 
@@ -870,19 +889,19 @@ export default function ManualBuilder() {
                       const facData = FACILITIES[facName];
                       const cost = facData.cost[tier - 1];
                       return (
-                        <div key={facName} className="bg-black/50 border border-white/5 p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div key={facName} className="bg-[#192235] border border-[#26334A] p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                           <div>
-                            <div className="text-sm font-bold text-white">{facName}</div>
-                            <div className="text-[10px] text-orange-400 font-bold uppercase tracking-widest mt-1">
+                            <div className="text-sm font-bold text-[#F4F7FB]">{facName}</div>
+                            <div className="text-[10px] text-[#21E6A4] font-bold uppercase tracking-widest mt-1">
                               +{facData.boosts[tier - 1]} {facData.stats.join(' & ')}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
-                            <div className="text-xs text-gray-400 font-mono">{cost.toLocaleString()}</div>
+                            <div className="text-xs text-[#8E9AAF] font-mono">{cost.toLocaleString()}</div>
                             <select 
                               value={tier} 
                               onChange={(e) => handleTierChange(facName, Number(e.target.value))}
-                              className="bg-black border border-white/10 text-white rounded p-1 text-xs focus:outline-none"
+                              className="bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] rounded p-1 text-xs focus:outline-none"
                             >
                               <option value={1}>Tier 1</option>
                               <option value={2}>Tier 2</option>
@@ -890,7 +909,7 @@ export default function ManualBuilder() {
                             </select>
                             <button 
                               onClick={() => handleRemoveFacility(facName)}
-                              className="w-7 h-7 rounded bg-red-500/20 text-red-400 hover:bg-red-500/40 flex items-center justify-center transition-colors"
+                              className="w-7 h-7 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
                             >
                               ✕
                             </button>
@@ -904,7 +923,7 @@ export default function ManualBuilder() {
                 {/* Add Facility Dropdown */}
                 <select 
                   onChange={handleAddFacility}
-                  className="w-full bg-black/60 border border-white/5 text-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:border-orange-500 transition-colors appearance-none"
+                  className="w-full bg-[#192235] border border-[#26334A] text-[#F4F7FB] rounded-lg p-3 text-sm focus:outline-none focus:border-[#4D8DFF] transition-colors appearance-none"
                 >
                   <option value="">+ Equip a Facility...</option>
                   {Object.keys(FACILITIES)
@@ -920,32 +939,32 @@ export default function ManualBuilder() {
 
         {/* --- ACCOUNT MASTERIES --- */}
         <section className="mb-6 animate-fade-in">
-          <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+          <div className="rounded-xl border bg-[#131A2A] border-[#26334A] shadow-xl overflow-hidden">
             <button 
               onClick={() => setIsMasteriesOpen(!isMasteriesOpen)}
-              className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+              className="w-full p-4 flex items-center justify-between bg-[#192235] hover:bg-[#26334A] transition-colors text-left"
             >
               <div className="flex items-center gap-2">
-                <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.70 0.15 200)" }} />
+                <div className="w-1 h-5 rounded-full bg-[#8B5CF6]" />
                 <div>
-                  <span className="text-xs font-bold tracking-widest uppercase text-cyan-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  <span className="text-xs font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                     Unlocked Masteries (Cross-Build)
                   </span>
                   {activeMasteriesCount > 0 && (
-                    <span className="ml-2 text-[10px] bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 px-2 py-0.5 rounded-full font-bold">
+                    <span className="ml-2 text-[10px] bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30 px-2 py-0.5 rounded-full font-bold">
                       {activeMasteriesCount} Active Bonus{activeMasteriesCount > 1 ? 'es' : ''}
                     </span>
                   )}
                 </div>
               </div>
-              <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isMasteriesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+              <span className="text-[#8E9AAF] text-sm font-bold transform transition-transform duration-200" style={{ transform: isMasteriesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                 ▼
               </span>
             </button>
 
             {isMasteriesOpen && (
-              <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
-                <p className="text-[11px] text-gray-400 font-sans">
+              <div className="p-4 border-t border-[#26334A] bg-[#0D1220] flex flex-col gap-4 animate-fade-in">
+                <p className="text-[11px] text-[#8E9AAF] font-sans">
                   Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses. Ticking Level 30 automatically unlocks Level 10.
                 </p>
 
@@ -959,17 +978,17 @@ export default function ManualBuilder() {
                     const l30Text = Object.entries(masteryDef.l30).map(([s, v]) => `+${v} ${s}`).join(', ');
 
                     return (
-                      <div key={arch} className="bg-black/50 border border-white/5 p-3 rounded-lg flex flex-col justify-between gap-2">
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">{arch}</span>
+                      <div key={arch} className="bg-[#192235] border border-[#26334A] p-3 rounded-lg flex flex-col justify-between gap-2">
+                        <span className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wider">{arch}</span>
                         <div className="flex gap-4">
                           <label className="flex items-center gap-2 cursor-pointer text-xs">
                             <input 
                               type="checkbox" 
                               checked={status.l10} 
                               onChange={() => toggleMasteryUnlock(arch, 'l10')}
-                              className="accent-cyan-500 rounded w-4 h-4"
+                              className="accent-[#4D8DFF] rounded w-4 h-4"
                             />
-                            <span className={status.l10 ? 'text-cyan-400 font-bold' : 'text-gray-500'}>
+                            <span className={status.l10 ? 'text-[#4D8DFF] font-bold' : 'text-[#59657A]'}>
                               Lvl 10 ({l10Text})
                             </span>
                           </label>
@@ -978,9 +997,9 @@ export default function ManualBuilder() {
                               type="checkbox" 
                               checked={status.l30} 
                               onChange={() => toggleMasteryUnlock(arch, 'l30')}
-                              className="accent-purple-500 rounded w-4 h-4"
+                              className="accent-[#8B5CF6] rounded w-4 h-4"
                             />
-                            <span className={status.l30 ? 'text-purple-400 font-bold' : 'text-gray-500'}>
+                            <span className={status.l30 ? 'text-[#8B5CF6] font-bold' : 'text-[#59657A]'}>
                               Lvl 30 ({l30Text})
                             </span>
                           </label>
@@ -997,41 +1016,41 @@ export default function ManualBuilder() {
         {/* --- PLAYSTYLES SECTION --- */}
         {currentStats && (
           <section className="mb-6 animate-fade-in">
-            <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+            <div className="rounded-xl border bg-[#131A2A] border-[#26334A] shadow-xl overflow-hidden">
               <button 
                 onClick={() => setIsPlaystylesOpen(!isPlaystylesOpen)}
-                className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+                className="w-full p-4 flex items-center justify-between bg-[#192235] hover:bg-[#26334A] transition-colors text-left"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.85 0.15 90)" }} />
+                  <div className="w-1 h-5 rounded-full bg-gradient-to-b from-[#4D8DFF] to-[#8B5CF6]" />
                   <div>
-                    <span className="text-xs font-bold tracking-widest uppercase text-yellow-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                    <span className="text-xs font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                       PlayStyles
                     </span>
                     {activePlaystylesCount > 0 && (
-                      <span className="ml-2 text-[10px] bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold">
+                      <span className="ml-2 text-[10px] bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30 px-2 py-0.5 rounded-full font-bold">
                         {activePlaystylesCount} Silver Equipped
                       </span>
                     )}
                   </div>
                 </div>
-                <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isPlaystylesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <span className="text-[#8E9AAF] text-sm font-bold transform transition-transform duration-200" style={{ transform: isPlaystylesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                   ▼
                 </span>
               </button>
 
               {isPlaystylesOpen && (
-                <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
+                <div className="p-4 border-t border-[#26334A] bg-[#0D1220] flex flex-col gap-4 animate-fade-in">
                   
                   {/* PlayStyle+ (Gold) */}
-                  <div className={`p-4 rounded-xl border ${isPsPlusUnlocked ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/50 border-white/5 opacity-50'}`}>
+                  <div className={`p-4 rounded-xl border ${isPsPlusUnlocked ? 'bg-[#192235] border-[#4D8DFF]' : 'bg-[#131A2A] border-[#26334A] opacity-50'}`}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold uppercase tracking-widest text-yellow-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                      <span className="text-xs font-bold uppercase tracking-widest text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         PlayStyle+ (Archetype Fixed)
                       </span>
-                      {!isPsPlusUnlocked && <span className="text-[10px] text-gray-400 font-bold">Unlocks @ Lvl 20</span>}
+                      {!isPsPlusUnlocked && <span className="text-[10px] text-[#59657A] font-bold">Unlocks @ Lvl 20</span>}
                     </div>
-                    <div className={`text-lg font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                    <div className={`text-lg font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
                       {fixedPsPlus}
                     </div>
                   </div>
@@ -1043,23 +1062,20 @@ export default function ManualBuilder() {
                       
                       return (
                         <div key={`ps-slot-${index}`} className="flex flex-col gap-1">
-                          <label className="text-xs font-medium uppercase text-gray-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                          <label className="text-xs font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                             Silver Slot {index + 1} {isUnlocked ? '' : `(Unlocks @ Lvl ${unlockLevel})`}
                           </label>
                           <select
                             disabled={!isUnlocked}
                             value={equippedPlaystyles[index]}
                             onChange={(e) => handlePlaystyleChange(index, e.target.value)}
-                            className="w-full bg-black/60 border border-white/5 text-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-yellow-500 transition-colors disabled:opacity-50"
+                            className="w-full bg-[#192235] border border-[#26334A] text-[#F4F7FB] rounded-lg p-3 text-sm focus:outline-none focus:border-[#4D8DFF] transition-colors disabled:opacity-50"
                           >
                             <option value="">{isUnlocked ? 'Select PlayStyle...' : 'Locked'}</option>
                             {PLAYSTYLES_DATA.map(ps => {
-                              // Cannot equip archetype fixed PS+ as standard
                               if (ps.name === fixedPsPlus) return null;
-                              // Cannot equip duplicates
                               if (equippedPlaystyles.includes(ps.name) && equippedPlaystyles[index] !== ps.name) return null;
 
-                              // Check attribute requirements
                               let meetsReqs = true;
                               let reqString = '';
                               if (ps.reqs.length > 0) {
@@ -1099,30 +1115,30 @@ export default function ManualBuilder() {
               const isOpen = openCategories[category];
 
               return (
-                <div key={category} className="mb-4 rounded-xl border bg-[#1a1d24] border-white/5 shadow-xl overflow-hidden">
+                <div key={category} className="mb-4 rounded-xl border bg-[#131A2A] border-[#26334A] shadow-xl overflow-hidden">
                   <button 
                     onClick={() => toggleCategory(category)}
-                    className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+                    className="w-full p-4 flex items-center justify-between bg-[#192235] hover:bg-[#26334A] transition-colors text-left"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="w-1 h-4 rounded-full bg-gray-500" />
-                      <h3 className="text-sm font-bold uppercase tracking-widest text-gray-300" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                      <div className="w-1 h-4 rounded-full bg-[#59657A]" />
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
                         {category}
                       </h3>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2 border border-white/10 rounded px-2 py-1 bg-black/30">
-                        <span className="text-[10px] text-gray-500 font-bold tracking-widest">AVG</span>
+                      <div className="flex items-center gap-2 border border-[#26334A] rounded px-2 py-1 bg-[#131A2A]">
+                        <span className="text-[10px] text-[#8E9AAF] font-bold tracking-widest">AVG</span>
                         <span className="text-sm font-bold" style={{ color: getCustomColor(catAvg) }}>{catAvg}</span>
                       </div>
-                      <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                      <span className="text-[#8E9AAF] text-sm font-bold transform transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                         ▼
                       </span>
                     </div>
                   </button>
 
                   {isOpen && (
-                    <div className="p-4 border-t border-white/5 bg-black/30 grid grid-cols-1 gap-5 animate-fade-in">
+                    <div className="p-5 border-t border-[#26334A] bg-[#0D1220] grid grid-cols-1 gap-6 animate-fade-in">
                       {attributes.map(stat => {
                         const value = currentStats[stat] || 70;
                         
@@ -1142,18 +1158,22 @@ export default function ManualBuilder() {
                         return (
                           <div key={stat} className="flex flex-col">
                             <div className="flex justify-between items-end mb-2">
-                              <div className="flex items-baseline gap-2">
-                                <span className="text-sm font-bold text-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>{stat}</span>
-                                <span className="text-[10px] text-gray-500 font-bold">({baseVal} - {capMax}) • {statApSpent} AP</span>
+                              <div>
+                                <div className="text-sm font-bold text-[#F4F7FB] uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
+                                  {stat}
+                                </div>
+                                <div className="text-[10px] text-[#59657A] font-bold mt-0.5 tracking-widest">
+                                  ({baseVal} - {capMax}) • {statApSpent} AP
+                                </div>
                               </div>
-                              <span className="text-xl font-black" style={{ color: customColor }}>{value}</span>
+                              <span className="text-3xl font-black" style={{ color: customColor }}>{value}</span>
                             </div>
                             
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <button 
                                 onClick={() => handleSliderChange(stat, value - 1)}
                                 disabled={invested <= 0}
-                                className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:bg-zinc-800 flex items-center justify-center transition-all pb-1"
+                                className="w-8 h-8 rounded bg-[#192235] border border-[#26334A] text-[#8E9AAF] font-bold disabled:opacity-30 active:bg-[#131A2A] hover:text-[#F4F7FB] hover:bg-[#26334A] flex items-center justify-center transition-all pb-1"
                               >
                                 -
                               </button>
@@ -1164,14 +1184,14 @@ export default function ManualBuilder() {
                                 max="99" 
                                 value={value} 
                                 onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
-                                className="flex-1 cursor-pointer bg-black/60 rounded-lg"
+                                className="flex-1 cursor-pointer bg-[#192235] rounded-lg"
                                 style={{ accentColor: customColor }}
                               />
                               
                               <button 
                                 onClick={() => handleSliderChange(stat, value + 1)}
                                 disabled={value >= capMax || availableAp < getApCost(archetype, stat, value + 1)}
-                                className="w-7 h-7 rounded bg-black/40 border border-white/5 text-gray-400 font-bold disabled:opacity-30 active:scale-95 flex items-center justify-center transition-all pb-1"
+                                className="w-8 h-8 rounded bg-[#192235] border border-[#26334A] text-[#8E9AAF] font-bold disabled:opacity-30 active:scale-95 hover:text-[#F4F7FB] hover:bg-[#26334A] flex items-center justify-center transition-all pb-1"
                               >
                                 +
                               </button>
