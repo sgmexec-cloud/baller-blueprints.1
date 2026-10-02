@@ -237,11 +237,10 @@ const PLAYSTYLES_DATA: { name: string; category: string; reqs: StatReq[] }[] = [
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
   const csvStatName = CSV_STAT_MAP[statName];
-  
   try {
     const cost = UPGRADE_COSTS[normalizedArch]?.[csvStatName]?.[targetLevel];
     return cost !== undefined ? cost : 1; 
-  } catch (error) {
+  } catch {
     return 1; 
   }
 };
@@ -249,8 +248,7 @@ const getApCost = (archName: string, statName: string, targetLevel: number): num
 const getCostForPoints = (archName: string, statName: string, startValue: number, pointsToAdd: number): number => {
   let totalCost = 0;
   for(let i = 1; i <= pointsToAdd; i++) {
-    const targetLvl = startValue + i;
-    totalCost += getApCost(archName, statName, targetLvl);
+    totalCost += getApCost(archName, statName, startValue + i);
   }
   return totalCost;
 };
@@ -259,30 +257,24 @@ const getTotalStarCost = (tier: string, minLevel: number, currentLevel: number):
   let total = 0;
   const costs = STAR_UPGRADE_COSTS[tier];
   if (!costs) return 0;
-  for (let i = minLevel + 1; i <= currentLevel; i++) {
-    total += costs[i];
-  }
+  for (let i = minLevel + 1; i <= currentLevel; i++) total += costs[i];
   return total;
 };
 
 const getModifier = (current: number, base: number, step: number): number => {
   const diff = current - base;
-  const absDiff = Math.abs(diff);
-  if (absDiff === 0) return 0;
-  const magnitude = 1 + Math.floor((absDiff - 1) / step);
+  if (Math.abs(diff) === 0) return 0;
+  const magnitude = 1 + Math.floor((Math.abs(diff) - 1) / step);
   return diff > 0 ? magnitude : -magnitude;
 };
 
 const getStatCaps = (archName: string, statName: string) => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
-  
   // @ts-ignore
   const capData = ARCHETYPE_ATTRIBUTE_CAPS[normalizedArch];
   if (!capData) return { min: 70, max: 99 }; 
-
   const camelStat = STAT_KEY_MAP[statName];
   if (!camelStat || !capData[camelStat]) return { min: 70, max: 99 };
-
   return capData[camelStat];
 };
 
@@ -307,14 +299,15 @@ export default function ManualBuilder() {
 
   const [clubLevel, setClubLevel] = useState<number>(10);
   const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
-
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
   
   // PlayStyles State
   const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
-  const [isPlaystylesOpen, setIsPlaystylesOpen] = useState<boolean>(false);
-  const [isMasteriesOpen, setIsMasteriesOpen] = useState<boolean>(false);
-  const [isFacilitiesOpen, setIsFacilitiesOpen] = useState<boolean>(false);
+  
+  // Dashboard Overlays State
+  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | null>(null);
+  const [selectedFacView, setSelectedFacView] = useState<string>('');
+  const [viewingFacTier, setViewingFacTier] = useState<number>(1);
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     "Pace": false,
@@ -344,7 +337,7 @@ export default function ManualBuilder() {
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
       setSmLevel(starCaps.sm.min);
       setWfLevel(starCaps.wf.min);
-      setEquippedPlaystyles(['', '', '']); // Reset on change
+      setEquippedPlaystyles(['', '', '']);
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -354,28 +347,36 @@ export default function ManualBuilder() {
     setHeight(bounds.baseH);
     setWeight(bounds.baseW);
     setAddedPoints({});
-
     const starCaps = ARCHETYPE_STAR_CAPS[newArch] || ARCHETYPE_STAR_CAPS['Finisher'];
     setSmLevel(starCaps.sm.min);
     setWfLevel(starCaps.wf.min);
-    setEquippedPlaystyles(['', '', '']); // Reset playstyles when changing archetypes
+    setEquippedPlaystyles(['', '', '']);
   };
 
-  const handleAddFacility = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const fac = e.target.value;
-    if (!fac) return;
-    setEquippedFacilities(prev => ({ ...prev, [fac]: 1 }));
-    e.target.value = ""; 
+  // ------------------------------------------
+  // MODAL LOGIC & ACTIONS
+  // ------------------------------------------
+  
+  const openFacilitiesModal = () => {
+    const firstFac = Object.keys(FACILITIES)[0];
+    setSelectedFacView(firstFac);
+    setViewingFacTier(equippedFacilities[firstFac] || 1);
+    setActiveModal('facilities');
   };
 
-  const handleTierChange = (fac: string, tier: number) => {
-    setEquippedFacilities(prev => ({ ...prev, [fac]: tier }));
+  const handleSelectFacilityView = (facName: string) => {
+    setSelectedFacView(facName);
+    setViewingFacTier(equippedFacilities[facName] || 1);
   };
 
-  const handleRemoveFacility = (fac: string) => {
+  const handleEquipFacilityTier = (facName: string, tier: number) => {
+    setEquippedFacilities(prev => ({ ...prev, [facName]: tier }));
+  };
+
+  const handleRemoveFacility = (facName: string) => {
     setEquippedFacilities(prev => {
       const next = { ...prev };
-      delete next[fac];
+      delete next[facName];
       return next;
     });
   };
@@ -385,23 +386,15 @@ export default function ManualBuilder() {
       const current = prev[archName] || { l10: false, l30: false };
       if (tier === 'l30') {
         const nextL30 = !current.l30;
-        return {
-          ...prev,
-          [archName]: { l10: nextL30 ? true : current.l10, l30: nextL30 }
-        };
+        return { ...prev, [archName]: { l10: nextL30 ? true : current.l10, l30: nextL30 } };
       } else {
         const nextL10 = !current.l10;
-        return {
-          ...prev,
-          [archName]: { l10: nextL10, l30: nextL10 ? current.l30 : false }
-        };
+        return { ...prev, [archName]: { l10: nextL10, l30: nextL10 ? current.l30 : false } };
       }
     });
   };
 
-  const toggleCategory = (category: string) => {
-    setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
-  };
+  const toggleCategory = (category: string) => setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
 
   const handlePlaystyleChange = (index: number, value: string) => {
     setEquippedPlaystyles(prev => {
@@ -411,13 +404,15 @@ export default function ManualBuilder() {
     });
   };
 
+  // ------------------------------------------
+  // CALCULATORS
+  // ------------------------------------------
+  
   const physicalModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
     const hModRaw = getModifier(height, activeBounds.baseH, 4);
     const wModRaw = getModifier(weight, activeBounds.baseW, 8);
-    const isGK = activeBounds.type === 'GK';
-
-    if (isGK) {
+    if (activeBounds.type === 'GK') {
       mods["Sprint Speed"] = (mods["Sprint Speed"] || 0) + hModRaw - wModRaw;
       mods["Strength"] = (mods["Strength"] || 0) + hModRaw + wModRaw;
       mods["Acceleration"] = (mods["Acceleration"] || 0) - hModRaw - wModRaw;
@@ -438,15 +433,15 @@ export default function ManualBuilder() {
     }, 0);
   }, [equippedFacilities]);
 
+  const remainingBudget = CLUB_BUDGETS[clubLevel] - totalFacilityCost;
+
   const facilityModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
     Object.entries(equippedFacilities).forEach(([name, tier]) => {
       const facility = FACILITIES[name];
       if (facility) {
         const boostAmount = facility.boosts[tier - 1];
-        facility.stats.forEach(stat => {
-          mods[stat] = (mods[stat] || 0) + boostAmount;
-        });
+        facility.stats.forEach(stat => { mods[stat] = (mods[stat] || 0) + boostAmount; });
       }
     });
     return mods;
@@ -454,23 +449,12 @@ export default function ManualBuilder() {
 
   const masteryModifiers = useMemo(() => {
     const mods: Record<string, number> = {};
-    
     Object.entries(unlockedMasteries).forEach(([arch, status]) => {
       const archMastery = MASTERIES[arch];
       if (!archMastery) return;
-
-      if (status.l10 && archMastery.l10) {
-        Object.entries(archMastery.l10).forEach(([stat, val]) => {
-          mods[stat] = (mods[stat] || 0) + val;
-        });
-      }
-      if (status.l30 && archMastery.l30) {
-        Object.entries(archMastery.l30).forEach(([stat, val]) => {
-          mods[stat] = (mods[stat] || 0) + val;
-        });
-      }
+      if (status.l10 && archMastery.l10) { Object.entries(archMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
+      if (status.l30 && archMastery.l30) { Object.entries(archMastery.l30).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
     });
-
     return mods;
   }, [unlockedMasteries]);
 
@@ -478,19 +462,14 @@ export default function ManualBuilder() {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
     const baseObj = serverArchetypes[archetype].base;
-    
     for (const statKey in baseObj) {
       const caps = getStatCaps(archetype, statKey);
-      
       const physMod = physicalModifiers[statKey] || 0;
       const facMod = facilityModifiers[statKey] || 0;
       const mastMod = masteryModifiers[statKey] || 0;
       const invested = addedPoints[statKey] || 0;
-      
       const dynamicBase = (caps.min || baseObj[statKey] || 70) + physMod + facMod + mastMod;
-      const capMax = caps.max || 99;
-      
-      computed[statKey] = Math.max(dynamicBase, Math.min(capMax, dynamicBase + invested));
+      computed[statKey] = Math.max(dynamicBase, Math.min(caps.max || 99, dynamicBase + invested));
     }
     return computed;
   }, [serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, addedPoints]);
@@ -498,21 +477,17 @@ export default function ManualBuilder() {
   const spentAp = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
-    
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
       const physMod = physicalModifiers[statKey] || 0;
       const facMod = facilityModifiers[statKey] || 0;
       const mastMod = masteryModifiers[statKey] || 0;
-      
       const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod;
       total += getCostForPoints(archetype, statKey, base, addedPoints[statKey]);
     }
-
     const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
     total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
-
     return total;
   }, [addedPoints, serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, smLevel, wfLevel]);
 
@@ -521,7 +496,6 @@ export default function ManualBuilder() {
   const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
     const caps = activeStarCaps[type];
     let safeTarget = Math.max(caps.min, Math.min(caps.max, targetValue));
-    
     const currentLevel = type === 'sm' ? smLevel : wfLevel;
     const currentCost = getTotalStarCost(caps.tier, caps.min, currentLevel);
     const targetCost = getTotalStarCost(caps.tier, caps.min, safeTarget);
@@ -530,35 +504,26 @@ export default function ManualBuilder() {
        let affordableLevel = currentLevel;
        let costAccumulator = currentCost;
        const costs = STAR_UPGRADE_COSTS[caps.tier];
-       
        for (let i = currentLevel + 1; i <= safeTarget; i++) {
          let stepCost = costs[i];
-         if (costAccumulator + stepCost <= currentCost + availableAp) {
-           affordableLevel++;
-           costAccumulator += stepCost;
-         } else {
-           break;
-         }
+         if (costAccumulator + stepCost <= currentCost + availableAp) { affordableLevel++; costAccumulator += stepCost; } 
+         else break;
        }
        safeTarget = affordableLevel;
     }
-    
     if (type === 'sm') setSmLevel(safeTarget);
     else setWfLevel(safeTarget);
   };
 
   const handleSliderChange = (statKey: string, targetValue: number) => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return;
-    
     const caps = getStatCaps(archetype, statKey);
-    const capMax = caps.max || 99;
-    
     const physMod = physicalModifiers[statKey] || 0;
     const facMod = facilityModifiers[statKey] || 0;
     const mastMod = masteryModifiers[statKey] || 0;
     const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod);
     
-    let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
+    let safeTarget = Math.max(baseVal, Math.min(caps.max || 99, targetValue));
     let newPointsAdded = safeTarget - baseVal;
     
     const currentInvestedPts = addedPoints[statKey] || 0;
@@ -570,20 +535,15 @@ export default function ManualBuilder() {
       let costAccumulator = currentCost;
       for (let i = currentInvestedPts; i < newPointsAdded; i++) {
         let stepCost = getApCost(archetype, statKey, baseVal + affordablePoints + 1);
-        if (costAccumulator + stepCost <= currentCost + availableAp) {
-          affordablePoints++;
-          costAccumulator += stepCost;
-        } else {
-          break;
-        }
+        if (costAccumulator + stepCost <= currentCost + availableAp) { affordablePoints++; costAccumulator += stepCost; } 
+        else break;
       }
       newPointsAdded = affordablePoints;
     }
 
     setAddedPoints(prev => {
       const next = { ...prev };
-      if (newPointsAdded <= 0) delete next[statKey];
-      else next[statKey] = newPointsAdded;
+      if (newPointsAdded <= 0) delete next[statKey]; else next[statKey] = newPointsAdded;
       return next;
     });
   };
@@ -593,7 +553,6 @@ export default function ManualBuilder() {
     const acc = currentStats["Acceleration"] || 70;
     const agi = currentStats["Agility"] || 70;
     const str = currentStats["Strength"] || 70;
-    
     if (height >= 185 && str >= 65 && (str - agi) >= 4 && acc >= 40) accelerate = 'Lengthy';
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
@@ -604,17 +563,8 @@ export default function ManualBuilder() {
     return null;
   }, [height, activeBounds]);
 
-  const activeMasteriesCount = useMemo(() => {
-    return Object.values(unlockedMasteries).reduce((count, status) => {
-      let active = 0;
-      if (status.l10) active++;
-      if (status.l30) active++;
-      return count + active;
-    }, 0);
-  }, [unlockedMasteries]);
-
+  const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
-  
   const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
   const isPsPlusUnlocked = level >= 20;
   const fixedPsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
@@ -637,7 +587,7 @@ export default function ManualBuilder() {
           <h1 className="text-2xl sm:text-3xl font-black text-[#F4F7FB] uppercase tracking-widest drop-shadow-lg" style={{ fontFamily: "'Orbitron', sans-serif" }}>
             Manual Builder
           </h1>
-          <p className="text-xs mt-2 font-medium tracking-wide" style={{ color: "#8E9AAF", fontFamily: "'Inter', sans-serif" }}>
+          <p className="text-xs mt-2 font-medium tracking-wide text-[#8E9AAF]" style={{ fontFamily: "'Inter', sans-serif" }}>
             Powered by live engine parameters.
           </p>
         </div>
@@ -647,9 +597,7 @@ export default function ManualBuilder() {
           <button
             onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
             className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
-              gameVersion === "FC26" 
-                ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" 
-                : "text-[#59657A] hover:text-[#8E9AAF]"
+              gameVersion === "FC26" ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" : "text-[#59657A] hover:text-[#8E9AAF]"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
@@ -658,9 +606,7 @@ export default function ManualBuilder() {
           <button
             onClick={() => { setGameVersion("FC27"); setAddedPoints({}); }}
             className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
-              gameVersion === "FC27" 
-                ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" 
-                : "text-[#59657A] hover:text-[#8E9AAF]"
+              gameVersion === "FC27" ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" : "text-[#59657A] hover:text-[#8E9AAF]"
             }`}
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >
@@ -668,7 +614,7 @@ export default function ManualBuilder() {
           </button>
         </div>
 
-        <section className="mb-8 animate-fade-in space-y-4">
+        <section className="mb-6 animate-fade-in space-y-4">
           {leagueWarning && (
             <div className="bg-[#080B14] border border-yellow-500/30 text-yellow-400/90 py-2 px-3 rounded-lg text-center text-[10px] font-bold uppercase tracking-widest">
               ⚠️ League Warning: {leagueWarning}
@@ -733,72 +679,43 @@ export default function ManualBuilder() {
             </div>
           </div>
 
-          {/* Physicals & Stars Grid */}
+          {/* Physicals Grid */}
           <div className="grid grid-cols-2 gap-3">
-            {/* Height */}
             <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
               <div className="flex justify-between items-end mb-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
                 <span className="text-sm font-bold text-[#F4F7FB]">{height} cm</span>
               </div>
-              <input 
-                type="range" min={activeBounds.minH} max={activeBounds.maxH} value={height} 
-                onChange={(e) => setHeight(Number(e.target.value))}
-                className="w-full accent-[#4D8DFF] cursor-pointer"
-              />
+              <input type="range" min={activeBounds.minH} max={activeBounds.maxH} value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
             </div>
             
-            {/* Weight */}
             <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
               <div className="flex justify-between items-end mb-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
                 <span className="text-sm font-bold text-[#F4F7FB]">{weight} kg</span>
               </div>
-              <input 
-                type="range" min={activeBounds.minW} max={activeBounds.maxW} value={weight} 
-                onChange={(e) => setWeight(Number(e.target.value))}
-                className="w-full accent-[#4D8DFF] cursor-pointer"
-              />
+              <input type="range" min={activeBounds.minW} max={activeBounds.maxW} value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
             </div>
 
-            {/* Skill Moves */}
             <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Skills</label>
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => handleStarChange('sm', smLevel - 1)}
-                  disabled={smLevel <= activeStarCaps.sm.min}
-                  className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5"
-                >-</button>
+                <button onClick={() => handleStarChange('sm', smLevel - 1)} disabled={smLevel <= activeStarCaps.sm.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
                 <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{smLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                <button 
-                  onClick={() => handleStarChange('sm', smLevel + 1)}
-                  disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]}
-                  className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5"
-                >+</button>
+                <button onClick={() => handleStarChange('sm', smLevel + 1)} disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
               </div>
             </div>
 
-            {/* Weak Foot */}
             <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W.Foot</label>
               <div className="flex items-center gap-3">
-                <button 
-                  onClick={() => handleStarChange('wf', wfLevel - 1)}
-                  disabled={wfLevel <= activeStarCaps.wf.min}
-                  className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5"
-                >-</button>
+                <button onClick={() => handleStarChange('wf', wfLevel - 1)} disabled={wfLevel <= activeStarCaps.wf.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
                 <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{wfLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                <button 
-                  onClick={() => handleStarChange('wf', wfLevel + 1)}
-                  disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]}
-                  className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5"
-                >+</button>
+                <button onClick={() => handleStarChange('wf', wfLevel + 1)} disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
               </div>
             </div>
           </div>
 
-          {/* AccelerATE */}
           <div className="bg-[#131A2A] p-4 rounded-xl border border-[#26334A] flex justify-between items-center shadow-sm">
             <span className="text-[11px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
               AccelerATE Style
@@ -811,200 +728,65 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- EXPANDABLE PANELS --- */}
-        <div className="space-y-3 mb-8">
-          
-          {/* Club Facilities */}
-          <div className="rounded-xl border border-[#26334A] bg-[#131A2A] overflow-hidden">
-            <button 
-              onClick={() => setIsFacilitiesOpen(!isFacilitiesOpen)}
-              className="w-full py-3 px-4 flex items-center justify-between hover:bg-[#192235] transition-colors text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#4D8DFF]" />
-                <span className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                  Club Facilities
-                </span>
-                {activeFacilitiesCount > 0 && (
-                  <span className="text-[9px] bg-[#4D8DFF]/10 text-[#4D8DFF] border border-[#4D8DFF]/20 px-2 py-0.5 rounded-full font-bold">
-                    {activeFacilitiesCount} Equipped
-                  </span>
-                )}
-              </div>
-              <span className="text-[#8E9AAF] text-[10px] transform transition-transform duration-200" style={{ transform: isFacilitiesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+        {/* --- APP DASHBOARD CARDS --- */}
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-3 pl-1">
+            <div className="w-1 h-3 rounded-full bg-[#8B5CF6]" />
+            <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+              Player Enhancements
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            
+            {/* Masteries */}
+            <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
+               <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                   <div className="w-3 h-3 rounded-[2px] bg-[#8B5CF6]" />
+               </div>
+               <div className="text-center">
+                   <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Masteries</div>
+                   <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activeMasteriesCount} Active</div>
+               </div>
+            </button>
+            
+            {/* Facilities */}
+            <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
+               <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                   <div className="w-3 h-3 rounded-full bg-[#4D8DFF]" />
+               </div>
+               <div className="text-center">
+                   <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Facilities</div>
+                   <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activeFacilitiesCount} Equipped</div>
+               </div>
+            </button>
+            
+            {/* PlayStyles */}
+            <button onClick={() => setActiveModal('playstyles')} className="col-span-2 bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
+               <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                       <div className="w-3 h-3 rounded-sm bg-white" />
+                   </div>
+                   <div className="text-left">
+                       <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyles</div>
+                       <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
+                   </div>
+               </div>
+               <div className="text-[#8E9AAF] text-xs font-black">➔</div>
             </button>
 
-            {isFacilitiesOpen && (
-              <div className="p-4 border-t border-[#26334A] bg-[#080B14] flex flex-col gap-4">
-                <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl">
-                  <div className="flex justify-between items-end mb-2">
-                    <div>
-                      <label className="block text-[10px] font-bold mb-1 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Club Level</label>
-                      <div className="text-[#F4F7FB] font-bold text-sm">{clubLevel}</div>
-                    </div>
-                    <div className="text-right">
-                      <label className="block text-[10px] font-bold mb-1 uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Budget</label>
-                      <div className={`text-base font-black ${CLUB_BUDGETS[clubLevel] - totalFacilityCost < 0 ? 'text-[#ff4d4d]' : 'text-[#4D8DFF]'}`}>
-                        {(CLUB_BUDGETS[clubLevel] - totalFacilityCost).toLocaleString()} 
-                        <span className="text-[10px] text-[#59657A] font-medium ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <input type="range" min="1" max="10" value={clubLevel} onChange={(e) => setClubLevel(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
-                </div>
-
-                {Object.entries(equippedFacilities).length > 0 && (
-                  <div className="flex flex-col gap-2">
-                    {Object.entries(equippedFacilities).map(([facName, tier]) => {
-                      const facData = FACILITIES[facName];
-                      return (
-                        <div key={facName} className="bg-[#0D1220] border border-[#26334A] p-3 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                          <div>
-                            <div className="text-xs font-bold text-[#F4F7FB]">{facName}</div>
-                            <div className="text-[9px] text-[#21E6A4] font-bold uppercase tracking-widest mt-0.5">+{facData.boosts[tier - 1]} {facData.stats.join(' & ')}</div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <select value={tier} onChange={(e) => handleTierChange(facName, Number(e.target.value))} className="bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] rounded p-1 text-[10px] focus:outline-none focus:border-[#4D8DFF] cursor-pointer">
-                              <option value={1}>Tier 1</option>
-                              <option value={2}>Tier 2</option>
-                              <option value={3}>Tier 3</option>
-                            </select>
-                            <button onClick={() => handleRemoveFacility(facName)} className="w-6 h-6 rounded bg-[#ff4d4d]/10 text-[#ff4d4d] hover:bg-[#ff4d4d]/20 flex items-center justify-center transition-colors text-[10px]">✕</button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <select onChange={handleAddFacility} className="w-full bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] rounded-lg p-2.5 text-xs focus:outline-none focus:border-[#4D8DFF] transition-colors cursor-pointer appearance-none">
-                  <option value="">+ Equip Facility...</option>
-                  {Object.keys(FACILITIES).filter(f => !equippedFacilities[f]).map(f => (<option key={f} value={f}>{f}</option>))}
-                </select>
-              </div>
-            )}
           </div>
+        </section>
 
-          {/* Account Masteries */}
-          <div className="rounded-xl border border-[#26334A] bg-[#131A2A] overflow-hidden">
-            <button 
-              onClick={() => setIsMasteriesOpen(!isMasteriesOpen)}
-              className="w-full py-3 px-4 flex items-center justify-between hover:bg-[#192235] transition-colors text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#8B5CF6]" />
-                <span className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                  Unlocked Masteries
-                </span>
-                {activeMasteriesCount > 0 && (
-                  <span className="text-[9px] bg-[#8B5CF6]/10 text-[#8B5CF6] border border-[#8B5CF6]/20 px-2 py-0.5 rounded-full font-bold">
-                    {activeMasteriesCount} Active
-                  </span>
-                )}
-              </div>
-              <span className="text-[#8E9AAF] text-[10px] transform transition-transform duration-200" style={{ transform: isMasteriesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-            </button>
-
-            {isMasteriesOpen && (
-              <div className="p-4 border-t border-[#26334A] bg-[#080B14] grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
-                  const status = unlockedMasteries[arch] || { l10: false, l30: false };
-                  const masteryDef = MASTERIES[arch];
-                  if (!masteryDef) return null;
-                  return (
-                    <div key={arch} className="bg-[#0D1220] border border-[#26334A] p-2.5 rounded-lg flex justify-between items-center gap-2">
-                      <span className="text-[10px] font-bold text-[#F4F7FB] uppercase tracking-wider">{arch}</span>
-                      <div className="flex gap-2">
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={status.l10} onChange={() => toggleMasteryUnlock(arch, 'l10')} className="accent-[#4D8DFF] w-3 h-3 cursor-pointer" />
-                          <span className={`text-[9px] font-bold ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`}>L10</span>
-                        </label>
-                        <label className="flex items-center gap-1 cursor-pointer">
-                          <input type="checkbox" checked={status.l30} onChange={() => toggleMasteryUnlock(arch, 'l30')} className="accent-[#8B5CF6] w-3 h-3 cursor-pointer" />
-                          <span className={`text-[9px] font-bold ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#59657A]'}`}>L30</span>
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* PlayStyles */}
-          {currentStats && (
-            <div className="rounded-xl border border-[#26334A] bg-[#131A2A] overflow-hidden">
-              <button 
-                onClick={() => setIsPlaystylesOpen(!isPlaystylesOpen)}
-                className="w-full py-3 px-4 flex items-center justify-between hover:bg-[#192235] transition-colors text-left"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#F4F7FB]" />
-                  <span className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                    PlayStyles
-                  </span>
-                  {activePlaystylesCount > 0 && (
-                    <span className="text-[9px] bg-[#F4F7FB]/10 text-[#F4F7FB] border border-[#F4F7FB]/20 px-2 py-0.5 rounded-full font-bold">
-                      {activePlaystylesCount} Silver
-                    </span>
-                  )}
-                </div>
-                <span className="text-[#8E9AAF] text-[10px] transform transition-transform duration-200" style={{ transform: isPlaystylesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-              </button>
-
-              {isPlaystylesOpen && (
-                <div className="p-4 border-t border-[#26334A] bg-[#080B14] flex flex-col gap-3">
-                  {/* Gold Slot */}
-                  <div className={`p-3 rounded-xl border ${isPsPlusUnlocked ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_10px_rgba(77,141,255,0.15)]' : 'bg-[#0D1220] border-[#26334A] opacity-60'}`}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Fixed)</span>
-                      {!isPsPlusUnlocked && <span className="text-[9px] text-[#59657A] font-bold">Unlocks @ Lvl 20</span>}
-                    </div>
-                    <div className={`text-sm font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                      {fixedPsPlus}
-                    </div>
-                  </div>
-
-                  {/* Silver Slots */}
-                  <div className="grid grid-cols-1 gap-2">
-                    {[5, 15, 40].map((unlockLevel, index) => {
-                      const isUnlocked = level >= unlockLevel;
-                      return (
-                        <div key={`ps-slot-${index}`} className="flex items-center gap-3 bg-[#0D1220] border border-[#26334A] p-2.5 rounded-lg">
-                          <span className="text-[10px] font-bold uppercase text-[#59657A] w-12 text-center border-r border-[#26334A] pr-3">SLOT {index + 1}</span>
-                          <select
-                            disabled={!isUnlocked}
-                            value={equippedPlaystyles[index]}
-                            onChange={(e) => handlePlaystyleChange(index, e.target.value)}
-                            className="flex-1 bg-transparent text-[#F4F7FB] text-xs focus:outline-none disabled:opacity-50 appearance-none cursor-pointer"
-                          >
-                            <option value="" className="bg-[#131A2A]">{isUnlocked ? 'Select...' : `Locked until Lvl ${unlockLevel}`}</option>
-                            {PLAYSTYLES_DATA.map(ps => {
-                              if (ps.name === fixedPsPlus) return null;
-                              if (equippedPlaystyles.includes(ps.name) && equippedPlaystyles[index] !== ps.name) return null;
-                              let meetsReqs = true;
-                              let reqString = '';
-                              if (ps.reqs.length > 0) {
-                                reqString = ' (Req: ' + ps.reqs.map(r => `${r.min} ${r.stat}`).join(', ') + ')';
-                                for (const req of ps.reqs) {
-                                  if ((currentStats[req.stat] || 70) < req.min) { meetsReqs = false; break; }
-                                }
-                              }
-                              return <option key={ps.name} value={ps.name} disabled={!meetsReqs} className="bg-[#131A2A]">{ps.name} {!meetsReqs ? reqString : ''}</option>;
-                            })}
-                          </select>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* --- ATTRIBUTES SECTION --- */}
+        {/* --- ATTRIBUTES ACCORDION SECTION --- */}
         {currentStats && serverArchetypes && (
           <section className="space-y-3 animate-fade-up">
+            <div className="flex items-center gap-2 mb-3 pl-1">
+              <div className="w-1 h-3 rounded-full bg-[#59657A]" />
+              <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                Attribute Distribution
+              </span>
+            </div>
+            
             {Object.entries(STAT_GROUPS).map(([category, attributes]) => {
               const catTotal = attributes.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
               const catAvg = Math.round(catTotal / attributes.length);
@@ -1022,7 +804,6 @@ export default function ManualBuilder() {
                       </h3>
                     </div>
                     <div className="flex items-center gap-4">
-                      {/* Slimmer AVG Pill */}
                       <div className="flex items-center gap-1.5 px-2 py-0.5 border border-[#26334A] rounded bg-[#080B14]">
                         <span className="text-[9px] text-[#59657A] font-bold tracking-widest">AVG</span>
                         <span className="text-xs font-black" style={{ color: getCustomColor(catAvg) }}>{catAvg}</span>
@@ -1087,7 +868,232 @@ export default function ManualBuilder() {
             })}
           </section>
         )}
+
       </div>
+
+      {/* =========================================
+          MODALS / OVERLAYS
+      ========================================= */}
+
+      {/* FACILITIES MODAL */}
+      {activeModal === 'facilities' && (
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Club Facilities</h2>
+              <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
+            </div>
+
+            {/* Budget Bar */}
+            <div className="p-4 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
+              <div className="flex justify-between items-end mb-3">
+                <div>
+                  <div className="text-[9px] uppercase tracking-widest text-[#8E9AAF] mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Club Level</div>
+                  <div className="text-lg font-black text-[#F4F7FB]">{clubLevel}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[9px] uppercase tracking-widest text-[#8E9AAF] mb-0.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Remaining Budget</div>
+                  <div className={`text-xl font-black ${remainingBudget < 0 ? 'text-[#ff4d4d]' : 'text-[#4D8DFF]'}`}>
+                    {remainingBudget.toLocaleString()} <span className="text-[9px] text-[#59657A] ml-1">/ {CLUB_BUDGETS[clubLevel].toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+              <input type="range" min="1" max="10" value={clubLevel} onChange={(e) => setClubLevel(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
+            </div>
+
+            {/* Split View */}
+            <div className="flex-1 flex overflow-hidden">
+              
+              {/* Left Column: List */}
+              <div className="w-[45%] overflow-y-auto border-r border-[#26334A] hide-scrollbar bg-[#0D1220]">
+                {Object.keys(FACILITIES).map(facName => {
+                  const isSelected = selectedFacView === facName;
+                  const equippedTier = equippedFacilities[facName];
+                  return (
+                    <button 
+                      key={facName} 
+                      onClick={() => handleSelectFacilityView(facName)} 
+                      className={`w-full p-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}
+                    >
+                      <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
+                      {equippedTier && <div className="text-[9px] text-[#21E6A4] uppercase mt-1 tracking-wider font-bold">★ Tier {equippedTier}</div>}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Column: Detail */}
+              <div className="w-[55%] p-4 flex flex-col items-center bg-[#080B14] overflow-y-auto">
+                {selectedFacView && FACILITIES[selectedFacView] ? (
+                  <>
+                    <div className="w-full text-center mb-6 pt-2">
+                      <div className="w-12 h-12 mx-auto rounded-full bg-[#131A2A] border border-[#26334A] flex items-center justify-center mb-3">
+                         <div className="w-4 h-4 rounded-full bg-[#4D8DFF]" />
+                      </div>
+                      <h3 className="text-sm font-black text-[#F4F7FB] mb-3 leading-tight">{selectedFacView}</h3>
+                      
+                      {/* Tier Selector */}
+                      <div className="flex items-center gap-4 justify-center">
+                        <button onClick={() => setViewingFacTier(Math.max(1, viewingFacTier - 1))} className="text-[#8E9AAF] p-2 hover:text-[#F4F7FB] active:scale-95 transition-all">◄</button>
+                        <div className="flex gap-2">
+                          {[1, 2, 3].map(t => (
+                            <div key={t} className={`w-2 h-2 rounded-full transition-colors ${viewingFacTier === t ? 'bg-[#4D8DFF]' : 'bg-[#26334A]'}`} />
+                          ))}
+                        </div>
+                        <button onClick={() => setViewingFacTier(Math.min(3, viewingFacTier + 1))} className="text-[#8E9AAF] p-2 hover:text-[#F4F7FB] active:scale-95 transition-all">►</button>
+                      </div>
+                      <div className="text-[10px] text-[#4D8DFF] font-bold mt-2 uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Tier {viewingFacTier}</div>
+                    </div>
+
+                    <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl w-full text-center mb-6 shadow-sm">
+                      <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
+                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">
+                        +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}
+                      </div>
+                    </div>
+
+                    <div className="w-full mt-auto mb-2">
+                      <div className="text-center mb-3">
+                        <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Purchase Cost</div>
+                        <div className="text-2xl font-black text-[#F4F7FB]">{FACILITIES[selectedFacView].cost[viewingFacTier - 1].toLocaleString()}</div>
+                      </div>
+                      
+                      {/* Interaction Logic */}
+                      {(() => {
+                         const currentEquippedTier = equippedFacilities[selectedFacView];
+                         if (currentEquippedTier === viewingFacTier) {
+                           return (
+                             <button onClick={() => handleRemoveFacility(selectedFacView)} className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 font-bold uppercase tracking-widest text-[10px] border border-red-500/30 hover:bg-red-500/20 transition-all">
+                               Unequip
+                             </button>
+                           );
+                         } else {
+                           const costToRefund = currentEquippedTier ? FACILITIES[selectedFacView].cost[currentEquippedTier - 1] : 0;
+                           const targetCost = FACILITIES[selectedFacView].cost[viewingFacTier - 1];
+                           const canAfford = remainingBudget + costToRefund >= targetCost;
+                           
+                           return (
+                             <button 
+                               onClick={() => handleEquipFacilityTier(selectedFacView, viewingFacTier)} 
+                               disabled={!canAfford}
+                               className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all ${
+                                 canAfford 
+                                   ? 'bg-[#4D8DFF] text-[#080B14] hover:bg-[#4D8DFF]/90 shadow-[0_0_15px_rgba(77,141,255,0.3)]' 
+                                   : 'bg-[#192235] text-[#59657A] cursor-not-allowed border border-[#26334A]'
+                               }`}
+                             >
+                               {canAfford ? (currentEquippedTier ? 'Upgrade' : 'Equip') : 'Insufficient Budget'}
+                             </button>
+                           );
+                         }
+                      })()}
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MASTERIES MODAL */}
+      {activeModal === 'masteries' && (
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Cross-Build Masteries</h2>
+              <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
+            </div>
+            <div className="p-4 bg-[#131A2A] border-b border-[#26334A] text-[10px] text-[#8E9AAF] leading-relaxed">
+              Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses. Level 30 automatically unlocks Level 10.
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 hide-scrollbar">
+              {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
+                const status = unlockedMasteries[arch] || { l10: false, l30: false };
+                const masteryDef = MASTERIES[arch];
+                if (!masteryDef) return null;
+                return (
+                  <div key={arch} className="bg-[#0D1220] border border-[#26334A] p-3 rounded-xl flex justify-between items-center gap-2">
+                    <span className="text-[11px] font-bold text-[#F4F7FB] uppercase tracking-wider">{arch}</span>
+                    <div className="flex gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={status.l10} onChange={() => toggleMasteryUnlock(arch, 'l10')} className="accent-[#4D8DFF] w-3 h-3 cursor-pointer" />
+                        <span className={`text-[9px] font-bold ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`}>L10</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="checkbox" checked={status.l30} onChange={() => toggleMasteryUnlock(arch, 'l30')} className="accent-[#8B5CF6] w-3 h-3 cursor-pointer" />
+                        <span className={`text-[9px] font-bold ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#59657A]'}`}>L30</span>
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PLAYSTYLES MODAL */}
+      {activeModal === 'playstyles' && (
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>PlayStyles</h2>
+              <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+              
+              <div className={`p-5 rounded-2xl border ${isPsPlusUnlocked ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.15)]' : 'bg-[#0D1220] border-[#26334A] opacity-60'}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Fixed)</span>
+                  {!isPsPlusUnlocked && <span className="text-[9px] text-[#59657A] font-bold uppercase tracking-widest">Unlocks @ Lvl 20</span>}
+                </div>
+                <div className={`text-lg font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                  {fixedPsPlus}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3">
+                {[5, 15, 40].map((unlockLevel, index) => {
+                  const isUnlocked = level >= unlockLevel;
+                  return (
+                    <div key={`ps-slot-${index}`} className="flex flex-col gap-2 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                        Silver Slot {index + 1} {!isUnlocked && <span className="ml-2 text-[#ff4d4d]/80 border border-[#ff4d4d]/30 px-1.5 py-0.5 rounded text-[8px]">Unlocks Lvl {unlockLevel}</span>}
+                      </label>
+                      <select
+                        disabled={!isUnlocked}
+                        value={equippedPlaystyles[index]}
+                        onChange={(e) => handlePlaystyleChange(index, e.target.value)}
+                        className="w-full bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] rounded-lg p-3 text-xs focus:outline-none focus:border-[#F4F7FB] transition-colors disabled:opacity-50 appearance-none cursor-pointer"
+                      >
+                        <option value="">{isUnlocked ? 'Select PlayStyle...' : 'Locked'}</option>
+                        {PLAYSTYLES_DATA.map(ps => {
+                          if (ps.name === fixedPsPlus) return null;
+                          if (equippedPlaystyles.includes(ps.name) && equippedPlaystyles[index] !== ps.name) return null;
+                          let meetsReqs = true;
+                          let reqString = '';
+                          if (ps.reqs.length > 0) {
+                            reqString = ' (' + ps.reqs.map(r => `${r.min} ${r.stat}`).join(', ') + ')';
+                            for (const req of ps.reqs) {
+                              if ((currentStats?.[req.stat] || 70) < req.min) { meetsReqs = false; break; }
+                            }
+                          }
+                          return <option key={ps.name} value={ps.name} disabled={!meetsReqs}>{ps.name} {!meetsReqs ? reqString : ''}</option>;
+                        })}
+                      </select>
+                    </div>
+                  );
+                })}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
