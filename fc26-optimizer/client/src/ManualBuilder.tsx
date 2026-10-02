@@ -12,7 +12,6 @@ const STAT_GROUPS: Record<string, string[]> = {
   "Physical": ["Jumping", "Stamina", "Strength", "Aggression"]
 };
 
-// Maps TRPC readable names to the camelCase keys used in the caps configuration
 const STAT_KEY_MAP: Record<string, string> = {
   "Acceleration": "acceleration",
   "Sprint Speed": "sprintSpeed",
@@ -94,7 +93,6 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
-// --- Star Ratings Config ---
 const STAR_UPGRADE_COSTS: Record<string, number[]> = {
   star0: [0, 0, 5, 10, 25, 40],
   star1: [0, 0, 8, 15, 25, 40],
@@ -120,7 +118,6 @@ const ARCHETYPE_STAR_CAPS: Record<string, { sm: { min: number, max: number, tier
   'Target Forward': { sm: { min: 2, max: 5, tier: 'star4' }, wf: { min: 2, max: 5, tier: 'star3' } }
 };
 
-// --- Facilities & Masteries Config ---
 const CLUB_BUDGETS: Record<number, number> = {
   1: 1000000, 2: 1100000, 3: 1200000, 4: 1300000, 5: 1500000,
   6: 1700000, 7: 1900000, 8: 2100000, 9: 2300000, 10: 2500000
@@ -177,6 +174,51 @@ const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: numb
   'Agility Drill': { stats: ['Agility', 'Ball Control'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] },
   'Quick Finishing Drill': { stats: ['Sprint Speed', 'Finishing'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] }
 };
+
+// --- PlayStyles Config ---
+const FIXED_PLAYSTYLE_PLUS: Record<string, string> = {
+  'Shot Stopper': 'GK Far Reach',
+  'Sweeper Keeper': 'GK Footwork',
+  'Progressor': 'Long Ball Pass',
+  'Boss': 'Bruiser',
+  'Disruptor': 'Jockey',
+  'Marauder': 'Quick Step',
+  'Recycler': 'Intercept',
+  'Maestro': 'Pinged Pass',
+  'Creator': 'Incisive Pass',
+  'Spark': 'Trickster',
+  'Magician': 'Technical',
+  'Finisher': 'Low Driven Shot',
+  'Target': 'Precision Header',
+  'Target Forward': 'Precision Header'
+};
+
+type StatReq = { stat: string; min: number };
+const PLAYSTYLES_DATA: { name: string; category: string; reqs: StatReq[] }[] = [
+  { name: 'Finesse Shot', category: 'scoring', reqs: [{ stat: 'Vision', min: 80 }, { stat: 'Finishing', min: 75 }, { stat: 'Curve', min: 80 }] },
+  { name: 'Power Shot', category: 'scoring', reqs: [{ stat: 'Finishing', min: 80 }, { stat: 'Shot Power', min: 75 }, { stat: 'Long Shots', min: 80 }] },
+  { name: 'Low Driven Shot', category: 'scoring', reqs: [] },
+  { name: 'Incisive Pass', category: 'passing', reqs: [{ stat: 'Vision', min: 75 }, { stat: 'Long Passing', min: 80 }, { stat: 'Curve', min: 80 }] },
+  { name: 'Pinged Pass', category: 'passing', reqs: [] },
+  { name: 'Long Ball Pass', category: 'passing', reqs: [] },
+  { name: 'Tiki Taka', category: 'passing', reqs: [] },
+  { name: 'First Touch', category: 'ball_control', reqs: [] },
+  { name: 'Technical', category: 'ball_control', reqs: [] },
+  { name: 'Trickster', category: 'ball_control', reqs: [] },
+  { name: 'Press Proven', category: 'ball_control', reqs: [] },
+  { name: 'Anticipate', category: 'defending', reqs: [{ stat: 'Balance', min: 80 }, { stat: 'Def Awareness', min: 75 }, { stat: 'Standing Tackle', min: 80 }] },
+  { name: 'Intercept', category: 'defending', reqs: [] },
+  { name: 'Jockey', category: 'defending', reqs: [] },
+  { name: 'Block', category: 'defending', reqs: [] },
+  { name: 'Slide Tackle', category: 'defending', reqs: [] },
+  { name: 'Bruiser', category: 'physical', reqs: [] },
+  { name: 'Relentless', category: 'physical', reqs: [{ stat: 'Agility', min: 80 }, { stat: 'Stamina', min: 80 }] },
+  { name: 'Quick Step', category: 'physical', reqs: [] },
+  { name: 'Aerial', category: 'physical', reqs: [] },
+  { name: 'Precision Header', category: 'physical', reqs: [] },
+  { name: 'GK Far Reach', category: 'goalkeeping', reqs: [] },
+  { name: 'GK Footwork', category: 'goalkeeping', reqs: [] },
+];
 
 // --- Helper Utilities ---
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
@@ -254,6 +296,10 @@ export default function ManualBuilder() {
   const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
 
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
+  
+  // PlayStyles State
+  const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
+  const [isPlaystylesOpen, setIsPlaystylesOpen] = useState<boolean>(false);
   const [isMasteriesOpen, setIsMasteriesOpen] = useState<boolean>(false);
   const [isFacilitiesOpen, setIsFacilitiesOpen] = useState<boolean>(false);
 
@@ -285,6 +331,7 @@ export default function ManualBuilder() {
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
       setSmLevel(starCaps.sm.min);
       setWfLevel(starCaps.wf.min);
+      setEquippedPlaystyles(['', '', '']); // Reset on change
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -298,6 +345,7 @@ export default function ManualBuilder() {
     const starCaps = ARCHETYPE_STAR_CAPS[newArch] || ARCHETYPE_STAR_CAPS['Finisher'];
     setSmLevel(starCaps.sm.min);
     setWfLevel(starCaps.wf.min);
+    setEquippedPlaystyles(['', '', '']); // Reset playstyles when changing archetypes
   };
 
   const handleAddFacility = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -340,6 +388,14 @@ export default function ManualBuilder() {
 
   const toggleCategory = (category: string) => {
     setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  };
+
+  const handlePlaystyleChange = (index: number, value: string) => {
+    setEquippedPlaystyles(prev => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
   };
 
   const physicalModifiers = useMemo(() => {
@@ -489,7 +545,6 @@ export default function ManualBuilder() {
     const mastMod = masteryModifiers[statKey] || 0;
     const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod);
     
-    // safeTarget enforces the floor boundary even if the slider is dragged to 0
     let safeTarget = Math.max(baseVal, Math.min(capMax, targetValue));
     let newPointsAdded = safeTarget - baseVal;
     
@@ -546,6 +601,10 @@ export default function ManualBuilder() {
   }, [unlockedMasteries]);
 
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
+  
+  const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
+  const isPsPlusUnlocked = level >= 20;
+  const fixedPsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -738,7 +797,7 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- CLUB FACILITIES SECTION (COLLAPSIBLE DROPDOWN) --- */}
+        {/* --- CLUB FACILITIES SECTION --- */}
         <section className="mb-6 animate-fade-in">
           <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
             <button 
@@ -846,7 +905,7 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- ACCOUNT MASTERIES (COLLAPSIBLE DROPDOWN) --- */}
+        {/* --- ACCOUNT MASTERIES --- */}
         <section className="mb-6 animate-fade-in">
           <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
             <button 
@@ -922,6 +981,103 @@ export default function ManualBuilder() {
           </div>
         </section>
 
+        {/* --- PLAYSTYLES SECTION --- */}
+        {currentStats && (
+          <section className="mb-6 animate-fade-in">
+            <div className="rounded-xl border bg-[#1a1d24] border-white/5 shadow-2xl overflow-hidden">
+              <button 
+                onClick={() => setIsPlaystylesOpen(!isPlaystylesOpen)}
+                className="w-full p-4 flex items-center justify-between bg-black/20 hover:bg-black/40 transition-colors text-left"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-5 rounded-full" style={{ background: "oklch(0.85 0.15 90)" }} />
+                  <div>
+                    <span className="text-xs font-bold tracking-widest uppercase text-yellow-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                      PlayStyles
+                    </span>
+                    {activePlaystylesCount > 0 && (
+                      <span className="ml-2 text-[10px] bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold">
+                        {activePlaystylesCount} Silver Equipped
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <span className="text-gray-400 text-sm font-bold transform transition-transform duration-200" style={{ transform: isPlaystylesOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                  ▼
+                </span>
+              </button>
+
+              {isPlaystylesOpen && (
+                <div className="p-4 border-t border-white/5 bg-black/30 flex flex-col gap-4 animate-fade-in">
+                  
+                  {/* PlayStyle+ (Gold) */}
+                  <div className={`p-4 rounded-xl border ${isPsPlusUnlocked ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/50 border-white/5 opacity-50'}`}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-xs font-bold uppercase tracking-widest text-yellow-500" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                        PlayStyle+ (Archetype Fixed)
+                      </span>
+                      {!isPsPlusUnlocked && <span className="text-[10px] text-gray-400 font-bold">Unlocks @ Lvl 20</span>}
+                    </div>
+                    <div className={`text-lg font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-white' : 'text-gray-500'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                      {fixedPsPlus}
+                    </div>
+                  </div>
+
+                  {/* Standard PlayStyles (Silver) */}
+                  <div className="grid grid-cols-1 gap-3">
+                    {[5, 15, 40].map((unlockLevel, index) => {
+                      const isUnlocked = level >= unlockLevel;
+                      
+                      return (
+                        <div key={`ps-slot-${index}`} className="flex flex-col gap-1">
+                          <label className="text-xs font-medium uppercase text-gray-400" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                            Silver Slot {index + 1} {isUnlocked ? '' : `(Unlocks @ Lvl ${unlockLevel})`}
+                          </label>
+                          <select
+                            disabled={!isUnlocked}
+                            value={equippedPlaystyles[index]}
+                            onChange={(e) => handlePlaystyleChange(index, e.target.value)}
+                            className="w-full bg-black/60 border border-white/5 text-gray-200 rounded-lg p-3 text-sm focus:outline-none focus:border-yellow-500 transition-colors disabled:opacity-50"
+                          >
+                            <option value="">{isUnlocked ? 'Select PlayStyle...' : 'Locked'}</option>
+                            {PLAYSTYLES_DATA.map(ps => {
+                              // Cannot equip archetype fixed PS+ as standard
+                              if (ps.name === fixedPsPlus) return null;
+                              // Cannot equip duplicates
+                              if (equippedPlaystyles.includes(ps.name) && equippedPlaystyles[index] !== ps.name) return null;
+
+                              // Check attribute requirements
+                              let meetsReqs = true;
+                              let reqString = '';
+                              if (ps.reqs.length > 0) {
+                                reqString = ' (Req: ' + ps.reqs.map(r => `${r.min} ${r.stat}`).join(', ') + ')';
+                                for (const req of ps.reqs) {
+                                  if ((currentStats[req.stat] || 70) < req.min) {
+                                    meetsReqs = false;
+                                    break;
+                                  }
+                                }
+                              }
+
+                              return (
+                                <option key={ps.name} value={ps.name} disabled={!meetsReqs}>
+                                  {ps.name} {!meetsReqs ? reqString : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* --- STATS SECTION --- */}
         {currentStats && serverArchetypes && (
           <section className="animate-fade-up">
             {Object.entries(STAT_GROUPS).map(([category, attributes]) => {
