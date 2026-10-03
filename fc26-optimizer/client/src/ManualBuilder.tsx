@@ -140,39 +140,39 @@ const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<strin
   'Target Forward': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } }
 };
 
-const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: number[] }> = {
-  'Equipment Manager': { stats: ['Jumping', 'Stamina'], boosts: [2, 3, 4], cost: [200000, 600000, 1200000] },
-  'Head Groundskeeper': { stats: ['Balance', 'Ball Control'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Performance Lab': { stats: ['Vision', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Scout': { stats: ['Attack Positioning', 'Def Awareness'], boosts: [2, 5, 7], cost: [100000, 400000, 1100000] },
-  'Sports Psychologist': { stats: ['Aggression', 'Composure'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
-  'Sports Scientist': { stats: ['Acceleration', 'Reactions'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Att. Tactical Coach': { stats: ['Attack Positioning', 'Vision'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
-  'Def. Tactical Coach': { stats: ['Interceptions', 'Def Awareness'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
-  'Fitness Coach': { stats: ['Jumping', 'Stamina'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Passing Coach': { stats: ['Long Passing', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Shooting Coach': { stats: ['Finishing', 'Long Shots'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Tackling Coach': { stats: ['Standing Tackle', 'Sliding Tackle'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Technical Coach': { stats: ['Ball Control', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Agility Poles': { stats: ['Agility', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Finishing Net': { stats: ['Finishing', 'Curve'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Football Tennis Net': { stats: ['Heading Accuracy', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
-  'GPS Vests': { stats: ['Stamina', 'Attack Positioning'], boosts: [2, 5, 7], cost: [200000, 600000, 1200000] },
-  'Mini Goals': { stats: ['Finishing', 'Short Passing'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000] },
-  'Rebounders': { stats: ['Reactions', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000] },
-  'Set Piece Mannequins': { stats: ['FK Accuracy', 'Penalties'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Speed Parachute': { stats: ['Acceleration', 'Sprint Speed'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000] },
-  'Compression Boots': { stats: ['Strength', 'Shot Power'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Running Track': { stats: ['Sprint Speed', 'Stamina'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000] }, 
-  'Training Pitch': { stats: ['Crossing', 'Long Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Weight Room': { stats: ['Jumping', 'Strength'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Yoga Instructor': { stats: ['Composure', 'Balance'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'VR Room': { stats: ['Finishing', 'Short Passing'], boosts: [2, 4, 4], cost: [200000, 600000, 1200000] },
-  'Passing Drill': { stats: ['Interceptions', 'Long Passing'], boosts: [3, 5, 5], cost: [200000, 600000, 1200000] },
-  'Low Driven Drill': { stats: ['Balance', 'Vision'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000] },
-  'Strength Drill': { stats: ['Strength', 'Standing Tackle'], boosts: [2, 4, 4], cost: [300000, 800000, 1400000] },
-  'Agility Drill': { stats: ['Agility', 'Ball Control'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] },
-  'Quick Finishing Drill': { stats: ['Sprint Speed', 'Finishing'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] }
+const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: number[], playstyle: string }> = {
+  'Equipment Manager': { stats: ['Jumping', 'Stamina'], boosts: [2, 3, 4], cost: [200000, 600000, 1200000], playstyle: 'Acrobatic' },
+  'Head Groundskeeper': { stats: ['Balance', 'Ball Control'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Press Proven' },
+  'Performance Lab': { stats: ['Vision', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Tiki Taka' },
+  'Scout': { stats: ['Attack Positioning', 'Def Awareness'], boosts: [2, 5, 7], cost: [100000, 400000, 1100000], playstyle: 'Anticipate' },
+  'Sports Psychologist': { stats: ['Aggression', 'Composure'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Jockey' },
+  'Sports Scientist': { stats: ['Acceleration', 'Reactions'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Quick Step' },
+  'Att. Tactical Coach': { stats: ['Attack Positioning', 'Vision'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Incisive Pass' },
+  'Def. Tactical Coach': { stats: ['Interceptions', 'Def Awareness'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Intercept' },
+  'Fitness Coach': { stats: ['Jumping', 'Stamina'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Relentless' },
+  'Passing Coach': { stats: ['Long Passing', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Pinged Pass' },
+  'Shooting Coach': { stats: ['Finishing', 'Long Shots'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Chip Shot' },
+  'Tackling Coach': { stats: ['Standing Tackle', 'Sliding Tackle'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Slide Tackle' },
+  'Technical Coach': { stats: ['Ball Control', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Technical' },
+  'Agility Poles': { stats: ['Agility', 'Dribbling'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Trickster' },
+  'Finishing Net': { stats: ['Finishing', 'Curve'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Finesse Shot' },
+  'Football Tennis Net': { stats: ['Heading Accuracy', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Aerial' },
+  'GPS Vests': { stats: ['Stamina', 'Attack Positioning'], boosts: [2, 5, 7], cost: [200000, 600000, 1200000], playstyle: 'Relentless' },
+  'Mini Goals': { stats: ['Finishing', 'Short Passing'], boosts: [2, 5, 5], cost: [300000, 800000, 1400000], playstyle: 'Game Changer' },
+  'Rebounders': { stats: ['Reactions', 'Volleys'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Acrobatic' },
+  'Set Piece Mannequins': { stats: ['FK Accuracy', 'Penalties'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Dead Ball' },
+  'Speed Parachute': { stats: ['Acceleration', 'Sprint Speed'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000], playstyle: 'Rapid' },
+  'Compression Boots': { stats: ['Strength', 'Shot Power'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Power Shot' },
+  'Running Track': { stats: ['Sprint Speed', 'Stamina'], boosts: [1, 2, 3], cost: [300000, 800000, 1400000], playstyle: 'Quick Step' },
+  'Training Pitch': { stats: ['Crossing', 'Long Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Whipped Pass' },
+  'Weight Room': { stats: ['Jumping', 'Strength'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Bruiser' },
+  'Yoga Instructor': { stats: ['Composure', 'Balance'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'First Touch' },
+  'VR Room': { stats: ['Finishing', 'Short Passing'], boosts: [2, 4, 4], cost: [200000, 600000, 1200000], playstyle: 'Low Driven Shot' },
+  'Passing Drill': { stats: ['Interceptions', 'Long Passing'], boosts: [3, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Long Ball Pass' },
+  'Low Driven Drill': { stats: ['Balance', 'Vision'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Inventive' },
+  'Strength Drill': { stats: ['Strength', 'Standing Tackle'], boosts: [2, 4, 4], cost: [300000, 800000, 1400000], playstyle: 'Block' },
+  'Agility Drill': { stats: ['Agility', 'Ball Control'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000], playstyle: 'Technical' },
+  'Quick Finishing Drill': { stats: ['Sprint Speed', 'Finishing'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000], playstyle: 'Precision Header' }
 };
 
 const FIXED_PLAYSTYLE_PLUS: Record<string, string> = {
@@ -312,7 +312,7 @@ export default function ManualBuilder() {
   const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
-  const [selectedPsView, setSelectedPsView] = useState<string | null>(null); // New state for PS Hub
+  const [selectedPsView, setSelectedPsView] = useState<string | null>(null);
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     "Pace": false,
@@ -548,15 +548,12 @@ export default function ManualBuilder() {
 
   const handleActionPlaystyle = (psName: string, upgrades: Record<string, number>, isEquipped: boolean) => {
     if (isEquipped) {
-      // Unequip
       setEquippedPlaystyles(prev => prev.map(p => p === psName ? '' : p));
     } else {
-      // Find Empty Slot that is unlocked based on level
       const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
       const emptyIndex = unlockedSlotIndexes.find(i => equippedPlaystyles[i] === '');
       
       if (emptyIndex !== undefined) {
-        // Apply AP Upgrades
         if (Object.keys(upgrades).length > 0) {
           setAddedPoints(prev => {
             const next = { ...prev };
@@ -564,7 +561,6 @@ export default function ManualBuilder() {
             return next;
           });
         }
-        // Equip
         setEquippedPlaystyles(prev => {
           const next = [...prev];
           next[emptyIndex] = psName;
@@ -970,7 +966,7 @@ export default function ManualBuilder() {
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Club Facilities</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-            {/* ... (Existing Facilities Split View left mostly unchanged to keep response concise) ... */}
+            
             <div className="p-4 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
               <div className="flex justify-between items-end mb-3">
                 <div>
@@ -986,6 +982,7 @@ export default function ManualBuilder() {
               </div>
               <input type="range" min="1" max="10" value={clubLevel} onChange={(e) => setClubLevel(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
             </div>
+
             <div className="flex-1 flex overflow-hidden">
               <div className="w-[45%] overflow-y-auto border-r border-[#26334A] hide-scrollbar bg-[#0D1220]">
                 {Object.keys(FACILITIES).map(facName => {
@@ -999,6 +996,7 @@ export default function ManualBuilder() {
                   );
                 })}
               </div>
+              
               <div className="w-[55%] p-4 flex flex-col items-center bg-[#080B14] overflow-y-auto">
                 {selectedFacView && FACILITIES[selectedFacView] && (
                   <>
@@ -1012,10 +1010,29 @@ export default function ManualBuilder() {
                       </div>
                       <div className="text-[10px] text-[#4D8DFF] font-bold mt-2 uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Tier {viewingFacTier}</div>
                     </div>
+
                     <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl w-full text-center mb-6 shadow-sm">
                       <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
-                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">+{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}</div>
+                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">
+                        +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}
+                      </div>
+                      
+                      {/* PlayStyle Reveal at Tier 3 */}
+                      {viewingFacTier === 3 && FACILITIES[selectedFacView].playstyle && (
+                        <div className="mt-4 pt-3 border-t border-[#26334A]/50 animate-fade-in">
+                           <div className="text-[9px] text-[#facc15] uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                             <div className="w-1 h-1 rounded-full bg-[#facc15]" />
+                             Tier 3 Team PlayStyle
+                             <div className="w-1 h-1 rounded-full bg-[#facc15]" />
+                           </div>
+                           <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider flex items-center justify-center gap-2">
+                             <div className="w-4 h-4 border border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
+                             {FACILITIES[selectedFacView].playstyle}
+                           </div>
+                        </div>
+                      )}
                     </div>
+
                     <div className="w-full mt-auto mb-2">
                       <div className="text-center mb-3">
                         <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Purchase Cost</div>
@@ -1086,7 +1103,7 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* NEW PLAYSTYLE HUB MODAL */}
+      {/* PLAYSTYLE HUB MODAL */}
       {activeModal === 'playstyles' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
