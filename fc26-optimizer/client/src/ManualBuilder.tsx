@@ -155,7 +155,6 @@ const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<strin
 
 type StatReq = { stat: string; min: number };
 
-// Extracted exactly from FC27_ARCHETYPES.csv
 const SPECIALIZATIONS_DATA: Record<string, { name: string; perk: string; inspiredBy: string; desc: string; reqs: StatReq[] }[]> = {
   "Boss": [
     { name: "BOSS+", perk: "Slide Tackle+", inspiredBy: "Inspired by Nemanja Vidić", desc: "Gain defensive dominance with a massive boost to tackling.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 92 } ] },
@@ -363,6 +362,24 @@ const getCustomColor = (val: number) => {
   return "oklch(63.7% 0.237 25.331)";
 };
 
+const HalfCircleGauge = ({ value, color }: { value: number; color: string }) => {
+  const radius = 14;
+  const circumference = Math.PI * radius; 
+  const totalCircumference = 2 * Math.PI * radius; 
+  const pct = Math.max(0, Math.min(100, value));
+  const strokeDashoffset = circumference - (pct / 100) * circumference;
+
+  return (
+    <div className="relative flex flex-col items-center justify-end w-9 h-5 overflow-hidden">
+      <svg className="absolute top-0 w-9 h-9 transform -rotate-180 origin-center" viewBox="0 0 36 36">
+        <circle cx="18" cy="18" r={radius} fill="none" stroke="#26334A" strokeWidth="3.5" strokeDasharray={`${circumference} ${totalCircumference}`} strokeDashoffset="0" strokeLinecap="round" />
+        <circle cx="18" cy="18" r={radius} fill="none" stroke={color} strokeWidth="3.5" strokeDasharray={`${circumference} ${totalCircumference}`} strokeDashoffset={strokeDashoffset} strokeLinecap="round" className="transition-all duration-500 ease-out" />
+      </svg>
+      <span className="text-[11px] font-black z-10 leading-none" style={{ color }}>{value}</span>
+    </div>
+  );
+};
+
 export default function ManualBuilder() {
   const [level, setLevel] = useState<number>(25);
   const [archetype, setArchetype] = useState<string>('');
@@ -383,19 +400,11 @@ export default function ManualBuilder() {
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   
   // Dashboard Overlays State
-  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | null>(null);
+  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
   const [selectedPsView, setSelectedPsView] = useState<string | null>(null);
-
-  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
-    "Pace": false,
-    "Shooting": false,
-    "Passing": false,
-    "Dribbling": false,
-    "Defending": false,
-    "Physical": false
-  });
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
@@ -477,7 +486,10 @@ export default function ManualBuilder() {
     });
   };
 
-  const toggleCategory = (category: string) => setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
+  const openCategoryModal = (category: string) => {
+    setEditingCategory(category);
+    setActiveModal('edit_category');
+  };
 
   // ------------------------------------------
   // CALCULATORS
@@ -660,8 +672,6 @@ export default function ManualBuilder() {
     }
   };
 
-  // ------------------------------------------
-
   const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
     const caps = activeStarCaps[type];
     let safeTarget = Math.max(caps.min, Math.min(caps.max, targetValue));
@@ -748,6 +758,54 @@ export default function ManualBuilder() {
   
   const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
+
+  // --- REUSABLE CATEGORY CARD ---
+  const CategoryCard = ({ category, stats }: { category: string, stats: string[] }) => {
+    if (!currentStats) return null;
+    const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
+    const catAvg = Math.round(catTotal / stats.length);
+    const avgColor = getCustomColor(catAvg);
+
+    return (
+      <button
+        onClick={() => openCategoryModal(category)}
+        className="w-full bg-[#0D1220] border border-[#26334A] rounded-xl p-3 text-left hover:bg-[#131A2A] hover:border-[#4D8DFF]/40 transition-all shadow-sm group"
+      >
+        <div className="flex justify-between items-start mb-3">
+          <span className="text-[11px] font-black uppercase tracking-widest text-[#F4F7FB]" style={{ fontFamily: "'Orbitron', sans-serif" }}>{category}</span>
+          <HalfCircleGauge value={catAvg} color={avgColor} />
+        </div>
+        <div className="space-y-2">
+          {stats.map(stat => {
+            const value = currentStats[stat] || 70;
+            const color = getCustomColor(value);
+            const displayName = CSV_STAT_MAP[stat] || stat;
+            return (
+              <div key={stat}>
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-[9px] font-bold text-[#8E9AAF] tracking-wider uppercase group-hover:text-[#F4F7FB] transition-colors">{displayName}</span>
+                  <span className="text-[10px] font-black" style={{ color }}>{value}</span>
+                </div>
+                <div className="h-[2px] w-full bg-[#131A2A] rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all duration-500 ease-out" style={{ width: `${value}%`, backgroundColor: color }} />
+                </div>
+              </div>
+            );
+          })}
+          {category === 'Pace' && (
+             <div className="mt-2.5 pt-2.5 border-t border-[#26334A]/50">
+                <div className="flex justify-between items-center">
+                  <span className="text-[9px] font-bold text-[#8E9AAF] tracking-wider uppercase">AccelerATE</span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${
+                     accelerate === 'Lengthy' ? 'text-[#8B5CF6]' : accelerate === 'Explosive' ? 'text-[#4D8DFF]' : 'text-[#F4F7FB]'
+                  }`}>{accelerate}</span>
+                </div>
+             </div>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -861,7 +919,7 @@ export default function ManualBuilder() {
 
           {/* Specialization Launch Card */}
           {SPECIALIZATIONS_DATA[archetype] && (
-            <div className="animate-fade-up">
+            <div className="animate-fade-up border-b border-[#26334A]/50 pb-4">
               {equippedSpecialization ? (
                 <div 
                   className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group"
@@ -896,7 +954,7 @@ export default function ManualBuilder() {
           )}
 
           {/* Physicals Grid */}
-          <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
               <div className="flex justify-between items-end mb-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
@@ -931,30 +989,46 @@ export default function ManualBuilder() {
               </div>
             </div>
           </div>
-
-          <div className="bg-[#131A2A] p-4 rounded-xl border border-[#26334A] flex justify-between items-center shadow-sm">
-            <span className="text-[11px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-              AccelerATE Style
-            </span>
-            <span className={`text-sm font-black uppercase tracking-widest ${
-              accelerate === 'Lengthy' ? 'text-[#8B5CF6]' : accelerate === 'Explosive' ? 'text-[#4D8DFF]' : 'text-[#F4F7FB]'
-            }`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
-              {accelerate}
-            </span>
-          </div>
         </section>
 
-        {/* --- APP DASHBOARD CARDS --- */}
-        <section className="mb-8">
+        {/* --- MAIN FUT CARD GRID --- */}
+        {currentStats && serverArchetypes && (
+          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-3 rounded-full bg-[#59657A]" />
+                <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  Player Attributes
+                </span>
+              </div>
+              <span className="text-[9px] text-[#59657A] font-bold tracking-widest uppercase">Tap to Edit</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <CategoryCard category="Pace" stats={STAT_GROUPS["Pace"]} />
+                <CategoryCard category="Passing" stats={STAT_GROUPS["Passing"]} />
+                <CategoryCard category="Defending" stats={STAT_GROUPS["Defending"]} />
+              </div>
+              <div className="space-y-3">
+                <CategoryCard category="Shooting" stats={STAT_GROUPS["Shooting"]} />
+                <CategoryCard category="Dribbling" stats={STAT_GROUPS["Dribbling"]} />
+                <CategoryCard category="Physical" stats={STAT_GROUPS["Physical"]} />
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* --- APP DASHBOARD CARDS (Moved to bottom) --- */}
+        <section className="mt-8 border-t border-[#26334A]/50 pt-6">
           <div className="flex items-center gap-2 mb-3 pl-1">
             <div className="w-1 h-3 rounded-full bg-[#8B5CF6]" />
             <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-              Player Enhancements
+              Club Enhancements
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             
-            {/* Masteries Hub Launch */}
             <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
                <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                    <div className="w-3 h-3 rounded-[2px] bg-[#8B5CF6]" />
@@ -965,7 +1039,6 @@ export default function ManualBuilder() {
                </div>
             </button>
             
-            {/* Facilities Hub Launch */}
             <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
                <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                    <div className="w-3 h-3 rounded-full bg-[#4D8DFF]" />
@@ -976,7 +1049,6 @@ export default function ManualBuilder() {
                </div>
             </button>
             
-            {/* PlayStyles Hub Launch */}
             <button onClick={() => setActiveModal('playstyles')} className="col-span-2 bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
                <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
@@ -993,103 +1065,77 @@ export default function ManualBuilder() {
           </div>
         </section>
 
-        {/* --- ATTRIBUTES ACCORDION SECTION --- */}
-        {currentStats && serverArchetypes && (
-          <section className="space-y-3 animate-fade-up">
-            <div className="flex items-center gap-2 mb-3 pl-1">
-              <div className="w-1 h-3 rounded-full bg-[#59657A]" />
-              <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Attribute Distribution
-              </span>
-            </div>
-            
-            {Object.entries(STAT_GROUPS).map(([category, attributes]) => {
-              const catTotal = attributes.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
-              const catAvg = Math.round(catTotal / attributes.length);
-              const isOpen = openCategories[category];
-
-              return (
-                <div key={category} className="rounded-xl border border-[#26334A] bg-[#0D1220] overflow-hidden shadow-sm transition-all">
-                  <button 
-                    onClick={() => toggleCategory(category)}
-                    className="w-full py-3 px-5 flex items-center justify-between hover:bg-[#131A2A] transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                        {category}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1.5 px-2 py-0.5 border border-[#26334A] rounded bg-[#080B14]">
-                        <span className="text-[9px] text-[#59657A] font-bold tracking-widest">AVG</span>
-                        <span className="text-xs font-black" style={{ color: getCustomColor(catAvg) }}>{catAvg}</span>
-                      </div>
-                      <span className="text-[#59657A] text-[10px] transform transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
-                    </div>
-                  </button>
-
-                  {isOpen && (
-                    <div className="p-4 border-t border-[#26334A] bg-[#080B14] grid grid-cols-1 gap-1 animate-fade-in">
-                      {attributes.map(stat => {
-                        const value = currentStats[stat] || 70;
-                        const caps = getStatCaps(archetype, stat);
-                        const physMod = physicalModifiers[stat] || 0;
-                        const facMod = facilityModifiers[stat] || 0;
-                        const mastMod = masteryModifiers[stat] || 0;
-                        const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
-                        const invested = addedPoints[stat] || 0;
-                        const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
-                        
-                        return (
-                          <div key={stat} className="flex flex-col py-2 border-b border-[#26334A]/50 last:border-0">
-                            <div className="flex justify-between items-end mb-1">
-                              <div>
-                                <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide" style={{ fontFamily: "'Inter', sans-serif" }}>
-                                  {stat}
-                                </div>
-                                <div className="text-[9px] text-[#59657A] font-medium tracking-widest uppercase mt-0.5">
-                                  CAP: {caps.max || 99} <span className="mx-1">•</span> {statApSpent} AP
-                                </div>
-                              </div>
-                              <span className="text-2xl font-black tabular-nums tracking-tight" style={{ color: getCustomColor(value) }}>{value}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 mt-1">
-                              <button 
-                                onClick={() => handleSliderChange(stat, value - 1)}
-                                disabled={invested <= 0}
-                                className="w-7 h-7 rounded border border-[#26334A] bg-[#0D1220] text-[#8E9AAF] font-bold disabled:opacity-30 hover:text-[#F4F7FB] hover:border-[#4D8DFF] flex items-center justify-center transition-all pb-0.5"
-                              >-</button>
-                              
-                              <input 
-                                type="range" min="0" max="99" value={value} 
-                                onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
-                                className="flex-1 cursor-pointer bg-[#0D1220] rounded-lg h-1.5"
-                                style={{ accentColor: getCustomColor(value) }}
-                              />
-                              
-                              <button 
-                                onClick={() => handleSliderChange(stat, value + 1)}
-                                disabled={value >= (caps.max || 99) || availableAp < getApCost(archetype, stat, value + 1)}
-                                className="w-7 h-7 rounded border border-[#26334A] bg-[#0D1220] text-[#8E9AAF] font-bold disabled:opacity-30 hover:text-[#F4F7FB] hover:border-[#4D8DFF] flex items-center justify-center transition-all pb-0.5"
-                              >+</button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-        )}
-
       </div>
 
       {/* =========================================
           MODALS / OVERLAYS
       ========================================= */}
+
+      {/* EDIT CATEGORY MODAL */}
+      {activeModal === 'edit_category' && editingCategory && currentStats && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg mx-auto bg-[#080B14] rounded-t-3xl border-t border-[#4D8DFF]/50 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] animate-fade-up overflow-hidden flex flex-col max-h-[85vh]">
+             
+             <div className="flex items-center justify-between p-5 bg-[#0D1220] border-b border-[#26334A]">
+               <div>
+                  <h2 className="text-lg font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Edit {editingCategory}</h2>
+                  <div className="text-[10px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1">AP Remaining: {availableAp}</div>
+               </div>
+               <button onClick={() => { setActiveModal(null); setEditingCategory(null); }} className="w-8 h-8 rounded-full bg-[#131A2A] text-[#8E9AAF] flex items-center justify-center hover:bg-[#192235] hover:text-[#F4F7FB] transition-colors">✕</button>
+             </div>
+             
+             <div className="p-4 overflow-y-auto space-y-2 hide-scrollbar pb-12">
+                {STAT_GROUPS[editingCategory].map(stat => {
+                  const value = currentStats[stat] || 70;
+                  const caps = getStatCaps(archetype, stat);
+                  const physMod = physicalModifiers[stat] || 0;
+                  const facMod = facilityModifiers[stat] || 0;
+                  const mastMod = masteryModifiers[stat] || 0;
+                  const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
+                  const invested = addedPoints[stat] || 0;
+                  const statApSpent = getCostForPoints(archetype, stat, baseVal, invested);
+                  
+                  return (
+                    <div key={stat} className="flex flex-col py-3 border-b border-[#26334A]/50 last:border-0">
+                      <div className="flex justify-between items-end mb-2">
+                        <div>
+                          <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide" style={{ fontFamily: "'Inter', sans-serif" }}>
+                            {stat}
+                          </div>
+                          <div className="text-[9px] text-[#59657A] font-medium tracking-widest uppercase mt-0.5">
+                            CAP: {caps.max || 99} <span className="mx-1">•</span> {statApSpent} AP Spent
+                          </div>
+                        </div>
+                        <span className="text-2xl font-black tabular-nums tracking-tight" style={{ color: getCustomColor(value) }}>{value}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 mt-1">
+                        <button 
+                          onClick={() => handleSliderChange(stat, value - 1)}
+                          disabled={invested <= 0}
+                          className="w-8 h-8 rounded-lg border border-[#26334A] bg-[#0D1220] text-[#8E9AAF] font-bold disabled:opacity-30 hover:text-[#F4F7FB] hover:border-[#4D8DFF] flex items-center justify-center transition-all"
+                        >-</button>
+                        
+                        <input 
+                          type="range" min="0" max="99" value={value} 
+                          onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
+                          className="flex-1 cursor-pointer bg-[#0D1220] rounded-lg h-1.5"
+                          style={{ accentColor: getCustomColor(value) }}
+                        />
+                        
+                        <button 
+                          onClick={() => handleSliderChange(stat, value + 1)}
+                          disabled={value >= (caps.max || 99) || availableAp < getApCost(archetype, stat, value + 1)}
+                          className="w-8 h-8 rounded-lg border border-[#26334A] bg-[#0D1220] text-[#8E9AAF] font-bold disabled:opacity-30 hover:text-[#F4F7FB] hover:border-[#4D8DFF] flex items-center justify-center transition-all"
+                        >+</button>
+                      </div>
+                    </div>
+                  );
+                })}
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* FACILITIES MODAL */}
       {activeModal === 'facilities' && (
@@ -1506,9 +1552,7 @@ export default function ManualBuilder() {
                     <div key={spec.name} className={`bg-[#0D1220] rounded-2xl overflow-hidden transition-all duration-300 border ${isEquipped ? 'border-[#facc15] shadow-[0_0_20px_rgba(250,204,21,0.15)] ring-1 ring-[#facc15]/30' : 'border-[#26334A]'}`}>
                        <div className="p-4 flex flex-col gap-4">
                           
-                          {/* Top row: Identity and Stats Grid */}
                           <div className="flex justify-between items-start gap-4">
-                             {/* Identity */}
                              <div className="flex-1">
                                <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{spec.name}</div>
                                <div className="text-[9px] text-[#8E9AAF] font-bold tracking-widest uppercase mt-0.5 mb-2">{spec.inspiredBy}</div>
@@ -1518,7 +1562,6 @@ export default function ManualBuilder() {
                                </div>
                              </div>
                              
-                             {/* Stats Box */}
                              <div className="w-[120px] shrink-0 bg-[#080B14] rounded-xl border border-[#26334A] p-3 shadow-inner">
                                <div className="space-y-2.5">
                                  {spec.reqs.map(req => {
@@ -1544,7 +1587,6 @@ export default function ManualBuilder() {
                              </div>
                           </div>
 
-                          {/* Action Button */}
                           <button 
                             onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)}
                             disabled={!isEquipped && !canEquip}
