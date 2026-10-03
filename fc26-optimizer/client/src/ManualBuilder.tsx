@@ -175,7 +175,6 @@ const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: numb
   'Quick Finishing Drill': { stats: ['Sprint Speed', 'Finishing'], boosts: [2, 3, 3], cost: [300000, 800000, 1400000] }
 };
 
-// --- PlayStyles Config ---
 const FIXED_PLAYSTYLE_PLUS: Record<string, string> = {
   'Shot Stopper': 'GK Far Reach',
   'Sweeper Keeper': 'GK Footwork',
@@ -233,6 +232,15 @@ const PLAYSTYLES_DATA: { name: string; category: string; reqs: StatReq[] }[] = [
   { name: 'GK Deflector', category: 'goalkeeping', reqs: [{ stat: 'Strength', min: 75 }, { stat: 'GK Diving', min: 80 }, { stat: 'GK Reflexes', min: 75 }] }
 ];
 
+const PLAYSTYLE_CATEGORIES = [
+  { id: 'scoring', label: 'Scoring' },
+  { id: 'passing', label: 'Passing' },
+  { id: 'ball_control', label: 'Ball Control' },
+  { id: 'defending', label: 'Defending' },
+  { id: 'physical', label: 'Physical' },
+  { id: 'goalkeeping', label: 'Goalkeeping' }
+];
+
 // --- Helper Utilities ---
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
@@ -240,16 +248,12 @@ const getApCost = (archName: string, statName: string, targetLevel: number): num
   try {
     const cost = UPGRADE_COSTS[normalizedArch]?.[csvStatName]?.[targetLevel];
     return cost !== undefined ? cost : 1; 
-  } catch {
-    return 1; 
-  }
+  } catch { return 1; }
 };
 
 const getCostForPoints = (archName: string, statName: string, startValue: number, pointsToAdd: number): number => {
   let totalCost = 0;
-  for(let i = 1; i <= pointsToAdd; i++) {
-    totalCost += getApCost(archName, statName, startValue + i);
-  }
+  for(let i = 1; i <= pointsToAdd; i++) totalCost += getApCost(archName, statName, startValue + i);
   return totalCost;
 };
 
@@ -308,6 +312,7 @@ export default function ManualBuilder() {
   const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
+  const [selectedPsView, setSelectedPsView] = useState<string | null>(null); // New state for PS Hub
 
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({
     "Pace": false,
@@ -338,6 +343,7 @@ export default function ManualBuilder() {
       setSmLevel(starCaps.sm.min);
       setWfLevel(starCaps.wf.min);
       setEquippedPlaystyles(['', '', '']);
+      setSelectedPsView(null);
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -351,6 +357,7 @@ export default function ManualBuilder() {
     setSmLevel(starCaps.sm.min);
     setWfLevel(starCaps.wf.min);
     setEquippedPlaystyles(['', '', '']);
+    setSelectedPsView(null);
   };
 
   // ------------------------------------------
@@ -395,14 +402,6 @@ export default function ManualBuilder() {
   };
 
   const toggleCategory = (category: string) => setOpenCategories(prev => ({ ...prev, [category]: !prev[category] }));
-
-  const handlePlaystyleChange = (index: number, value: string) => {
-    setEquippedPlaystyles(prev => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  };
 
   // ------------------------------------------
   // CALCULATORS
@@ -493,6 +492,90 @@ export default function ManualBuilder() {
 
   const availableAp = maxAp - spentAp;
 
+  // ------------------------------------------
+  // PLAYSTYLE HUB - "QUICK EQUIP" LOGIC
+  // ------------------------------------------
+  
+  const getQuickEquipData = (psName: string) => {
+    const ps = PLAYSTYLES_DATA.find(p => p.name === psName);
+    if (!ps || ps.reqs.length === 0) return { canEquip: true, cost: 0, upgrades: {} };
+
+    let totalCost = 0;
+    let isPossible = true;
+    let reason = '';
+    const upgrades: Record<string, number> = {};
+    let allMet = true;
+
+    for (const req of ps.reqs) {
+      const statName = req.stat;
+      const currentVal = currentStats?.[statName] || 70;
+      const targetVal = req.min;
+
+      if (currentVal < targetVal) {
+        allMet = false;
+        const caps = getStatCaps(archetype, statName);
+        const capMax = caps.max || 99;
+
+        if (targetVal > capMax) {
+          isPossible = false;
+          reason = 'CAP EXCEEDED';
+          break;
+        }
+
+        const physMod = physicalModifiers[statName] || 0;
+        const facMod = facilityModifiers[statName] || 0;
+        const mastMod = masteryModifiers[statName] || 0;
+        const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70) + physMod + facMod + mastMod);
+        
+        const currentInvested = addedPoints[statName] || 0;
+        const targetInvested = targetVal - baseVal;
+        
+        if (targetInvested > currentInvested) {
+            const costCurrent = getCostForPoints(archetype, statName, baseVal, currentInvested);
+            const costTarget = getCostForPoints(archetype, statName, baseVal, targetInvested);
+            totalCost += (costTarget - costCurrent);
+            upgrades[statName] = targetInvested;
+        }
+      }
+    }
+
+    if (allMet) return { canEquip: true, cost: 0, upgrades: {} };
+    if (!isPossible) return { canEquip: false, reason, cost: 0, upgrades: {} };
+    if (totalCost > availableAp) return { canEquip: false, reason: 'INSUFFICIENT AP', cost: totalCost, upgrades: {} };
+
+    return { canEquip: true, cost: totalCost, upgrades };
+  };
+
+  const handleActionPlaystyle = (psName: string, upgrades: Record<string, number>, isEquipped: boolean) => {
+    if (isEquipped) {
+      // Unequip
+      setEquippedPlaystyles(prev => prev.map(p => p === psName ? '' : p));
+    } else {
+      // Find Empty Slot that is unlocked based on level
+      const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
+      const emptyIndex = unlockedSlotIndexes.find(i => equippedPlaystyles[i] === '');
+      
+      if (emptyIndex !== undefined) {
+        // Apply AP Upgrades
+        if (Object.keys(upgrades).length > 0) {
+          setAddedPoints(prev => {
+            const next = { ...prev };
+            for (const stat in upgrades) next[stat] = upgrades[stat];
+            return next;
+          });
+        }
+        // Equip
+        setEquippedPlaystyles(prev => {
+          const next = [...prev];
+          next[emptyIndex] = psName;
+          return next;
+        });
+      }
+    }
+  };
+
+  // ------------------------------------------
+
   const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
     const caps = activeStarCaps[type];
     let safeTarget = Math.max(caps.min, Math.min(caps.max, targetValue));
@@ -565,9 +648,13 @@ export default function ManualBuilder() {
 
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
+  
   const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
   const isPsPlusUnlocked = level >= 20;
   const fixedPsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
+  
+  const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
+  const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -760,14 +847,14 @@ export default function ManualBuilder() {
                </div>
             </button>
             
-            {/* PlayStyles */}
+            {/* PlayStyles Hub Launch */}
             <button onClick={() => setActiveModal('playstyles')} className="col-span-2 bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
                <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform">
-                       <div className="w-3 h-3 rounded-sm bg-white" />
+                       <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
                    </div>
                    <div className="text-left">
-                       <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyles</div>
+                       <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle Hub</div>
                        <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
                    </div>
                </div>
@@ -879,14 +966,11 @@ export default function ManualBuilder() {
       {activeModal === 'facilities' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
-            
-            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Club Facilities</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-
-            {/* Budget Bar */}
+            {/* ... (Existing Facilities Split View left mostly unchanged to keep response concise) ... */}
             <div className="p-4 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
               <div className="flex justify-between items-end mb-3">
                 <div>
@@ -902,87 +986,54 @@ export default function ManualBuilder() {
               </div>
               <input type="range" min="1" max="10" value={clubLevel} onChange={(e) => setClubLevel(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
             </div>
-
-            {/* Split View */}
             <div className="flex-1 flex overflow-hidden">
-              
-              {/* Left Column: List */}
               <div className="w-[45%] overflow-y-auto border-r border-[#26334A] hide-scrollbar bg-[#0D1220]">
                 {Object.keys(FACILITIES).map(facName => {
                   const isSelected = selectedFacView === facName;
                   const equippedTier = equippedFacilities[facName];
                   return (
-                    <button 
-                      key={facName} 
-                      onClick={() => handleSelectFacilityView(facName)} 
-                      className={`w-full p-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}
-                    >
+                    <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full p-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
                       <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
                       {equippedTier && <div className="text-[9px] text-[#21E6A4] uppercase mt-1 tracking-wider font-bold">★ Tier {equippedTier}</div>}
                     </button>
                   );
                 })}
               </div>
-
-              {/* Right Column: Detail */}
               <div className="w-[55%] p-4 flex flex-col items-center bg-[#080B14] overflow-y-auto">
-                {selectedFacView && FACILITIES[selectedFacView] ? (
+                {selectedFacView && FACILITIES[selectedFacView] && (
                   <>
                     <div className="w-full text-center mb-6 pt-2">
-                      <div className="w-12 h-12 mx-auto rounded-full bg-[#131A2A] border border-[#26334A] flex items-center justify-center mb-3">
-                         <div className="w-4 h-4 rounded-full bg-[#4D8DFF]" />
-                      </div>
+                      <div className="w-12 h-12 mx-auto rounded-full bg-[#131A2A] border border-[#26334A] flex items-center justify-center mb-3"><div className="w-4 h-4 rounded-full bg-[#4D8DFF]" /></div>
                       <h3 className="text-sm font-black text-[#F4F7FB] mb-3 leading-tight">{selectedFacView}</h3>
-                      
-                      {/* Tier Selector */}
                       <div className="flex items-center gap-4 justify-center">
                         <button onClick={() => setViewingFacTier(Math.max(1, viewingFacTier - 1))} className="text-[#8E9AAF] p-2 hover:text-[#F4F7FB] active:scale-95 transition-all">◄</button>
-                        <div className="flex gap-2">
-                          {[1, 2, 3].map(t => (
-                            <div key={t} className={`w-2 h-2 rounded-full transition-colors ${viewingFacTier === t ? 'bg-[#4D8DFF]' : 'bg-[#26334A]'}`} />
-                          ))}
-                        </div>
+                        <div className="flex gap-2">{[1, 2, 3].map(t => (<div key={t} className={`w-2 h-2 rounded-full transition-colors ${viewingFacTier === t ? 'bg-[#4D8DFF]' : 'bg-[#26334A]'}`} />))}</div>
                         <button onClick={() => setViewingFacTier(Math.min(3, viewingFacTier + 1))} className="text-[#8E9AAF] p-2 hover:text-[#F4F7FB] active:scale-95 transition-all">►</button>
                       </div>
                       <div className="text-[10px] text-[#4D8DFF] font-bold mt-2 uppercase tracking-widest" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Tier {viewingFacTier}</div>
                     </div>
-
                     <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl w-full text-center mb-6 shadow-sm">
                       <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
-                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">
-                        +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}
-                      </div>
+                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">+{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}</div>
                     </div>
-
                     <div className="w-full mt-auto mb-2">
                       <div className="text-center mb-3">
                         <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Purchase Cost</div>
                         <div className="text-2xl font-black text-[#F4F7FB]">{FACILITIES[selectedFacView].cost[viewingFacTier - 1].toLocaleString()}</div>
                       </div>
-                      
-                      {/* Interaction Logic */}
                       {(() => {
                          const currentEquippedTier = equippedFacilities[selectedFacView];
                          if (currentEquippedTier === viewingFacTier) {
-                           return (
-                             <button onClick={() => handleRemoveFacility(selectedFacView)} className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 font-bold uppercase tracking-widest text-[10px] border border-red-500/30 hover:bg-red-500/20 transition-all">
-                               Unequip
-                             </button>
-                           );
+                           return <button onClick={() => handleRemoveFacility(selectedFacView)} className="w-full py-3 rounded-xl bg-red-500/10 text-red-400 font-bold uppercase tracking-widest text-[10px] border border-red-500/30 hover:bg-red-500/20 transition-all">Unequip</button>;
                          } else {
                            const costToRefund = currentEquippedTier ? FACILITIES[selectedFacView].cost[currentEquippedTier - 1] : 0;
                            const targetCost = FACILITIES[selectedFacView].cost[viewingFacTier - 1];
                            const canAfford = remainingBudget + costToRefund >= targetCost;
-                           
                            return (
                              <button 
                                onClick={() => handleEquipFacilityTier(selectedFacView, viewingFacTier)} 
                                disabled={!canAfford}
-                               className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all ${
-                                 canAfford 
-                                   ? 'bg-[#4D8DFF] text-[#080B14] hover:bg-[#4D8DFF]/90 shadow-[0_0_15px_rgba(77,141,255,0.3)]' 
-                                   : 'bg-[#192235] text-[#59657A] cursor-not-allowed border border-[#26334A]'
-                               }`}
+                               className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all ${canAfford ? 'bg-[#4D8DFF] text-[#080B14] hover:bg-[#4D8DFF]/90 shadow-[0_0_15px_rgba(77,141,255,0.3)]' : 'bg-[#192235] text-[#59657A] cursor-not-allowed border border-[#26334A]'}`}
                              >
                                {canAfford ? (currentEquippedTier ? 'Upgrade' : 'Equip') : 'Insufficient Budget'}
                              </button>
@@ -991,7 +1042,7 @@ export default function ManualBuilder() {
                       })()}
                     </div>
                   </>
-                ) : null}
+                )}
               </div>
             </div>
           </div>
@@ -1035,61 +1086,192 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* PLAYSTYLES MODAL */}
+      {/* NEW PLAYSTYLE HUB MODAL */}
       {activeModal === 'playstyles' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            
+            {/* Header & AP Status */}
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
-              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>PlayStyles</h2>
-              <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>PlayStyle Hub</h2>
+              <button onClick={() => { setActiveModal(null); setSelectedPsView(null); }} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+            
+            <div className="flex items-center justify-between p-3 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
+               <div className="flex gap-2">
+                 <div className="text-[9px] font-bold text-[#59657A] uppercase tracking-widest">Slots</div>
+                 <div className="flex gap-1.5">
+                   {[0, 1, 2].map((slotIndex) => {
+                     const isUnlocked = level >= [5, 15, 40][slotIndex];
+                     const isFilled = equippedPlaystyles[slotIndex] !== '';
+                     return (
+                       <div key={slotIndex} className={`w-3 h-3 rounded-[3px] border ${!isUnlocked ? 'border-red-500/30 bg-red-500/10' : isFilled ? 'border-[#21E6A4] bg-[#21E6A4]/20' : 'border-[#4D8DFF]/40 bg-[#080B14]'}`} />
+                     );
+                   })}
+                 </div>
+               </div>
+               <div className="text-right">
+                  <span className="text-[9px] uppercase tracking-widest text-[#8E9AAF] mr-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>AP Remaining</span>
+                  <span className="text-base font-black text-[#4D8DFF]">{availableAp}</span>
+               </div>
+            </div>
+
+            {/* Scrollable Grid Area */}
+            <div className={`flex-1 overflow-y-auto p-4 space-y-6 ${selectedPsView ? 'pb-64' : 'pb-8'} hide-scrollbar`}>
               
-              <div className={`p-5 rounded-2xl border ${isPsPlusUnlocked ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.15)]' : 'bg-[#0D1220] border-[#26334A] opacity-60'}`}>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Fixed)</span>
-                  {!isPsPlusUnlocked && <span className="text-[9px] text-[#59657A] font-bold uppercase tracking-widest">Unlocks @ Lvl 20</span>}
+              {/* PlayStyle+ Fixed Category */}
+              <div>
+                <div className="flex items-center gap-2 mb-3 border-b border-[#26334A] pb-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#facc15]" />
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#facc15]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Gold)</span>
                 </div>
-                <div className={`text-lg font-black uppercase tracking-wider ${isPsPlusUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                  {fixedPsPlus}
+                <div className="grid grid-cols-2 gap-3">
+                  <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group text-left">
+                     <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
+                     <div className="w-6 h-6 border-2 border-[#facc15] rotate-45 flex items-center justify-center mb-1">
+                       <div className="w-2 h-2 bg-[#facc15] -rotate-45" />
+                     </div>
+                     <div>
+                       <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">{fixedPsPlus}</div>
+                       <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? 'Active' : 'Unlocks Lvl 20'}</div>
+                     </div>
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3">
-                {[5, 15, 40].map((unlockLevel, index) => {
-                  const isUnlocked = level >= unlockLevel;
-                  return (
-                    <div key={`ps-slot-${index}`} className="flex flex-col gap-2 bg-[#0D1220] border border-[#26334A] p-4 rounded-xl">
-                      <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                        Silver Slot {index + 1} {!isUnlocked && <span className="ml-2 text-[#ff4d4d]/80 border border-[#ff4d4d]/30 px-1.5 py-0.5 rounded text-[8px]">Unlocks Lvl {unlockLevel}</span>}
-                      </label>
-                      <select
-                        disabled={!isUnlocked}
-                        value={equippedPlaystyles[index]}
-                        onChange={(e) => handlePlaystyleChange(index, e.target.value)}
-                        className="w-full bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] rounded-lg p-3 text-xs focus:outline-none focus:border-[#F4F7FB] transition-colors disabled:opacity-50 appearance-none cursor-pointer"
-                      >
-                        <option value="">{isUnlocked ? 'Select PlayStyle...' : 'Locked'}</option>
-                        {PLAYSTYLES_DATA.map(ps => {
-                          if (ps.name === fixedPsPlus) return null;
-                          if (equippedPlaystyles.includes(ps.name) && equippedPlaystyles[index] !== ps.name) return null;
-                          let meetsReqs = true;
-                          let reqString = '';
-                          if (ps.reqs.length > 0) {
-                            reqString = ' (' + ps.reqs.map(r => `${r.min} ${r.stat}`).join(', ') + ')';
-                            for (const req of ps.reqs) {
-                              if ((currentStats?.[req.stat] || 70) < req.min) { meetsReqs = false; break; }
-                            }
-                          }
-                          return <option key={ps.name} value={ps.name} disabled={!meetsReqs}>{ps.name} {!meetsReqs ? reqString : ''}</option>;
+              {/* Categorized Silver Playstyles */}
+              {PLAYSTYLE_CATEGORIES.map(category => {
+                 const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && ps.name !== fixedPsPlus);
+                 if (categoryStyles.length === 0) return null;
+
+                 return (
+                   <div key={category.id}>
+                     <div className="flex items-center gap-2 mb-3 border-b border-[#26334A] pb-2">
+                       <div className="w-1.5 h-1.5 rounded-full bg-[#8E9AAF]" />
+                       <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{category.label}</span>
+                     </div>
+                     
+                     <div className="grid grid-cols-2 gap-3">
+                        {categoryStyles.map(ps => {
+                          const isEquipped = equippedPlaystyles.includes(ps.name);
+                          const isSelected = selectedPsView === ps.name;
+                          
+                          return (
+                            <button 
+                              key={ps.name}
+                              onClick={() => setSelectedPsView(ps.name)}
+                              className={`rounded-xl p-3 flex flex-col gap-2 relative overflow-hidden text-left transition-all duration-200 border ${
+                                isSelected 
+                                  ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' 
+                                  : isEquipped 
+                                    ? 'bg-[#131A2A] border-[#21E6A4]/60' 
+                                    : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className={`w-5 h-5 border-2 rotate-45 flex items-center justify-center mb-2 ${isEquipped ? 'border-[#21E6A4]' : 'border-[#59657A]'}`}>
+                                   <div className={`w-1.5 h-1.5 -rotate-45 ${isEquipped ? 'bg-[#21E6A4]' : 'bg-[#59657A]'}`} />
+                                </div>
+                                {isEquipped && <span className="text-[8px] bg-[#21E6A4]/20 text-[#21E6A4] border border-[#21E6A4]/40 px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Equipped</span>}
+                              </div>
+                              <div className={`text-[11px] font-black uppercase tracking-wider ${isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
+                            </button>
+                          )
                         })}
-                      </select>
+                     </div>
+                   </div>
+                 );
+              })}
+            </div>
+
+            {/* Sticky Detail Panel */}
+            {selectedPsView && (
+              <div className="absolute bottom-0 left-0 w-full bg-[#0D1220] border-t border-[#4D8DFF]/50 rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,0.6)] animate-fade-up z-20">
+                {(() => {
+                  const ps = PLAYSTYLES_DATA.find(p => p.name === selectedPsView);
+                  if (!ps) return null;
+                  
+                  const { canEquip, cost, upgrades, reason } = getQuickEquipData(ps.name);
+                  const isEquipped = equippedPlaystyles.includes(ps.name);
+
+                  return (
+                    <div className="p-5 flex flex-col gap-4">
+                      
+                      {/* Title & Close */}
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 border-2 border-[#F4F7FB] rotate-45 flex items-center justify-center"><div className="w-2 h-2 bg-[#F4F7FB] -rotate-45" /></div>
+                          <div className="ml-2">
+                             <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{ps.name}</h3>
+                             <p className="text-[9px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{PLAYSTYLE_CATEGORIES.find(c => c.id === ps.category)?.label}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => setSelectedPsView(null)} className="text-[#59657A] hover:text-[#F4F7FB] font-bold p-1">✕</button>
+                      </div>
+
+                      {/* Attribute Dependencies */}
+                      <div className="bg-[#080B14] rounded-xl border border-[#26334A] p-4">
+                        <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Dependencies</div>
+                        <div className="space-y-3">
+                          {ps.reqs.map(req => {
+                            const currentVal = currentStats?.[req.stat] || 70;
+                            const targetVal = req.min;
+                            const isMet = currentVal >= targetVal;
+                            const capMax = getStatCaps(archetype, req.stat).max || 99;
+                            const isImpossible = targetVal > capMax;
+                            const fillPct = Math.min(100, (currentVal / targetVal) * 100);
+
+                            return (
+                              <div key={req.stat}>
+                                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                                  <span className={isMet ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}>{req.stat}</span>
+                                  <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>
+                                    {currentVal} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}
+                                  </span>
+                                </div>
+                                <div className="h-1.5 w-full bg-[#131A2A] rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full rounded-full transition-all duration-500 ${isMet ? 'bg-[#21E6A4]' : isImpossible ? 'bg-[#ff4d4d]' : 'bg-[#4D8DFF]'}`} 
+                                    style={{ width: `${fillPct}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <button 
+                        onClick={() => handleActionPlaystyle(ps.name, upgrades, isEquipped)}
+                        disabled={!isEquipped && (!canEquip || (!hasEmptySlot && Object.keys(upgrades).length === 0 && cost === 0))}
+                        className={`w-full py-3.5 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
+                          isEquipped 
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                            : !canEquip
+                              ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
+                              : !hasEmptySlot
+                                ? 'bg-[#131A2A] text-[#ff4d4d] border border-red-500/30 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white shadow-[0_0_20px_rgba(77,141,255,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)]'
+                        }`}
+                      >
+                        {isEquipped 
+                          ? 'Deselect Element' 
+                          : !canEquip 
+                            ? reason 
+                            : !hasEmptySlot
+                              ? 'Slots Full'
+                              : cost > 0 
+                                ? `Quick Equip [ ${cost} AP ]` 
+                                : 'Equip PlayStyle'}
+                      </button>
+
                     </div>
                   );
-                })}
+                })()}
               </div>
+            )}
 
-            </div>
           </div>
         </div>
       )}
