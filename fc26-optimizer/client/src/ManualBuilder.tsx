@@ -153,6 +153,67 @@ const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<strin
   'Target Forward': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } }
 };
 
+type StatReq = { stat: string; min: number };
+
+// Extracted exactly from FC27_ARCHETYPES.csv
+const SPECIALIZATIONS_DATA: Record<string, { name: string; perk: string; inspiredBy: string; desc: string; reqs: StatReq[] }[]> = {
+  "Boss": [
+    { name: "BOSS+", perk: "Slide Tackle+", inspiredBy: "Inspired by Nemanja Vidić", desc: "Gain defensive dominance with a massive boost to tackling.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 92 } ] },
+    { name: "ENFORCER", perk: "Press Proven+", inspiredBy: "Inspired by Roy Keane", desc: "Control the defensive transition with extreme ball retention.", reqs: [ { stat: "Composure", min: 92 }, { stat: "Vision", min: 90 }, { stat: "Ball Control", min: 90 } ] },
+    { name: "CAPITANO", perk: "Block+", inspiredBy: "Inspired by Paolo Maldini", desc: "Read the game flawlessly and block critical passes.", reqs: [ { stat: "Def Awareness", min: 92 }, { stat: "Reactions", min: 90 }, { stat: "Agility", min: 90 } ] }
+  ],
+  "Progressor": [
+    { name: "PROGRESSOR+", perk: "Jockey+", inspiredBy: "Inspired by Philipp Lahm", desc: "Dominate your flank with elite defensive awareness.", reqs: [ { stat: "Long Passing", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] },
+    { name: "PIONEER", perk: "Pinged Pass+", inspiredBy: "Inspired by Trent Alexander-Arnold", desc: "Transform defense into instant offense.", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 90 } ] },
+    { name: "JANITOR", perk: "Quick Step+", inspiredBy: "Inspired by N'Golo Kanté", desc: "Sweep up every loose ball with relentless pace.", reqs: [ { stat: "Acceleration", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] }
+  ],
+  "Marauder": [
+    { name: "MARAUDER+", perk: "Slide Tackle+", inspiredBy: "Inspired by Roberto Carlos", desc: "Aggressive defending meets explosive overlap.", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] },
+    { name: "SPEEDSTER", perk: "Rapid+", inspiredBy: "Inspired by Alphonso Davies", desc: "Burn past the opposition with blistering pace.", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Sprint Speed", min: 92 }, { stat: "Acceleration", min: 90 } ] },
+    { name: "ATHLETE", perk: "Bruiser+", inspiredBy: "Inspired by Kyle Walker", desc: "Physically dominate any winger on the pitch.", reqs: [ { stat: "Strength", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Def Awareness", min: 90 } ] }
+  ],
+  "Maestro": [
+    { name: "MAESTRO+", perk: "Technical+", inspiredBy: "Inspired by Andrés Iniesta", desc: "Dictate the tempo with elite dribbling and vision.", reqs: [ { stat: "Balance", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Dribbling", min: 90 } ] },
+    { name: "CRASHER", perk: "First Touch+", inspiredBy: "Inspired by Zinedine Zidane", desc: "Control impossible passes in the final third.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 } ] },
+    { name: "HEARTBEAT", perk: "Relentless+", inspiredBy: "Inspired by Luka Modrić", desc: "The engine of the team that never stops running.", reqs: [ { stat: "Agility", min: 92 }, { stat: "Stamina", min: 90 }, { stat: "Aggression", min: 90 } ] }
+  ],
+  "Creator": [
+    { name: "CREATOR+", perk: "Whipped Pass+", inspiredBy: "Inspired by Kevin De Bruyne", desc: "Deliver devastating crosses from anywhere.", reqs: [ { stat: "Vision", min: 92 }, { stat: "Crossing", min: 90 }, { stat: "Long Passing", min: 90 } ] },
+    { name: "ARCHITECT", perk: "Dead Ball+", inspiredBy: "Inspired by David Beckham", desc: "Turn every set piece into a guaranteed chance.", reqs: [ { stat: "Crossing", min: 92 }, { stat: "FK Accuracy", min: 90 }, { stat: "Shot Power", min: 90 } ] },
+    { name: "SNIPER", perk: "Power Shot+", inspiredBy: "Inspired by Steven Gerrard", desc: "Lethal strikes from outside the box.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] }
+  ],
+  "Recycler": [
+    { name: "RECYCLER+", perk: "Pinged Pass+", inspiredBy: "Inspired by Sergio Busquets", desc: "Break lines effortlessly with drilled passes.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
+    { name: "DRIVER", perk: "Enforcer+", inspiredBy: "Inspired by Yaya Touré", desc: "Carry the ball through the midfield with pure power.", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Balance", min: 92 }, { stat: "Strength", min: 90 } ] },
+    { name: "THIEF", perk: "Anticipate+", inspiredBy: "Inspired by Claude Makélélé", desc: "Win the ball before the opponent even realizes.", reqs: [ { stat: "Interceptions", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] }
+  ],
+  "Disruptor": [
+    { name: "DISRUPTOR+", perk: "Intercept+", inspiredBy: "Inspired by Patrick Vieira", desc: "Shut down passing lanes permanently.", reqs: [ { stat: "Balance", min: 90 }, { stat: "Reactions", min: 90 }, { stat: "Interceptions", min: 92 } ] },
+    { name: "DESTROYER", perk: "Slide Tackle+", inspiredBy: "Inspired by Gennaro Gattuso", desc: "Fearless tackling to stop any counter-attack.", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Strength", min: 92 }, { stat: "Sliding Tackle", min: 90 } ] },
+    { name: "ANCHOR", perk: "Bruiser+", inspiredBy: "Inspired by Casemiro", desc: "The ultimate physical presence in front of the defense.", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Dribbling", min: 90 }, { stat: "Short Passing", min: 90 } ] }
+  ],
+  "Magician": [
+    { name: "MAGICIAN+", perk: "First Touch+", inspiredBy: "Inspired by Ronaldinho", desc: "One, Two: Do a pass and go in the opponent's half for a short boost to Acceleration, Ball Control, and Balance.", reqs: [ { stat: "Acceleration", min: 90 }, { stat: "Composure", min: 90 }, { stat: "Ball Control", min: 92 } ] },
+    { name: "HOTSHOT", perk: "Power Shot+", inspiredBy: "Inspired by Thierry Henry", desc: "Cut and Shoot: Shoot after entering the box from the wing for a short boost to Finishing, Curve, and Shot Power.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] },
+    { name: "INVADER", perk: "Incisive Pass+", inspiredBy: "Inspired by Mia Hamm", desc: "Silver Platter: Your through pass gives receiver boosts to composure, finishing and ball control in the box.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Long Passing", min: 90 } ] }
+  ],
+  "Finisher": [
+    { name: "FINISHER+", perk: "Chip Shot+", inspiredBy: "Inspired by Lionel Messi", desc: "Ultimate composure in 1v1 situations.", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 }, { stat: "Reactions", min: 90 } ] },
+    { name: "PRESSER", perk: "Relentless+", inspiredBy: "Inspired by Wayne Rooney", desc: "Lead the press from the front with endless energy.", reqs: [ { stat: "Agility", min: 90 }, { stat: "Stamina", min: 92 }, { stat: "Aggression", min: 90 } ] },
+    { name: "HUNTER", perk: "Gamechanger+", inspiredBy: "Inspired by Gerd Müller", desc: "Elite positioning to finish every half-chance.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Finishing", min: 90 }, { stat: "Curve", min: 92 } ] }
+  ],
+  "Spark": [
+    { name: "SPARK+", perk: "Quick Step+", inspiredBy: "Inspired by Neymar Jr.", desc: "Explosive acceleration to beat the first man instantly.", reqs: [ { stat: "Agility", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Acceleration", min: 90 } ] },
+    { name: "JOKER", perk: "Whipped Pass+", inspiredBy: "Inspired by Luis Figo", desc: "Pinpoint delivery from wide areas.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Crossing", min: 92 }, { stat: "Long Passing", min: 90 } ] },
+    { name: "ACE", perk: "Chip Shot+", inspiredBy: "Inspired by Eden Hazard", desc: "Unpredictable flair and lethal finishing.", reqs: [ { stat: "Reactions", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Finishing", min: 92 } ] }
+  ],
+  "Target": [
+    { name: "TARGET+", perk: "Acrobatic+", inspiredBy: "Inspired by Zlatan Ibrahimović", desc: "Convert impossible crosses into spectacular goals.", reqs: [ { stat: "Agility", min: 90 }, { stat: "Jumping", min: 92 }, { stat: "Volleys", min: 90 } ] },
+    { name: "ROAMER", perk: "Incisive Pass+", inspiredBy: "Inspired by Harry Kane", desc: "Drop deep and orchestrate the attack.", reqs: [ { stat: "Vision", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
+    { name: "RUNNER", perk: "Enforcer+", inspiredBy: "Inspired by Erling Haaland", desc: "Unstoppable power and pace in behind.", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Strength", min: 90 }, { stat: "Attack Positioning", min: 90 } ] }
+  ]
+};
+
 const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: number[], playstyle: string }> = {
   'Equipment Manager': { stats: ['Jumping', 'Stamina'], boosts: [2, 3, 4], cost: [200000, 600000, 1200000], playstyle: 'Acrobatic' },
   'Head Groundskeeper': { stats: ['Balance', 'Ball Control'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Press Proven' },
@@ -205,7 +266,6 @@ const FIXED_PLAYSTYLE_PLUS: Record<string, string> = {
   'Target Forward': 'Precision Header'
 };
 
-type StatReq = { stat: string; min: number };
 const PLAYSTYLES_DATA: { name: string; category: string; reqs: StatReq[] }[] = [
   { name: 'Finesse Shot', category: 'scoring', reqs: [{ stat: 'Vision', min: 80 }, { stat: 'Finishing', min: 75 }, { stat: 'Curve', min: 80 }] },
   { name: 'Chip Shot', category: 'scoring', reqs: [{ stat: 'Reactions', min: 75 }, { stat: 'Composure', min: 80 }, { stat: 'Ball Control', min: 80 }] },
@@ -318,11 +378,12 @@ export default function ManualBuilder() {
   const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
   const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
   
-  // PlayStyles State
+  // Equip States
   const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
+  const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   
   // Dashboard Overlays State
-  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | null>(null);
+  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
   const [selectedPsView, setSelectedPsView] = useState<string | null>(null);
@@ -357,6 +418,7 @@ export default function ManualBuilder() {
       setWfLevel(starCaps.wf.min);
       setEquippedPlaystyles(['', '', '']);
       setSelectedPsView(null);
+      setEquippedSpecialization(null);
     }
   }, [serverArchetypes, gameVersion]);
 
@@ -371,6 +433,7 @@ export default function ManualBuilder() {
     setWfLevel(starCaps.wf.min);
     setEquippedPlaystyles(['', '', '']);
     setSelectedPsView(null);
+    setEquippedSpecialization(null);
   };
 
   // ------------------------------------------
@@ -506,12 +569,11 @@ export default function ManualBuilder() {
   const availableAp = maxAp - spentAp;
 
   // ------------------------------------------
-  // PLAYSTYLE HUB - "QUICK EQUIP" LOGIC
+  // QUICK EQUIP ENGINE
   // ------------------------------------------
   
-  const getQuickEquipData = (psName: string) => {
-    const ps = PLAYSTYLES_DATA.find(p => p.name === psName);
-    if (!ps || ps.reqs.length === 0) return { canEquip: true, cost: 0, upgrades: {} };
+  const getUpgradeData = (reqs: StatReq[]) => {
+    if (!reqs || reqs.length === 0) return { canEquip: true, cost: 0, upgrades: {} };
 
     let totalCost = 0;
     let isPossible = true;
@@ -519,7 +581,7 @@ export default function ManualBuilder() {
     const upgrades: Record<string, number> = {};
     let allMet = true;
 
-    for (const req of ps.reqs) {
+    for (const req of reqs) {
       const statName = req.stat;
       const currentVal = currentStats?.[statName] || 70;
       const targetVal = req.min;
@@ -580,6 +642,21 @@ export default function ManualBuilder() {
           return next;
         });
       }
+    }
+  };
+
+  const handleActionSpecialization = (specName: string, upgrades: Record<string, number>, isEquipped: boolean) => {
+    if (isEquipped) {
+      setEquippedSpecialization(null);
+    } else {
+      if (Object.keys(upgrades).length > 0) {
+        setAddedPoints(prev => {
+          const next = { ...prev };
+          for (const stat in upgrades) next[stat] = upgrades[stat];
+          return next;
+        });
+      }
+      setEquippedSpecialization(specName);
     }
   };
 
@@ -656,13 +733,18 @@ export default function ManualBuilder() {
   }, [height, activeBounds]);
 
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
-  const totalMasteriesCount = 28; // 14 Archetypes * 2 Levels
+  const totalMasteriesCount = 28; 
   const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
   
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
   const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
+  
   const isPsPlusUnlocked = level >= 20;
-  const fixedPsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
+  const basePsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
+  
+  const activePsPlus = equippedSpecialization 
+     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk || basePsPlus
+     : basePsPlus;
   
   const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
@@ -777,8 +859,44 @@ export default function ManualBuilder() {
             </div>
           </div>
 
+          {/* Specialization Launch Card */}
+          {SPECIALIZATIONS_DATA[archetype] && (
+            <div className="animate-fade-up">
+              {equippedSpecialization ? (
+                <div 
+                  className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group"
+                  onClick={() => setActiveModal('specializations')}
+                >
+                  <div className="flex items-center gap-4">
+                     <div className="w-10 h-10 rounded-full bg-[#facc15]/10 flex items-center justify-center border border-[#facc15]/30 group-hover:scale-110 transition-transform">
+                        <div className="w-4 h-4 border-2 border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
+                     </div>
+                     <div>
+                       <div className="text-[11px] font-black tracking-widest uppercase text-[#facc15]" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                          {equippedSpecialization}
+                       </div>
+                       <div className="text-[9px] text-[#F4F7FB] font-bold tracking-wider mt-1 uppercase">Active Specialization</div>
+                     </div>
+                  </div>
+                  <span className="text-[#facc15] text-xs font-black">➔</span>
+                </div>
+              ) : (
+                <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                  <div>
+                    <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Choose a Specialization</div>
+                    <div className="text-[9px] text-[#8E9AAF] font-medium tracking-wide mt-1">Boost key attributes and unlock unique playstyle perks.</div>
+                  </div>
+                  <button onClick={() => setActiveModal('specializations')} className="flex items-center gap-2 bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#4D8DFF]/20 transition-colors shadow-[0_0_10px_rgba(77,141,255,0.1)]">
+                    <span className="w-3 h-3 flex items-center justify-center border border-[#4D8DFF] rounded-full text-[8px] leading-none">+</span>
+                    Browse
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Physicals Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-4">
             <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
               <div className="flex justify-between items-end mb-2">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
@@ -861,7 +979,7 @@ export default function ManualBuilder() {
             {/* PlayStyles Hub Launch */}
             <button onClick={() => setActiveModal('playstyles')} className="col-span-2 bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
                        <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
                    </div>
                    <div className="text-left">
@@ -973,7 +1091,7 @@ export default function ManualBuilder() {
           MODALS / OVERLAYS
       ========================================= */}
 
-      {/* FACILITIES MODAL (UNCHANGED) */}
+      {/* FACILITIES MODAL */}
       {activeModal === 'facilities' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
@@ -1080,18 +1198,16 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* NEW MASTERIES ROW-BASED MODAL */}
+      {/* MASTERIES MODAL */}
       {activeModal === 'masteries' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
             
-            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Masteries</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
             
-            {/* Mastery Progress Bar */}
             <div className="p-4 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10 flex flex-col gap-3">
               <div className="flex justify-between items-center">
                  <div className="text-[11px] font-bold text-[#F4F7FB] uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Mastery Progress</div>
@@ -1099,13 +1215,11 @@ export default function ManualBuilder() {
               </div>
               
               <div className="flex items-center gap-4">
-                 {/* Rank Icon */}
                  <div className={`w-8 h-8 rounded border-2 flex flex-col items-center justify-center gap-0.5 ${masteryProgressPct >= 50 ? 'border-[#8B5CF6] bg-[#8B5CF6]/10' : masteryProgressPct > 0 ? 'border-[#4D8DFF] bg-[#4D8DFF]/10' : 'border-[#59657A] bg-[#0D1220]'}`}>
                     <svg className={`w-4 h-4 ${masteryProgressPct >= 50 ? 'text-[#8B5CF6]' : masteryProgressPct > 0 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`} fill="currentColor" viewBox="0 0 24 24">
                        <path d="M12 2L2 9l10 7 10-7-10-7zm0 10l-10-7v4l10 7 10-7v-4l-10 7z" />
                     </svg>
                  </div>
-                 {/* Progress Bar */}
                  <div className="flex-1 h-2 bg-[#080B14] rounded-full overflow-hidden border border-[#26334A]">
                     <div 
                       className="h-full bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] transition-all duration-500 ease-out"
@@ -1115,14 +1229,12 @@ export default function ManualBuilder() {
               </div>
             </div>
 
-            {/* List Headers */}
             <div className="flex items-center px-4 py-2 bg-[#080B14] text-[9px] uppercase tracking-widest font-bold text-[#8E9AAF] border-b border-[#26334A]/50 sticky top-0 z-0">
                <div className="w-1/3 pl-2">Archetype</div>
                <div className="w-1/3 text-center">Lvl 10</div>
                <div className="w-1/3 text-center">Lvl 30</div>
             </div>
 
-            {/* Scrolling Row Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24 hide-scrollbar bg-[#080B14]">
               {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
                 const status = unlockedMasteries[arch] || { l10: false, l30: false };
@@ -1132,7 +1244,6 @@ export default function ManualBuilder() {
                 return (
                   <div key={arch} className="flex bg-[#0D1220] rounded-xl border border-[#26334A] overflow-hidden hover:border-[#4D8DFF]/40 transition-colors">
                     
-                    {/* Left: Archetype Info */}
                     <div className="w-1/3 bg-[#131A2A] p-3 flex flex-col items-center justify-center border-r border-[#26334A]">
                        <div className="w-6 h-6 rounded-full bg-[#26334A] mb-1.5 flex items-center justify-center">
                           <div className="w-2.5 h-2.5 rounded-sm bg-[#59657A] rotate-45" />
@@ -1140,7 +1251,6 @@ export default function ManualBuilder() {
                        <span className="text-[9px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
                     </div>
                     
-                    {/* Middle: Lvl 10 Boosts */}
                     <button 
                       onClick={() => toggleMasteryUnlock(arch, 'l10')}
                       className={`w-1/3 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
@@ -1152,7 +1262,6 @@ export default function ManualBuilder() {
                        ))}
                     </button>
 
-                    {/* Right: Lvl 30 Boost */}
                     <button 
                       onClick={() => toggleMasteryUnlock(arch, 'l30')}
                       className={`w-1/3 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
@@ -1169,7 +1278,6 @@ export default function ManualBuilder() {
               })}
             </div>
 
-            {/* Sticky Action Footer */}
             <div className="absolute bottom-0 left-0 w-full p-4 bg-[#0D1220]/90 backdrop-blur-md border-t border-[#26334A] flex gap-3 z-20">
                <button 
                  onClick={() => setActiveModal(null)}
@@ -1189,12 +1297,11 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* PLAYSTYLE HUB MODAL (UNCHANGED) */}
+      {/* PLAYSTYLE HUB MODAL */}
       {activeModal === 'playstyles' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
             
-            {/* Header & AP Status */}
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>PlayStyle Hub</h2>
               <button onClick={() => { setActiveModal(null); setSelectedPsView(null); }} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
@@ -1219,10 +1326,8 @@ export default function ManualBuilder() {
                </div>
             </div>
 
-            {/* Scrollable Grid Area */}
             <div className={`flex-1 overflow-y-auto p-4 space-y-6 ${selectedPsView ? 'pb-64' : 'pb-8'} hide-scrollbar`}>
               
-              {/* PlayStyle+ Fixed Category */}
               <div>
                 <div className="flex items-center gap-2 mb-3 border-b border-[#26334A] pb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#facc15]" />
@@ -1235,16 +1340,15 @@ export default function ManualBuilder() {
                        <div className="w-2 h-2 bg-[#facc15] -rotate-45" />
                      </div>
                      <div>
-                       <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">{fixedPsPlus}</div>
-                       <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? 'Active' : 'Unlocks Lvl 20'}</div>
+                       <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">{activePsPlus}</div>
+                       <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? (equippedSpecialization ? 'From Spec.' : 'Active') : 'Unlocks Lvl 20'}</div>
                      </div>
                   </button>
                 </div>
               </div>
 
-              {/* Categorized Silver Playstyles */}
               {PLAYSTYLE_CATEGORIES.map(category => {
-                 const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && ps.name !== fixedPsPlus);
+                 const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && ps.name !== activePsPlus);
                  if (categoryStyles.length === 0) return null;
 
                  return (
@@ -1287,20 +1391,17 @@ export default function ManualBuilder() {
               })}
             </div>
 
-            {/* Sticky Detail Panel */}
             {selectedPsView && (
               <div className="absolute bottom-0 left-0 w-full bg-[#0D1220] border-t border-[#4D8DFF]/50 rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,0.6)] animate-fade-up z-20">
                 {(() => {
                   const ps = PLAYSTYLES_DATA.find(p => p.name === selectedPsView);
                   if (!ps) return null;
                   
-                  const { canEquip, cost, upgrades, reason } = getQuickEquipData(ps.name);
+                  const { canEquip, cost, upgrades, reason } = getUpgradeData(ps.reqs);
                   const isEquipped = equippedPlaystyles.includes(ps.name);
 
                   return (
                     <div className="p-5 flex flex-col gap-4">
-                      
-                      {/* Title & Close */}
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 border-2 border-[#F4F7FB] rotate-45 flex items-center justify-center"><div className="w-2 h-2 bg-[#F4F7FB] -rotate-45" /></div>
@@ -1312,7 +1413,6 @@ export default function ManualBuilder() {
                         <button onClick={() => setSelectedPsView(null)} className="text-[#59657A] hover:text-[#F4F7FB] font-bold p-1">✕</button>
                       </div>
 
-                      {/* Attribute Dependencies */}
                       <div className="bg-[#080B14] rounded-xl border border-[#26334A] p-4">
                         <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Dependencies</div>
                         <div className="space-y-3">
@@ -1344,7 +1444,6 @@ export default function ManualBuilder() {
                         </div>
                       </div>
 
-                      {/* Action Button */}
                       <button 
                         onClick={() => handleActionPlaystyle(ps.name, upgrades, isEquipped)}
                         disabled={!isEquipped && (!canEquip || (!hasEmptySlot && Object.keys(upgrades).length === 0 && cost === 0))}
@@ -1368,12 +1467,109 @@ export default function ManualBuilder() {
                                 ? `Quick Equip [ ${cost} AP ]` 
                                 : 'Equip PlayStyle'}
                       </button>
-
                     </div>
                   );
                 })()}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* SPECIALIZATIONS MODAL */}
+      {activeModal === 'specializations' && (
+        <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            
+            <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Browse Specializations</h2>
+              <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
+               <div className="text-[10px] text-[#8E9AAF] tracking-wide font-medium">Select a path for <span className="font-bold text-[#F4F7FB] uppercase tracking-widest">{archetype}</span></div>
+               <div className="text-right">
+                  <span className="text-[9px] uppercase tracking-widest text-[#8E9AAF] mr-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>AP Remaining</span>
+                  <span className="text-base font-black text-[#facc15] drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]">{availableAp}</span>
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-8 hide-scrollbar">
+              {(!SPECIALIZATIONS_DATA[archetype] || SPECIALIZATIONS_DATA[archetype].length === 0) ? (
+                 <div className="text-center text-[#8E9AAF] text-xs font-bold uppercase tracking-widest mt-10">No Specializations available for this archetype.</div>
+              ) : (
+                SPECIALIZATIONS_DATA[archetype].map((spec) => {
+                  const isEquipped = equippedSpecialization === spec.name;
+                  const { canEquip, cost, upgrades, reason } = getUpgradeData(spec.reqs);
+                  
+                  return (
+                    <div key={spec.name} className={`bg-[#0D1220] rounded-2xl overflow-hidden transition-all duration-300 border ${isEquipped ? 'border-[#facc15] shadow-[0_0_20px_rgba(250,204,21,0.15)] ring-1 ring-[#facc15]/30' : 'border-[#26334A]'}`}>
+                       <div className="p-4 flex flex-col gap-4">
+                          
+                          {/* Top row: Identity and Stats Grid */}
+                          <div className="flex justify-between items-start gap-4">
+                             {/* Identity */}
+                             <div className="flex-1">
+                               <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{spec.name}</div>
+                               <div className="text-[9px] text-[#8E9AAF] font-bold tracking-widest uppercase mt-0.5 mb-2">{spec.inspiredBy}</div>
+                               <div className="text-[10px] text-[#8E9AAF] font-medium leading-relaxed bg-[#080B14] p-2.5 rounded-lg border border-[#26334A]/50">
+                                 <span className="font-bold text-[#facc15] block mb-1">{spec.perk}</span>
+                                 {spec.desc}
+                               </div>
+                             </div>
+                             
+                             {/* Stats Box */}
+                             <div className="w-[120px] shrink-0 bg-[#080B14] rounded-xl border border-[#26334A] p-3 shadow-inner">
+                               <div className="space-y-2.5">
+                                 {spec.reqs.map(req => {
+                                    const currentVal = currentStats?.[req.stat] || 70;
+                                    const targetVal = req.min;
+                                    const isMet = currentVal >= targetVal;
+                                    const isImpossible = targetVal > (getStatCaps(archetype, req.stat).max || 99);
+                                    
+                                    return (
+                                       <div key={req.stat}>
+                                          <div className="flex justify-between items-end mb-1">
+                                             <span className="text-[9px] font-bold uppercase tracking-wide text-[#8E9AAF] leading-none" style={{ fontFamily: "'Inter', sans-serif" }}>
+                                               {STAT_ABBR[req.stat]}
+                                             </span>
+                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>
+                                               {currentVal}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}
+                                             </span>
+                                          </div>
+                                       </div>
+                                    )
+                                 })}
+                               </div>
+                             </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <button 
+                            onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)}
+                            disabled={!isEquipped && !canEquip}
+                            className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
+                              isEquipped 
+                                ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]'
+                                : !canEquip
+                                  ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
+                                  : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'
+                            }`}
+                          >
+                            {isEquipped 
+                              ? '✔ Equipped' 
+                              : !canEquip 
+                                ? reason 
+                                : cost > 0 
+                                  ? `Unlock (${cost} AP)` 
+                                  : 'Equip Path'}
+                          </button>
+                       </div>
+                    </div>
+                  )
+                })
+              )}
+            </div>
 
           </div>
         </div>
