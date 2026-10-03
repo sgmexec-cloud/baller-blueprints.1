@@ -155,6 +155,65 @@ const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<strin
 
 type StatReq = { stat: string; min: number };
 
+const SIGNATURE_PERKS_DATA: Record<string, { name: string; level: number; desc: string }[]> = {
+  "Target": [
+    { name: "No Look Finisher", level: 10, desc: "Shoot with your back to the goal in the box to gain a short boost to Shot Power, Finishing, and Balance." },
+    { name: "Physical Shooter", level: 45, desc: "Shield off an opponent, then shoot in the box for a short boost to Strength, Shot Power, and Balance." }
+  ],
+  "Target Forward": [ 
+    { name: "No Look Finisher", level: 10, desc: "Shoot with your back to the goal in the box to gain a short boost to Shot Power, Finishing, and Balance." },
+    { name: "Physical Shooter", level: 45, desc: "Shield off an opponent, then shoot in the box for a short boost to Strength, Shot Power, and Balance." }
+  ],
+  "Finisher": [
+    { name: "Fake-to-Real", level: 10, desc: "Fake shot in the box to gain a short boost to Shot Power, Finishing, and Composure." },
+    { name: "1v1 Master", level: 45, desc: "When 1vs1 with the goalkeeper, gain a short boost to Ball Control, Agility, and Balance." }
+  ],
+  "Magician": [
+    { name: "Getaway Driver", level: 10, desc: "Dribble at full sprint in the opponent's half for a short boost to Agility, Balance, and Reactions." },
+    { name: "Ankle Breaker", level: 45, desc: "Fake shot to beat an opponent in the attacking third for a boost to Balance, Ball Control, and Dribbling." }
+  ],
+  "Spark": [
+    { name: "Bail Out", level: 10, desc: "Knock-on past an opponent on the attacking wing for a boost to Acceleration, Agility, and Ball Control." },
+    { name: "Cut Back Specialist", level: 45, desc: "Passes after entering the box from the wing receive a boost to Short Passing, Crossing, and Vision." }
+  ],
+  "Creator": [
+    { name: "Grasshopper Passer", level: 10, desc: "Dinked passes in the opponent's half receive a boost to Ball Control, Short Passing, and Curve." },
+    { name: "Bullseye Passer", level: 45, desc: "Precision passes in the middle third receive a boost to Curve, Long Passing, and Short Passing." }
+  ],
+  "Maestro": [
+    { name: "Fly Trap", level: 10, desc: "Shield after an interception in the middle third for a boost to Strength, Balance, and Ball Control." },
+    { name: "Eagle Eyes", level: 45, desc: "Receive a pass in the defensive half for a short boost to Long Passing, Vision, and Ball Control." }
+  ],
+  "Recycler": [
+    { name: "Press and Pass", level: 10, desc: "Win the ball in the defensive half to gain a short boost to Short Passing, Reactions, and Vision." },
+    { name: "Physical Passer", level: 45, desc: "Shield the ball from an opponent in the defensive half to boost Balance, Short Passing, and Aggression." }
+  ],
+  "Disruptor": [
+    { name: "Tracker", level: 10, desc: "Jockey near a dribbler in the defensive half for a boost to Interceptions, Reactions, and Ball Control." },
+    { name: "Presser", level: 45, desc: "Win the ball in the defensive half to gain a short boost to Short Passing, Vision, and Balance." }
+  ],
+  "Marauder": [
+    { name: "High Speed Crosser", level: 10, desc: "Crosses while at full sprint on the attacking wing receive a boost to Agility, Crossing, and Curve." },
+    { name: "Tackle and Run", level: 45, desc: "Successful stand tackle on the defensive wing for a boost to Acceleration, Agility, and Sprint Speed." }
+  ],
+  "Boss": [
+    { name: "Shuffler", level: 10, desc: "Jockey near a dribbler in the defensive half for a boost to Aggression, Balance, and Reactions." },
+    { name: "Box Controller", level: 45, desc: "Clear the ball from the defensive box for a short boost to Heading, Jumping, and Reactions." }
+  ],
+  "Progressor": [
+    { name: "Restarter", level: 10, desc: "Successful stand tackle in the defensive half for a boost to Long Passing, Short Passing, and Vision." },
+    { name: "Goalkeepers Favourite", level: 45, desc: "Receive a pass from the GK in the defensive third for a boost to Long Passing, Short Passing, and Vision." }
+  ],
+  "Sweeper Keeper": [
+    { name: "Back Option", level: 10, desc: "Receive a ground pass in the defensive half for a short boost to Short Passing, Ball Control, and Vision." },
+    { name: "Rush Specialist", level: 45, desc: "Rush the dribbler in the box for a short boost to Acceleration, Aggression, and Reactions." }
+  ],
+  "Shot Stopper": [
+    { name: "Low Shot Saver", level: 10, desc: "Stop a low shot for a short boost to Agility, Handling, and Reflexes." },
+    { name: "Ready to Act", level: 45, desc: "Jockey when the dribbler is in the attacking third for a short boost to Diving, Balance, and Reflexes." }
+  ]
+};
+
 const SPECIALIZATIONS_DATA: Record<string, { name: string; perk: string; inspiredBy: string; desc: string; reqs: StatReq[] }[]> = {
   "Boss": [
     { name: "BOSS+", perk: "Slide Tackle+", inspiredBy: "Inspired by Nemanja Vidić", desc: "Gain defensive dominance with a massive boost to tackling.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 92 } ] },
@@ -990,6 +1049,58 @@ export default function ManualBuilder() {
             </div>
           </div>
         </section>
+
+        {/* --- SIGNATURE PERKS --- */}
+        {SIGNATURE_PERKS_DATA[archetype] && (
+          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6">
+            <div className="flex items-center gap-2 mb-4 pl-1">
+              <div className="w-1 h-3 rounded-full bg-[#21E6A4]" />
+              <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                Signature Perks
+              </span>
+            </div>
+            
+            <div className="space-y-3">
+              {SIGNATURE_PERKS_DATA[archetype].map((perk, index) => {
+                const isUnlocked = level >= perk.level;
+                
+                return (
+                  <div 
+                    key={index}
+                    className={`p-4 rounded-xl border transition-all ${
+                      isUnlocked 
+                        ? 'bg-[#131A2A] border-[#26334A] shadow-sm' 
+                        : 'bg-[#0D1220]/60 border-[#26334A]/50 opacity-70'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[12px] font-black uppercase tracking-wider ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                          {perk.name}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnlocked ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                          LVL {perk.level}
+                        </span>
+                        {isUnlocked ? (
+                          <svg className="w-3.5 h-3.5 text-[#21E6A4]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 text-[#59657A]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 17a2 2 0 002-2v-1h-4v1a2 2 0 002 2zm3-6V9a3 3 0 00-6 0v2H8v8h8v-8h-1zm-5-2a2 2 0 014 0v2h-4V9z" /></svg>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <p className={`text-[10px] leading-relaxed font-medium ${isUnlocked ? 'text-[#8E9AAF]' : 'text-[#59657A]'}`}>
+                      <span className={`font-bold ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>Effect:</span> {perk.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* --- MAIN FUT CARD GRID --- */}
         {currentStats && serverArchetypes && (
