@@ -76,6 +76,19 @@ const CSV_STAT_MAP: Record<string, string> = {
   "Aggression": "Aggression"
 };
 
+const STAT_ABBR: Record<string, string> = {
+  "Acceleration": "ACC", "Sprint Speed": "SPD", "Attack Positioning": "ATT",
+  "Finishing": "FIN", "Shot Power": "SHT", "Long Shots": "LNG", "Volleys": "VOL",
+  "Penalties": "PEN", "Vision": "VIS", "Crossing": "CRO", "FK Accuracy": "FKA",
+  "Short Passing": "SPA", "Long Passing": "LPA", "Curve": "CRV", "Agility": "AGI",
+  "Balance": "BAL", "Reactions": "REA", "Ball Control": "BAC", "Dribbling": "DRI",
+  "Composure": "COM", "Interceptions": "INT", "Heading Accuracy": "HEA",
+  "Def Awareness": "DFA", "Standing Tackle": "STT", "Sliding Tackle": "SLT",
+  "Jumping": "JMP", "Stamina": "STA", "Strength": "STR", "Aggression": "AGG",
+  "GK Diving": "GKD", "GK Handling": "GKH", "GK Kicking": "GKK", 
+  "GK Reflexes": "GKR", "GK Positioning": "GKP"
+};
+
 const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number, baseW: number, minW: number, maxW: number, type: 'DEF' | 'MID_ATT' | 'GK' }> = {
   'Shot Stopper': { baseH: 188, minH: 179, maxH: 197, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
   'Sweeper Keeper': { baseH: 192, minH: 184, maxH: 200, baseW: 90, minW: 80, maxW: 100, type: 'GK' },
@@ -643,8 +656,10 @@ export default function ManualBuilder() {
   }, [height, activeBounds]);
 
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
-  const activeFacilitiesCount = Object.keys(equippedFacilities).length;
+  const totalMasteriesCount = 28; // 14 Archetypes * 2 Levels
+  const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
   
+  const activeFacilitiesCount = Object.keys(equippedFacilities).length;
   const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
   const isPsPlusUnlocked = level >= 20;
   const fixedPsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
@@ -821,7 +836,7 @@ export default function ManualBuilder() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             
-            {/* Masteries */}
+            {/* Masteries Hub Launch */}
             <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
                <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                    <div className="w-3 h-3 rounded-[2px] bg-[#8B5CF6]" />
@@ -832,7 +847,7 @@ export default function ManualBuilder() {
                </div>
             </button>
             
-            {/* Facilities */}
+            {/* Facilities Hub Launch */}
             <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
                <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                    <div className="w-3 h-3 rounded-full bg-[#4D8DFF]" />
@@ -958,7 +973,7 @@ export default function ManualBuilder() {
           MODALS / OVERLAYS
       ========================================= */}
 
-      {/* FACILITIES MODAL */}
+      {/* FACILITIES MODAL (UNCHANGED) */}
       {activeModal === 'facilities' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
@@ -1017,7 +1032,6 @@ export default function ManualBuilder() {
                         +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}
                       </div>
                       
-                      {/* PlayStyle Reveal at Tier 3 */}
                       {viewingFacTier === 3 && FACILITIES[selectedFacView].playstyle && (
                         <div className="mt-4 pt-3 border-t border-[#26334A]/50 animate-fade-in">
                            <div className="text-[9px] text-[#facc15] uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
@@ -1066,44 +1080,116 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* MASTERIES MODAL */}
+      {/* NEW MASTERIES ROW-BASED MODAL */}
       {activeModal === 'masteries' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
+            
+            {/* Header */}
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
-              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Cross-Build Masteries</h2>
+              <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Masteries</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-            <div className="p-4 bg-[#131A2A] border-b border-[#26334A] text-[10px] text-[#8E9AAF] leading-relaxed">
-              Check off milestones completed across all archetypes to stack permanent account-wide attribute bonuses. Level 30 automatically unlocks Level 10.
+            
+            {/* Mastery Progress Bar */}
+            <div className="p-4 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10 flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                 <div className="text-[11px] font-bold text-[#F4F7FB] uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Mastery Progress</div>
+                 <div className="text-sm font-black text-[#F4F7FB]">{masteryProgressPct}%</div>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                 {/* Rank Icon */}
+                 <div className={`w-8 h-8 rounded border-2 flex flex-col items-center justify-center gap-0.5 ${masteryProgressPct >= 50 ? 'border-[#8B5CF6] bg-[#8B5CF6]/10' : masteryProgressPct > 0 ? 'border-[#4D8DFF] bg-[#4D8DFF]/10' : 'border-[#59657A] bg-[#0D1220]'}`}>
+                    <svg className={`w-4 h-4 ${masteryProgressPct >= 50 ? 'text-[#8B5CF6]' : masteryProgressPct > 0 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`} fill="currentColor" viewBox="0 0 24 24">
+                       <path d="M12 2L2 9l10 7 10-7-10-7zm0 10l-10-7v4l10 7 10-7v-4l-10 7z" />
+                    </svg>
+                 </div>
+                 {/* Progress Bar */}
+                 <div className="flex-1 h-2 bg-[#080B14] rounded-full overflow-hidden border border-[#26334A]">
+                    <div 
+                      className="h-full bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] transition-all duration-500 ease-out"
+                      style={{ width: `${masteryProgressPct}%` }}
+                    />
+                 </div>
+              </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 hide-scrollbar">
+
+            {/* List Headers */}
+            <div className="flex items-center px-4 py-2 bg-[#080B14] text-[9px] uppercase tracking-widest font-bold text-[#8E9AAF] border-b border-[#26334A]/50 sticky top-0 z-0">
+               <div className="w-1/3 pl-2">Archetype</div>
+               <div className="w-1/3 text-center">Lvl 10</div>
+               <div className="w-1/3 text-center">Lvl 30</div>
+            </div>
+
+            {/* Scrolling Row Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24 hide-scrollbar bg-[#080B14]">
               {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
                 const status = unlockedMasteries[arch] || { l10: false, l30: false };
                 const masteryDef = MASTERIES[arch];
                 if (!masteryDef) return null;
+                
                 return (
-                  <div key={arch} className="bg-[#0D1220] border border-[#26334A] p-3 rounded-xl flex justify-between items-center gap-2">
-                    <span className="text-[11px] font-bold text-[#F4F7FB] uppercase tracking-wider">{arch}</span>
-                    <div className="flex gap-3">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" checked={status.l10} onChange={() => toggleMasteryUnlock(arch, 'l10')} className="accent-[#4D8DFF] w-3 h-3 cursor-pointer" />
-                        <span className={`text-[9px] font-bold ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`}>L10</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input type="checkbox" checked={status.l30} onChange={() => toggleMasteryUnlock(arch, 'l30')} className="accent-[#8B5CF6] w-3 h-3 cursor-pointer" />
-                        <span className={`text-[9px] font-bold ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#59657A]'}`}>L30</span>
-                      </label>
+                  <div key={arch} className="flex bg-[#0D1220] rounded-xl border border-[#26334A] overflow-hidden hover:border-[#4D8DFF]/40 transition-colors">
+                    
+                    {/* Left: Archetype Info */}
+                    <div className="w-1/3 bg-[#131A2A] p-3 flex flex-col items-center justify-center border-r border-[#26334A]">
+                       <div className="w-6 h-6 rounded-full bg-[#26334A] mb-1.5 flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 rounded-sm bg-[#59657A] rotate-45" />
+                       </div>
+                       <span className="text-[9px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
                     </div>
+                    
+                    {/* Middle: Lvl 10 Boosts */}
+                    <button 
+                      onClick={() => toggleMasteryUnlock(arch, 'l10')}
+                      className={`w-1/3 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
+                    >
+                       {Object.entries(masteryDef.l10).map(([stat, val]) => (
+                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>
+                             {STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span>
+                          </div>
+                       ))}
+                    </button>
+
+                    {/* Right: Lvl 30 Boost */}
+                    <button 
+                      onClick={() => toggleMasteryUnlock(arch, 'l30')}
+                      className={`w-1/3 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
+                    >
+                       {Object.entries(masteryDef.l30).map(([stat, val]) => (
+                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>
+                             {STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span>
+                          </div>
+                       ))}
+                    </button>
+                    
                   </div>
                 );
               })}
             </div>
+
+            {/* Sticky Action Footer */}
+            <div className="absolute bottom-0 left-0 w-full p-4 bg-[#0D1220]/90 backdrop-blur-md border-t border-[#26334A] flex gap-3 z-20">
+               <button 
+                 onClick={() => setActiveModal(null)}
+                 className="flex-1 py-3 rounded-xl bg-[#131A2A] border border-[#26334A] text-[#8E9AAF] font-bold uppercase tracking-widest text-[10px] hover:bg-[#192235] hover:text-[#F4F7FB] transition-all"
+               >
+                 Cancel
+               </button>
+               <button 
+                 onClick={() => setActiveModal(null)}
+                 className="flex-[2] py-3 rounded-xl bg-[#4D8DFF] text-[#080B14] font-black uppercase tracking-widest text-[10px] shadow-[0_0_15px_rgba(77,141,255,0.3)] hover:bg-[#4D8DFF]/90 transition-all"
+               >
+                 Save to this Build Only
+               </button>
+            </div>
+
           </div>
         </div>
       )}
 
-      {/* PLAYSTYLE HUB MODAL */}
+      {/* PLAYSTYLE HUB MODAL (UNCHANGED) */}
       {activeModal === 'playstyles' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
