@@ -795,12 +795,6 @@ export default function ManualBuilder() {
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
 
-  const leagueWarning = useMemo(() => {
-    if (activeBounds.type === 'DEF' && height > 187) return "Max DEF height is 187cm";
-    if (activeBounds.type === 'MID_ATT' && height > 182) return "Max MID/ATT height is 182cm";
-    return null;
-  }, [height, activeBounds]);
-
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const totalMasteriesCount = 28; 
   const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
@@ -879,14 +873,13 @@ export default function ManualBuilder() {
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-hidden pt-8 pb-16 px-4">
       <div className="max-w-lg mx-auto">
         
-        {/* Header Branding */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl sm:text-3xl font-black text-[#F4F7FB] uppercase tracking-widest drop-shadow-lg" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-            Manual Builder
-          </h1>
-          <p className="text-xs mt-2 font-medium tracking-wide text-[#8E9AAF]" style={{ fontFamily: "'Inter', sans-serif" }}>
-            Powered by live engine parameters.
-          </p>
+        {/* Header Branding - REPLACED WITH LOGO */}
+        <div className="flex justify-center mb-8">
+          <img 
+            src="/clubs-dna-logo.png"
+            alt="ClubsDNA" 
+            className="w-full max-w-[320px] h-auto object-contain drop-shadow-[0_0_15px_rgba(77,141,255,0.15)]" 
+          />
         </div>
 
         {/* Global Dataset Toggles */}
@@ -912,11 +905,6 @@ export default function ManualBuilder() {
         </div>
 
         <section className="mb-6 animate-fade-in space-y-4">
-          {leagueWarning && (
-            <div className="bg-[#080B14] border border-yellow-500/30 text-yellow-400/90 py-2 px-3 rounded-lg text-center text-[10px] font-bold uppercase tracking-widest">
-              ⚠️ League Warning: {leagueWarning}
-            </div>
-          )}
 
           {/* Premium Top Dashboard (AP & Level) */}
           <div className="flex gap-4">
