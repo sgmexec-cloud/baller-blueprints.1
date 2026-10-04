@@ -373,6 +373,13 @@ const PLAYSTYLE_CATEGORIES = [
 ];
 
 // --- Helper Utilities ---
+const getPlaystyleIconPath = (name: string, isPlus: boolean = false) => {
+  if (!name) return '';
+  const formatted = name.toLowerCase().replace(/\s+/g, '-');
+  const suffix = isPlus ? '-plus' : '';
+  return `/icons/playstyles/${formatted}${suffix}.png`;
+};
+
 const getApCost = (archName: string, statName: string, targetLevel: number): number => {
   const normalizedArch = archName.split(' ')[0].toLowerCase();
   const csvStatName = CSV_STAT_MAP[statName];
@@ -1332,7 +1339,12 @@ export default function ManualBuilder() {
                              <div className="w-1 h-1 rounded-full bg-[#facc15]" />
                            </div>
                            <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider flex items-center justify-center gap-2">
-                             <div className="w-4 h-4 border border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
+                             <img 
+                               src={getPlaystyleIconPath(FACILITIES[selectedFacView].playstyle, false)} 
+                               alt="" 
+                               className="w-4 h-4 object-contain"
+                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                             />
                              {FACILITIES[selectedFacView].playstyle}
                            </div>
                         </div>
@@ -1510,8 +1522,15 @@ export default function ManualBuilder() {
                 <div className="grid grid-cols-2 gap-3">
                   <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group text-left">
                      <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
-                     <div className="w-6 h-6 border-2 border-[#facc15] rotate-45 flex items-center justify-center mb-1">
-                       <div className="w-2 h-2 bg-[#facc15] -rotate-45" />
+                     <div className="w-6 h-6 flex items-center justify-center mb-1">
+                       <img 
+                         src={getPlaystyleIconPath(activePsPlus, true)} 
+                         alt={activePsPlus} 
+                         className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                         onError={(e) => {
+                           e.currentTarget.style.display = 'none';
+                         }}
+                       />
                      </div>
                      <div>
                        <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">{activePsPlus}</div>
@@ -1550,8 +1569,15 @@ export default function ManualBuilder() {
                               }`}
                             >
                               <div className="flex justify-between items-start">
-                                <div className={`w-5 h-5 border-2 rotate-45 flex items-center justify-center mb-2 ${isEquipped ? 'border-[#21E6A4]' : 'border-[#59657A]'}`}>
-                                   <div className={`w-1.5 h-1.5 -rotate-45 ${isEquipped ? 'bg-[#21E6A4]' : 'bg-[#59657A]'}`} />
+                                <div className="w-5 h-5 flex items-center justify-center mb-2">
+                                   <img 
+                                     src={getPlaystyleIconPath(ps.name, isEquipped)} 
+                                     alt={ps.name} 
+                                     className="w-full h-full object-contain"
+                                     onError={(e) => {
+                                       e.currentTarget.style.display = 'none';
+                                     }}
+                                   />
                                 </div>
                                 {isEquipped && <span className="text-[8px] bg-[#21E6A4]/20 text-[#21E6A4] border border-[#21E6A4]/40 px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Equipped</span>}
                               </div>
@@ -1578,7 +1604,14 @@ export default function ManualBuilder() {
                     <div className="p-5 flex flex-col gap-4">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 border-2 border-[#F4F7FB] rotate-45 flex items-center justify-center"><div className="w-2 h-2 bg-[#F4F7FB] -rotate-45" /></div>
+                          <div className="w-8 h-8 flex items-center justify-center">
+                            <img 
+                              src={getPlaystyleIconPath(ps.name, isEquipped)} 
+                              alt={ps.name} 
+                              className="w-full h-full object-contain"
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          </div>
                           <div className="ml-2">
                              <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{ps.name}</h3>
                              <p className="text-[9px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{PLAYSTYLE_CATEGORIES.find(c => c.id === ps.category)?.label}</p>
@@ -1721,7 +1754,7 @@ export default function ManualBuilder() {
                             className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
                               isEquipped 
                                 ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]'
-                                : !canEquip
+                                : !caninspect
                                   ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
                                   : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'
                             }`}
