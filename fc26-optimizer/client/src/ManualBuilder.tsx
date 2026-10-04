@@ -882,32 +882,46 @@ export default function ManualBuilder() {
           />
         </div>
 
-        {/* STICKY TOP DASHBOARD (LEVEL, ARCHETYPE, AP) */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-5 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6 flex items-center justify-between">
+        {/* STICKY TOP DASHBOARD (LOGO, LEVEL, ARCHETYPE, AP) */}
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-4 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6 flex items-center justify-between gap-3">
           
+          {/* BRANDING ICON */}
+          <div className="shrink-0 flex items-center justify-center">
+            <img 
+              src="/app-icon.png" 
+              alt="ClubsDNA" 
+              className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(77,141,255,0.2)]"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                // Fallback to a generic shape if the specific app icon is not found
+                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+              }}
+            />
+          </div>
+
           {/* LEVEL & SLIDER */}
-          <div className="flex flex-col gap-1 w-1/3">
+          <div className="flex flex-col gap-1 flex-1 pl-3 border-l border-[#26334A]/50">
             <div className="flex items-end gap-1.5">
-              <span className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest">Lvl</span>
+              <span className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest leading-none">Lvl</span>
               <span className="text-sm font-black text-[#F4F7FB] leading-none">{level}</span>
             </div>
             <input 
               type="range" min="1" max="40" value={level} 
               onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-              className="w-full max-w-[100px] accent-[#4D8DFF] h-1.5 bg-[#26334A] rounded-full appearance-none cursor-pointer"
+              className="w-full max-w-[70px] accent-[#4D8DFF] h-1 bg-[#26334A] rounded-full appearance-none cursor-pointer"
             />
           </div>
 
           {/* ARCHETYPE */}
-          <div className="flex flex-col items-center justify-center w-1/3 px-2 border-x border-[#26334A]/50">
-            <span className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-0.5">Archetype</span>
-            <span className="text-[11px] font-black text-[#F4F7FB] text-center leading-tight uppercase tracking-wider">{archetype}</span>
+          <div className="flex flex-col items-center justify-center flex-1 px-2 border-x border-[#26334A]/50">
+            <span className="text-[8px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-0.5">Archetype</span>
+            <span className="text-[10px] font-black text-[#F4F7FB] text-center leading-tight uppercase tracking-wider line-clamp-1">{archetype}</span>
           </div>
 
           {/* AP */}
-          <div className="flex flex-col items-end justify-center w-1/3">
-            <span className="text-[10px] font-bold text-[#4D8DFF] uppercase tracking-widest mb-0.5">Avail AP</span>
-            <span className="text-lg font-black text-[#F4F7FB] leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>{availableAp}</span>
+          <div className="flex flex-col items-end justify-center flex-[0.8]">
+            <span className="text-[9px] font-bold text-[#4D8DFF] uppercase tracking-widest mb-0.5">Avail AP</span>
+            <span className="text-base font-black text-[#F4F7FB] leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>{availableAp}</span>
           </div>
 
         </div>
@@ -1135,7 +1149,7 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* --- APP DASHBOARD CARDS (Moved to bottom) --- */}
+        {/* --- APP DASHBOARD CARDS --- */}
         <section className="mt-8 border-t border-[#26334A]/50 pt-6">
           <div className="flex items-center gap-2 mb-3 pl-1">
             <div className="w-1 h-3 rounded-full bg-[#8B5CF6]" />
