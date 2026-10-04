@@ -870,7 +870,6 @@ export default function ManualBuilder() {
   }
 
   return (
-    {/* overflow-x-hidden fixes the sticky issue by preventing child elements from breaking the layout while allowing vertical scrolling */}
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-hidden pt-6 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
@@ -894,7 +893,6 @@ export default function ManualBuilder() {
               className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(77,141,255,0.2)]"
               onError={(e) => {
                 e.currentTarget.onerror = null;
-                // Fallback to a generic shape if the specific app icon is not found
                 e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
               }}
             />
@@ -963,7 +961,7 @@ export default function ManualBuilder() {
             <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto pb-4 snap-x hide-scrollbar" style={{ gridAutoColumns: '88px' }}>
               {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
                 const isSelected = archetype === arch;
-                const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png'; // e.g., 'shot-stopper.png'
+                const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
                 
                 return (
                   <button
@@ -982,7 +980,6 @@ export default function ManualBuilder() {
                          className="w-full h-full object-contain drop-shadow-md"
                          onError={(e) => {
                            e.currentTarget.onerror = null; 
-                           // Fallback to a generic shape if the specific archetype icon is not found
                            e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
                          }}
                       />
