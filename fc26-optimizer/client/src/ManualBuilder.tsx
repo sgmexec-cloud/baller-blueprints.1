@@ -871,15 +871,45 @@ export default function ManualBuilder() {
 
   return (
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-hidden pt-8 pb-16 px-4">
-      <div className="max-w-lg mx-auto">
+      <div className="max-w-lg mx-auto relative">
         
-        {/* Header Branding - REPLACED WITH LOGO */}
-        <div className="flex justify-center mb-8">
+        {/* Header Branding */}
+        <div className="flex justify-center mb-6 pt-2">
           <img 
             src="/clubs-dna-logo.png"
             alt="ClubsDNA" 
-            className="w-full max-w-[320px] h-auto object-contain drop-shadow-[0_0_15px_rgba(77,141,255,0.15)]" 
+            className="w-full max-w-[280px] h-auto object-contain drop-shadow-[0_0_15px_rgba(77,141,255,0.15)]" 
           />
+        </div>
+
+        {/* STICKY TOP DASHBOARD (LEVEL, ARCHETYPE, AP) */}
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-5 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6 flex items-center justify-between">
+          
+          {/* LEVEL & SLIDER */}
+          <div className="flex flex-col gap-1 w-1/3">
+            <div className="flex items-end gap-1.5">
+              <span className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest">Lvl</span>
+              <span className="text-sm font-black text-[#F4F7FB] leading-none">{level}</span>
+            </div>
+            <input 
+              type="range" min="1" max="40" value={level} 
+              onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
+              className="w-full max-w-[100px] accent-[#4D8DFF] h-1.5 bg-[#26334A] rounded-full appearance-none cursor-pointer"
+            />
+          </div>
+
+          {/* ARCHETYPE */}
+          <div className="flex flex-col items-center justify-center w-1/3 px-2 border-x border-[#26334A]/50">
+            <span className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-0.5">Archetype</span>
+            <span className="text-[11px] font-black text-[#F4F7FB] text-center leading-tight uppercase tracking-wider">{archetype}</span>
+          </div>
+
+          {/* AP */}
+          <div className="flex flex-col items-end justify-center w-1/3">
+            <span className="text-[10px] font-bold text-[#4D8DFF] uppercase tracking-widest mb-0.5">Avail AP</span>
+            <span className="text-lg font-black text-[#F4F7FB] leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>{availableAp}</span>
+          </div>
+
         </div>
 
         {/* Global Dataset Toggles */}
@@ -906,31 +936,7 @@ export default function ManualBuilder() {
 
         <section className="mb-6 animate-fade-in space-y-4">
 
-          {/* Premium Top Dashboard (AP & Level) */}
-          <div className="flex gap-4">
-            <div className="flex-1 bg-[#131A2A] border border-[#26334A] p-5 rounded-2xl flex flex-col justify-center">
-              <label className="block text-[10px] font-bold mb-3 uppercase tracking-[0.2em] text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Player Level <span className="text-[#F4F7FB] text-sm ml-1">{level}</span>
-              </label>
-              <input 
-                type="range" min="1" max="40" value={level} 
-                onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-                className="w-full accent-[#4D8DFF] cursor-pointer"
-              />
-            </div>
-            
-            <div className="flex-1 bg-gradient-to-b from-[#192235] to-[#131A2A] border border-[#4D8DFF]/40 p-5 rounded-2xl flex flex-col justify-center items-center relative overflow-hidden shadow-[0_0_20px_rgba(77,141,255,0.1)]">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-[#4D8DFF]/10 rounded-full blur-2xl pointer-events-none" />
-              <label className="block text-[10px] font-bold mb-1 uppercase tracking-[0.2em] text-[#4D8DFF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Available AP
-              </label>
-              <div className="text-4xl font-black text-[#F4F7FB] tracking-tight drop-shadow-md z-10" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                {availableAp}
-              </div>
-            </div>
-          </div>
-
-          {/* Archetype Selector */}
+          {/* Archetype Selector (2-Row Horizontal Scroll) */}
           <div>
             <div className="flex items-center gap-2 mb-3 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
@@ -938,25 +944,36 @@ export default function ManualBuilder() {
                 Archetype Foundation
               </span>
             </div>
-            <div className="flex overflow-x-auto gap-3 pb-2 snap-x hide-scrollbar">
+            
+            <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto pb-4 snap-x hide-scrollbar" style={{ gridAutoColumns: '88px' }}>
               {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
                 const isSelected = archetype === arch;
+                const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png'; // e.g., 'shot-stopper.png'
+                
                 return (
                   <button
                     key={arch}
                     onClick={() => handleArchetypeChange(arch)}
-                    className={`flex-shrink-0 text-left p-3 rounded-xl transition-all duration-300 snap-center border ${
+                    className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 snap-center border-2 ${
                       isSelected 
-                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)]' 
-                        : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF] hover:bg-[#192235]'
+                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
+                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
                     }`}
-                    style={{ minWidth: '130px' }}
                   >
-                    <div className={`font-bold text-sm tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {arch}
+                    <div className="w-8 h-8 mb-1.5 flex items-center justify-center">
+                      <img 
+                         src={`/archetypes/${iconFilename}`} 
+                         alt={arch} 
+                         className="w-full h-full object-contain drop-shadow-md"
+                         onError={(e) => {
+                           e.currentTarget.onerror = null; 
+                           // Fallback to a generic shape if the specific archetype icon is not found
+                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                         }}
+                      />
                     </div>
-                    <div className="text-[10px] mt-1 font-medium text-[#59657A] tracking-wider uppercase">
-                      {serverArchetypes[arch].pos}
+                    <div className={`font-black text-[9px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {arch}
                     </div>
                   </button>
                 );
