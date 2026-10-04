@@ -870,7 +870,8 @@ export default function ManualBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-hidden pt-8 pb-16 px-4">
+    {/* overflow-x-hidden fixes the sticky issue by preventing child elements from breaking the layout while allowing vertical scrolling */}
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-hidden pt-6 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
         {/* Header Branding */}
