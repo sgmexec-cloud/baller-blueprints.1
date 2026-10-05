@@ -977,47 +977,85 @@ export default function ManualBuilder() {
 
         <section className="mb-6 animate-fade-in space-y-4">
 
-          {/* Archetype Selector (2-Row Horizontal Scroll) */}
+          {/* Archetype Selector (Static Grid) */}
           <div>
             <div className="flex items-center gap-2 mb-3 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
               <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Archetype Foundation
+                Archetypes
               </span>
             </div>
             
-            <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto pb-4 snap-x hide-scrollbar" style={{ gridAutoColumns: '88px' }}>
-              {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
-                const isSelected = archetype === arch;
-                const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
-                
-                return (
-                  <button
-                    key={arch}
-                    onClick={() => handleArchetypeChange(arch)}
-                    className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 snap-center border-2 ${
-                      isSelected 
-                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
-                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
-                    }`}
-                  >
-                    <div className="w-8 h-8 mb-1.5 flex items-center justify-center">
-                      <img 
-                         src={`/archetypes/${iconFilename}`} 
-                         alt={arch} 
-                         className="w-full h-full object-contain drop-shadow-md"
-                         onError={(e) => {
-                           e.currentTarget.onerror = null; 
-                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                         }}
-                      />
-                    </div>
-                    <div className={`font-black text-[9px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {arch}
-                    </div>
-                  </button>
-                );
-              })}
+            <div className="flex flex-col gap-2 pb-4">
+              {/* Row 1 (5 items) */}
+              <div className="grid grid-cols-5 gap-2">
+                {['Progressor', 'Disruptor', 'Maestro', 'Spark', 'Finisher'].map(arch => {
+                  const isSelected = archetype === arch;
+                  const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
+                  
+                  return (
+                    <button
+                      key={arch}
+                      onClick={() => handleArchetypeChange(arch)}
+                      className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
+                        isSelected 
+                          ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
+                          : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
+                        <img 
+                           src={`/archetypes/${iconFilename}`} 
+                           alt={arch} 
+                           className="w-full h-full object-contain drop-shadow-md"
+                           onError={(e) => {
+                             e.currentTarget.onerror = null; 
+                             e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                           }}
+                        />
+                      </div>
+                      <div className={`font-black text-[8px] sm:text-[9px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {arch}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Row 2 (6 items) */}
+              <div className="grid grid-cols-6 gap-2">
+                {['Boss', 'Marauder', 'Recycler', 'Creator', 'Magician', 'Target'].map(arch => {
+                  const isSelected = archetype === arch;
+                  const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
+                  
+                  return (
+                    <button
+                      key={arch}
+                      onClick={() => handleArchetypeChange(arch)}
+                      className={`flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-2xl transition-all duration-300 border-2 ${
+                        isSelected 
+                          ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
+                          : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <div className="w-6 h-6 sm:w-7 sm:h-7 mb-1.5 flex items-center justify-center">
+                        <img 
+                           src={`/archetypes/${iconFilename}`} 
+                           alt={arch} 
+                           className="w-full h-full object-contain drop-shadow-md"
+                           onError={(e) => {
+                             e.currentTarget.onerror = null; 
+                             e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                           }}
+                        />
+                      </div>
+                      <div className={`font-black text-[7px] sm:text-[8px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+                        {arch}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
