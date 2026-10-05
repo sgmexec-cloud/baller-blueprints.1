@@ -1233,11 +1233,11 @@ export default function ManualBuilder() {
           <div className="grid grid-cols-2 gap-3">
             
             <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
-               <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+               <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform p-1.5 overflow-hidden">
                    <img 
                      src="/icons/masteries.png" 
                      alt="Masteries" 
-                     className="w-5 h-5 object-contain"
+                     className="w-full h-full object-contain"
                      onError={(e) => {
                        e.currentTarget.onerror = null;
                        e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238B5CF6"><path d="M12 2L2 9l10 7 10-7-10-7z"/></svg>';
@@ -1251,8 +1251,16 @@ export default function ManualBuilder() {
             </button>
             
             <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
-               <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                   <div className="w-3 h-3 rounded-full bg-[#4D8DFF]" />
+               <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform p-2 overflow-hidden">
+                   <img 
+                     src="/icons/facilities.png" 
+                     alt="Facilities" 
+                     className="w-full h-full object-contain"
+                     onError={(e) => {
+                       e.currentTarget.onerror = null;
+                       e.currentTarget.outerHTML = '<div class="w-3 h-3 rounded-full bg-[#4D8DFF]"></div>';
+                     }}
+                   />
                </div>
                <div className="text-center">
                    <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Facilities</div>
@@ -1378,10 +1386,25 @@ export default function ManualBuilder() {
                 {Object.keys(FACILITIES).map(facName => {
                   const isSelected = selectedFacView === facName;
                   const equippedTier = equippedFacilities[facName];
+                  const iconPath = `/icons/facilities/${facName.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-')}.png`;
+                  
                   return (
-                    <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full p-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
-                      <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
-                      {equippedTier && <div className="text-[9px] text-[#21E6A4] uppercase mt-1 tracking-wider font-bold">★ Tier {equippedTier}</div>}
+                    <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full p-3 flex items-center gap-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
+                      <div className="w-8 h-8 shrink-0 rounded-full bg-[#080B14] border border-[#26334A] flex items-center justify-center p-1.5 overflow-hidden">
+                         <img 
+                             src={iconPath}
+                             alt={facName}
+                             className="w-full h-full object-contain"
+                             onError={(e) => {
+                                 e.currentTarget.onerror = null;
+                                 e.currentTarget.outerHTML = '<div class="w-2 h-2 rounded-full bg-[#4D8DFF]"></div>';
+                             }}
+                         />
+                      </div>
+                      <div>
+                        <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
+                        {equippedTier && <div className="text-[9px] text-[#21E6A4] uppercase mt-1 tracking-wider font-bold">★ Tier {equippedTier}</div>}
+                      </div>
                     </button>
                   );
                 })}
