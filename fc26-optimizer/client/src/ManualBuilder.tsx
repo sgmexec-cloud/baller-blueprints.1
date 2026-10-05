@@ -1605,22 +1605,23 @@ export default function ManualBuilder() {
                   <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#facc15]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Gold)</span>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group text-left">
+                  <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-3.5 flex flex-row items-center gap-3 relative overflow-hidden group text-left">
                      <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
-                     {/* Increased Gold Playstyle Icon Size */}
-                     <div className="w-10 h-10 flex items-center justify-center mb-1">
+                     {/* 50% width left container for icon */}
+                     <div className="w-1/2 flex items-center justify-center">
                        <img 
                          src={getPlaystyleIconPath(activePsPlus, true)} 
                          alt={activePsPlus} 
-                         className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
+                         className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
                          onError={(e) => {
                            e.currentTarget.style.display = 'none';
                          }}
                        />
                      </div>
-                     <div>
-                       <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">{activePsPlus}</div>
-                       <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? (equippedSpecialization ? 'From Spec.' : 'Active') : 'Unlocks Lvl 20'}</div>
+                     {/* 50% width right container for name/status */}
+                     <div className="w-1/2 flex flex-col justify-center">
+                       <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider leading-tight">{activePsPlus}</div>
+                       <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? (equippedSpecialization ? 'From Spec.' : 'Active') : 'Locked'}</div>
                      </div>
                   </button>
                 </div>
@@ -1646,7 +1647,7 @@ export default function ManualBuilder() {
                             <button 
                               key={ps.name}
                               onClick={() => setSelectedPsView(ps.name)}
-                              className={`rounded-xl p-3.5 flex flex-col gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${
+                              className={`rounded-xl p-3 flex flex-row items-center gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${
                                 isSelected 
                                   ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' 
                                   : isEquipped 
@@ -1654,21 +1655,22 @@ export default function ManualBuilder() {
                                     : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'
                               }`}
                             >
-                              <div className="flex justify-between items-start">
-                                {/* Increased Grid Card Playstyle Icon Size */}
-                                <div className="w-7 h-7 flex items-center justify-center">
-                                   <img 
-                                     src={getPlaystyleIconPath(ps.name, isEquipped)} 
-                                     alt={ps.name} 
-                                     className="w-full h-full object-contain drop-shadow-sm"
-                                     onError={(e) => {
-                                       e.currentTarget.style.display = 'none';
-                                     }}
-                                   />
-                                </div>
-                                {isEquipped && <span className="text-[8px] bg-[#21E6A4]/20 text-[#21E6A4] border border-[#21E6A4]/40 px-1.5 py-0.5 rounded font-black tracking-widest uppercase">Equipped</span>}
+                              {/* Left 50% for Icon */}
+                              <div className="w-1/2 flex items-center justify-center">
+                                 <img 
+                                   src={getPlaystyleIconPath(ps.name, isEquipped)} 
+                                   alt={ps.name} 
+                                   className="w-8 h-8 object-contain drop-shadow-sm"
+                                   onError={(e) => {
+                                     e.currentTarget.style.display = 'none';
+                                   }}
+                                 />
                               </div>
-                              <div className={`text-[11px] font-black uppercase tracking-wider ${isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
+                              {/* Right 50% for Name and Equipped status */}
+                              <div className="w-1/2 flex flex-col justify-center">
+                                {isEquipped && <span className="text-[7px] bg-[#21E6A4]/20 text-[#21E6A4] border border-[#21E6A4]/40 px-1 py-0.5 rounded font-black tracking-widest uppercase mb-0.5 w-fit">Equipped</span>}
+                                <div className={`text-[10px] font-black uppercase tracking-wider leading-tight ${isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
+                              </div>
                             </button>
                           )
                         })}
@@ -1691,7 +1693,6 @@ export default function ManualBuilder() {
                     <div className="p-5 flex flex-col gap-4">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          {/* Increased Drawer Header Playstyle Icon Size */}
                           <div className="w-10 h-10 flex items-center justify-center">
                             <img 
                               src={getPlaystyleIconPath(ps.name, isEquipped)} 
