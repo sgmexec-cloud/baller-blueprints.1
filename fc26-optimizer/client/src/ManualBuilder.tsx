@@ -889,47 +889,70 @@ export default function ManualBuilder() {
           />
         </div>
 
-        {/* STICKY TOP DASHBOARD (LOGO, LEVEL, ARCHETYPE, AP) */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-4 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6 flex items-center justify-between gap-3">
-          
-          {/* BRANDING ICON */}
-          <div className="shrink-0 flex items-center justify-center">
-            <img 
-              src="/app-icon.png" 
-              alt="ClubsDNA" 
-              className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(77,141,255,0.2)]"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-              }}
-            />
-          </div>
-
-          {/* LEVEL & SLIDER */}
-          <div className="flex flex-col gap-1 flex-1 pl-3 border-l border-[#26334A]/50">
-            <div className="flex items-end gap-1.5">
-              <span className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest leading-none">Lvl</span>
-              <span className="text-sm font-black text-[#F4F7FB] leading-none">{level}</span>
+        {/* STICKY TOP DASHBOARD (5-SQUARE GRID) */}
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-4 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6">
+          <div className="grid grid-cols-5 gap-2">
+            
+            {/* Square 1: Logo */}
+            <div className="flex items-center justify-center bg-[#0D1220] border border-[#26334A]/80 rounded-xl h-14 shadow-inner relative overflow-hidden">
+              <img 
+                src="/app-icon.png" 
+                alt="ClubsDNA" 
+                className="w-7 h-7 object-contain drop-shadow-[0_0_10px_rgba(77,141,255,0.2)]"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                }}
+              />
             </div>
-            <input 
-              type="range" min="1" max="40" value={level} 
-              onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-              className="w-full max-w-[70px] accent-[#4D8DFF] h-1 bg-[#26334A] rounded-full appearance-none cursor-pointer"
-            />
-          </div>
 
-          {/* ARCHETYPE */}
-          <div className="flex flex-col items-center justify-center flex-1 px-2 border-x border-[#26334A]/50">
-            <span className="text-[8px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-0.5">Archetype</span>
-            <span className="text-[10px] font-black text-[#F4F7FB] text-center leading-tight uppercase tracking-wider line-clamp-1">{archetype}</span>
-          </div>
+            {/* Square 2: Blank */}
+            <div className="flex items-center justify-center bg-[#0D1220] border border-[#26334A]/80 rounded-xl h-14 shadow-inner">
+              <div className="w-3 h-[2px] bg-[#26334A]/40 rounded-full" />
+            </div>
 
-          {/* AP */}
-          <div className="flex flex-col items-end justify-center flex-[0.8]">
-            <span className="text-[9px] font-bold text-[#4D8DFF] uppercase tracking-widest mb-0.5">Avail AP</span>
-            <span className="text-base font-black text-[#F4F7FB] leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>{availableAp}</span>
-          </div>
+            {/* Square 3: Archetype Icon (No Name) */}
+            <div className="flex items-center justify-center bg-[#0D1220] border border-[#26334A]/80 rounded-xl h-14 shadow-inner p-2.5 relative">
+               <img 
+                  src={`/archetypes/${archetype ? archetype.replace(/\s+/g, '-').toLowerCase() : ''}.png`} 
+                  alt={archetype} 
+                  className="w-full h-full object-contain opacity-90 drop-shadow-md"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null; 
+                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><circle cx="12" cy="12" r="10" /></svg>';
+                  }}
+               />
+            </div>
 
+            {/* Square 4: Level Dropdown */}
+            <div className="flex flex-col items-center justify-center bg-[#0D1220] border border-[#26334A]/80 rounded-xl h-14 shadow-inner relative group hover:border-[#4D8DFF]/50 transition-colors">
+              <span className="text-[8px] font-bold text-[#8E9AAF] uppercase tracking-widest absolute top-1">Lvl</span>
+              <select 
+                value={level} 
+                onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
+                className="bg-transparent text-lg font-black text-[#F4F7FB] outline-none appearance-none cursor-pointer mt-3 w-full text-center"
+              >
+                {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
+                  <option key={l} value={l} className="bg-[#131A2A] text-[#F4F7FB] text-sm">
+                    {l}
+                  </option>
+                ))}
+              </select>
+              {/* Custom tiny arrow to indicate dropdown */}
+              <div className="absolute right-1 top-[55%] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity">
+                <svg className="w-2.5 h-2.5 text-[#F4F7FB]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+              </div>
+            </div>
+
+            {/* Square 5: Available AP */}
+            <div className="flex flex-col items-center justify-center bg-[#0D1220] border border-[#26334A]/80 rounded-xl h-14 shadow-inner relative">
+              <span className="text-[8px] font-bold text-[#4D8DFF] uppercase tracking-widest absolute top-1">AP</span>
+              <span className="text-xl font-black text-[#F4F7FB] mt-2.5 leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>
+                {availableAp}
+              </span>
+            </div>
+
+          </div>
         </div>
 
         {/* Global Dataset Toggles */}
@@ -1754,7 +1777,7 @@ export default function ManualBuilder() {
                             className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
                               isEquipped 
                                 ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]'
-                                : !caninspect
+                                : !canEquip
                                   ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
                                   : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'
                             }`}
