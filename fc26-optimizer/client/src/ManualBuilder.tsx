@@ -1234,7 +1234,15 @@ export default function ManualBuilder() {
             
             <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
                <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                   <div className="w-3 h-3 rounded-[2px] bg-[#8B5CF6]" />
+                   <img 
+                     src="/icons/masteries.png" 
+                     alt="Masteries" 
+                     className="w-5 h-5 object-contain"
+                     onError={(e) => {
+                       e.currentTarget.onerror = null;
+                       e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238B5CF6"><path d="M12 2L2 9l10 7 10-7-10-7z"/></svg>';
+                     }}
+                   />
                </div>
                <div className="text-center">
                    <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Masteries</div>
@@ -1494,13 +1502,22 @@ export default function ManualBuilder() {
                 const status = unlockedMasteries[arch] || { l10: false, l30: false };
                 const masteryDef = MASTERIES[arch];
                 if (!masteryDef) return null;
+                const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
                 
                 return (
                   <div key={arch} className="flex bg-[#0D1220] rounded-xl border border-[#26334A] overflow-hidden hover:border-[#4D8DFF]/40 transition-colors">
                     
                     <div className="w-1/3 bg-[#131A2A] p-3 flex flex-col items-center justify-center border-r border-[#26334A]">
-                       <div className="w-6 h-6 rounded-full bg-[#26334A] mb-1.5 flex items-center justify-center">
-                          <div className="w-2.5 h-2.5 rounded-sm bg-[#59657A] rotate-45" />
+                       <div className="w-6 h-6 mb-1.5 flex items-center justify-center">
+                          <img 
+                             src={`/archetypes/${iconFilename}`} 
+                             alt={arch} 
+                             className="w-full h-full object-contain drop-shadow-md"
+                             onError={(e) => {
+                               e.currentTarget.onerror = null; 
+                               e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                             }}
+                          />
                        </div>
                        <span className="text-[9px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
                     </div>
