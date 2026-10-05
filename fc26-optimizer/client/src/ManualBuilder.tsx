@@ -275,7 +275,7 @@ const SPECIALIZATIONS_DATA: Record<string, { name: string; perk: string; inspire
 const FACILITIES: Record<string, { stats: string[], boosts: number[], cost: number[], playstyle: string }> = {
   'Equipment Manager': { stats: ['Jumping', 'Stamina'], boosts: [2, 3, 4], cost: [200000, 600000, 1200000], playstyle: 'Acrobatic' },
   'Head Groundskeeper': { stats: ['Balance', 'Ball Control'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Press Proven' },
-  'Performance Lab': { stats: ['Vision', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Tiki Taka' },
+  'Performance Analyst': { stats: ['Vision', 'Short Passing'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Tiki Taka' },
   'Scout': { stats: ['Attack Positioning', 'Def Awareness'], boosts: [2, 5, 7], cost: [100000, 400000, 1100000], playstyle: 'Anticipate' },
   'Sports Psychologist': { stats: ['Aggression', 'Composure'], boosts: [2, 5, 5], cost: [100000, 400000, 1100000], playstyle: 'Jockey' },
   'Sports Scientist': { stats: ['Acceleration', 'Reactions'], boosts: [2, 5, 5], cost: [200000, 600000, 1200000], playstyle: 'Quick Step' },
@@ -1258,7 +1258,7 @@ export default function ManualBuilder() {
                      className="w-full h-full object-contain"
                      onError={(e) => {
                        e.currentTarget.onerror = null;
-                       e.currentTarget.outerHTML = '<div class="w-3 h-3 rounded-full bg-[#4D8DFF]"></div>';
+                       e.currentTarget.src = '/icons/facilities/default.png';
                      }}
                    />
                </div>
@@ -1382,6 +1382,7 @@ export default function ManualBuilder() {
             </div>
 
             <div className="flex-1 flex overflow-hidden">
+              {/* LEFT COLUMN: LIST */}
               <div className="w-[45%] overflow-y-auto border-r border-[#26334A] hide-scrollbar bg-[#0D1220]">
                 {Object.keys(FACILITIES).map(facName => {
                   const isSelected = selectedFacView === facName;
@@ -1397,7 +1398,7 @@ export default function ManualBuilder() {
                              className="w-full h-full object-contain"
                              onError={(e) => {
                                  e.currentTarget.onerror = null;
-                                 e.currentTarget.outerHTML = '<div class="w-2 h-2 rounded-full bg-[#4D8DFF]"></div>';
+                                 e.currentTarget.src = '/icons/facilities/default.png';
                              }}
                          />
                       </div>
@@ -1410,6 +1411,7 @@ export default function ManualBuilder() {
                 })}
               </div>
               
+              {/* RIGHT COLUMN: INFORMATION PANEL */}
               <div className="w-[55%] p-4 flex flex-col items-center bg-[#080B14] overflow-y-auto">
                 {selectedFacView && FACILITIES[selectedFacView] && (
                   <>
@@ -1421,7 +1423,7 @@ export default function ManualBuilder() {
                             className="w-full h-full object-contain"
                             onError={(e) => {
                                 e.currentTarget.onerror = null;
-                                e.currentTarget.outerHTML = '<div class="w-4 h-4 rounded-full bg-[#4D8DFF]"></div>';
+                                e.currentTarget.src = '/icons/facilities/default.png';
                             }}
                         />
                       </div>
@@ -1435,9 +1437,13 @@ export default function ManualBuilder() {
                     </div>
 
                     <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl w-full text-center mb-6 shadow-sm">
-                      <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
-                      <div className="text-xs font-bold text-[#21E6A4] tracking-wide">
-                        +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]} <br/> {FACILITIES[selectedFacView].stats.join(' & ')}
+                      <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
+                      
+                      {/* FIXED STAT BOOST LAYOUT */}
+                      <div className="flex flex-col gap-1.5 text-xs font-bold text-[#21E6A4] tracking-wide">
+                        {FACILITIES[selectedFacView].stats.map(stat => (
+                          <div key={stat}>{stat} +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]}</div>
+                        ))}
                       </div>
                       
                       {viewingFacTier === 3 && FACILITIES[selectedFacView].playstyle && (
