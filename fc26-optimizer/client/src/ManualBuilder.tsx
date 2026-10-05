@@ -977,7 +977,7 @@ export default function ManualBuilder() {
 
         <section className="mb-6 animate-fade-in space-y-4">
 
-          {/* Archetype Selector (Static Uniform Grids) */}
+          {/* Archetype Selector (12-Column Staggered Pyramid Layout) */}
           <div>
             <div className="flex items-center gap-2 mb-3 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
@@ -986,76 +986,85 @@ export default function ManualBuilder() {
               </span>
             </div>
             
-            <div className="flex flex-col gap-2 pb-4">
-              {/* Row 1 (5 items utilizing a 5-column grid for absolute uniformity with row 2's cell scaling) */}
-              <div className="grid grid-cols-5 gap-2">
-                {['Progressor', 'Disruptor', 'Maestro', 'Spark', 'Finisher'].map(arch => {
-                  const isSelected = archetype === arch;
-                  const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
-                  
-                  return (
-                    <button
-                      key={arch}
-                      onClick={() => handleArchetypeChange(arch)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
-                        isSelected 
-                          ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
-                          : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                        <img 
-                           src={`/archetypes/${iconFilename}`} 
-                           alt={arch} 
-                           className="w-full h-full object-contain drop-shadow-md"
-                           onError={(e) => {
-                             e.currentTarget.onerror = null; 
-                             e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                           }}
-                        />
-                      </div>
-                      <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {arch}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+            <div className="grid grid-cols-12 gap-2 pb-4">
+              {/* Top Row (5 items, spanning 2 columns each, offset by 1 column: cols 2, 4, 6, 8, 10) */}
+              {[
+                { name: 'Progressor', col: 'col-start-2 col-span-2' },
+                { name: 'Disruptor', col: 'col-start-4 col-span-2' },
+                { name: 'Maestro', col: 'col-start-6 col-span-2' },
+                { name: 'Spark', col: 'col-start-8 col-span-2' },
+                { name: 'Finisher', col: 'col-start-10 col-span-2' }
+              ].map(item => {
+                const isSelected = archetype === item.name;
+                const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
+                
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => handleArchetypeChange(item.name)}
+                    className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
+                      isSelected 
+                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
+                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
+                      <img 
+                         src={`/archetypes/${iconFilename}`} 
+                         alt={item.name} 
+                         className="w-full h-full object-contain drop-shadow-md"
+                         onError={(e) => {
+                           e.currentTarget.onerror = null; 
+                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                         }}
+                      />
+                    </div>
+                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {item.name}
+                    </div>
+                  </button>
+                );
+              })}
 
-              {/* Row 2 (6 items utilizing a 6-column grid) */}
-              <div className="grid grid-cols-6 gap-2">
-                {['Boss', 'Marauder', 'Recycler', 'Creator', 'Magician', 'Target'].map(arch => {
-                  const isSelected = archetype === arch;
-                  const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
-                  
-                  return (
-                    <button
-                      key={arch}
-                      onClick={() => handleArchetypeChange(arch)}
-                      className={`flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
-                        isSelected 
-                          ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
-                          : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
-                      }`}
-                    >
-                      <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                        <img 
-                           src={`/archetypes/${iconFilename}`} 
-                           alt={arch} 
-                           className="w-full h-full object-contain drop-shadow-md"
-                           onError={(e) => {
-                             e.currentTarget.onerror = null; 
-                             e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                           }}
-                        />
-                      </div>
-                      <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {arch}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+              {/* Bottom Row (6 items, spanning 2 columns each: cols 1, 3, 5, 7, 9, 11) */}
+              {[
+                { name: 'Boss', col: 'col-start-1 col-span-2' },
+                { name: 'Marauder', col: 'col-start-3 col-span-2' },
+                { name: 'Recycler', col: 'col-start-5 col-span-2' },
+                { name: 'Creator', col: 'col-start-7 col-span-2' },
+                { name: 'Magician', col: 'col-start-9 col-span-2' },
+                { name: 'Target', col: 'col-start-11 col-span-2' }
+              ].map(item => {
+                const isSelected = archetype === item.name;
+                const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
+                
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => handleArchetypeChange(item.name)}
+                    className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
+                      isSelected 
+                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
+                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
+                      <img 
+                         src={`/archetypes/${iconFilename}`} 
+                         alt={item.name} 
+                         className="w-full h-full object-contain drop-shadow-md"
+                         onError={(e) => {
+                           e.currentTarget.onerror = null; 
+                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
+                         }}
+                      />
+                    </div>
+                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
+                      {item.name}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
