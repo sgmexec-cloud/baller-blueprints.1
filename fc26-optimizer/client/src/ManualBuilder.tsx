@@ -466,7 +466,7 @@ export default function ManualBuilder() {
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   
   // Dashboard Overlays State
-  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | null>(null);
+  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | 'physicals' | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
@@ -852,16 +852,6 @@ export default function ManualBuilder() {
               </div>
             );
           })}
-          {category === 'Pace' && (
-             <div className="mt-2.5 pt-2.5 border-t border-[#26334A]/50">
-                <div className="flex justify-between items-center">
-                  <span className="text-[9px] font-bold text-[#8E9AAF] tracking-wider uppercase">AccelerATE</span>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${
-                     accelerate === 'Lengthy' ? 'text-[#8B5CF6]' : accelerate === 'Explosive' ? 'text-[#4D8DFF]' : 'text-[#F4F7FB]'
-                  }`}>{accelerate}</span>
-                </div>
-             </div>
-          )}
         </div>
       </button>
     );
@@ -1104,39 +1094,70 @@ export default function ManualBuilder() {
             </div>
           )}
 
-          {/* Physicals Grid */}
-          <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
-              <div className="flex justify-between items-end mb-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
-                <span className="text-sm font-bold text-[#F4F7FB]">{height} cm</span>
-              </div>
-              <input type="range" min={activeBounds.minH} max={activeBounds.maxH} value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
-            </div>
-            
-            <div className="bg-[#131A2A] border border-[#26334A] p-4 rounded-xl flex flex-col justify-between">
-              <div className="flex justify-between items-end mb-2">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
-                <span className="text-sm font-bold text-[#F4F7FB]">{weight} kg</span>
-              </div>
-              <input type="range" min={activeBounds.minW} max={activeBounds.maxW} value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full accent-[#4D8DFF] cursor-pointer" />
-            </div>
+          {/* Physicals & AcceleRATE Launcher Card */}
+          <div className="pt-2">
+            <button 
+              onClick={() => setActiveModal('physicals')} 
+              className="w-full bg-[#131A2A] border border-[#26334A] rounded-xl p-3 flex items-center justify-between hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all shadow-sm group mb-3"
+            >
+               <div className="flex items-center gap-5">
+                  <div className="flex flex-col items-center">
+                     <img 
+                       src="/icons/height.png" 
+                       alt="Height" 
+                       className="w-4 h-4 mb-1 object-contain"
+                       onError={(e) => {
+                         e.currentTarget.onerror = null;
+                         e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2L8 6h3v12H8l4 4 4-4h-3V6h3l-4-4z"/></svg>';
+                       }}
+                     />
+                     <span className="text-xs font-bold text-[#F4F7FB]">{height} cm</span>
+                  </div>
+                  <div className="w-px h-6 bg-[#26334A]" />
+                  <div className="flex flex-col items-center">
+                     <img 
+                       src="/icons/weight.png" 
+                       alt="Weight" 
+                       className="w-4 h-4 mb-1 object-contain"
+                       onError={(e) => {
+                         e.currentTarget.onerror = null;
+                         e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
+                       }}
+                     />
+                     <span className="text-xs font-bold text-[#F4F7FB]">{weight} kg</span>
+                  </div>
+               </div>
 
-            <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Skills</label>
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleStarChange('sm', smLevel - 1)} disabled={smLevel <= activeStarCaps.sm.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
-                <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{smLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                <button onClick={() => handleStarChange('sm', smLevel + 1)} disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
-              </div>
-            </div>
+               <div className="flex items-center gap-3">
+                  <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${
+                     accelerate === 'Lengthy' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30' : 
+                     accelerate === 'Explosive' ? 'bg-[#4D8DFF]/20 text-[#4D8DFF] border border-[#4D8DFF]/30' : 
+                     'bg-[#26334A]/50 text-[#F4F7FB] border border-[#26334A]'
+                  }`}>
+                    {accelerate}
+                  </div>
+                  <div className="text-[#8E9AAF] group-hover:text-[#F4F7FB] transition-colors text-xs">▼</div>
+               </div>
+            </button>
 
-            <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
-              <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W.Foot</label>
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleStarChange('wf', wfLevel - 1)} disabled={wfLevel <= activeStarCaps.wf.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
-                <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{wfLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                <button onClick={() => handleStarChange('wf', wfLevel + 1)} disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
+            {/* Skills & WF Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Skills</label>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => handleStarChange('sm', smLevel - 1)} disabled={smLevel <= activeStarCaps.sm.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
+                  <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{smLevel} <span className="opacity-70 text-[10px]">★</span></span>
+                  <button onClick={() => handleStarChange('sm', smLevel + 1)} disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
+                </div>
+              </div>
+
+              <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W.Foot</label>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => handleStarChange('wf', wfLevel - 1)} disabled={wfLevel <= activeStarCaps.wf.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
+                  <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{wfLevel} <span className="opacity-70 text-[10px]">★</span></span>
+                  <button onClick={() => handleStarChange('wf', wfLevel + 1)} disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
+                </div>
               </div>
             </div>
           </div>
@@ -1289,6 +1310,109 @@ export default function ManualBuilder() {
       {/* =========================================
           MODALS / OVERLAYS
       ========================================= */}
+
+      {/* PHYSICALS MODAL */}
+      {activeModal === 'physicals' && currentStats && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-lg mx-auto bg-[#080B14] rounded-t-3xl border-t border-[#4D8DFF]/50 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] animate-fade-up overflow-hidden flex flex-col max-h-[85vh]">
+             
+             <div className="flex items-center justify-between p-5 bg-[#0D1220] border-b border-[#26334A]">
+               <div>
+                  <h2 className="text-lg font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Physical Attributes</h2>
+                  <div className="text-[10px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1">Adjust Height & Weight</div>
+               </div>
+               <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-[#131A2A] text-[#8E9AAF] flex items-center justify-center hover:bg-[#192235] hover:text-[#F4F7FB] transition-colors">✕</button>
+             </div>
+             
+             <div className="p-4 overflow-y-auto hide-scrollbar pb-12 flex gap-4">
+                
+                {/* Sliders Side */}
+                <div className="w-1/2 flex flex-col gap-6 pt-2">
+                   {/* Height Slider */}
+                   <div>
+                     <div className="flex justify-between items-end mb-3">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
+                        <span className="text-sm font-black text-[#F4F7FB]">{height} cm</span>
+                     </div>
+                     <input 
+                        type="range" 
+                        min={activeBounds.minH} 
+                        max={activeBounds.maxH} 
+                        value={height} 
+                        onChange={(e) => setHeight(Number(e.target.value))} 
+                        className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" 
+                     />
+                     <div className="flex justify-between mt-2">
+                        <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase">{activeBounds.minH} cm<br/>MIN</span>
+                        <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-right">{activeBounds.maxH} cm<br/>MAX</span>
+                     </div>
+                   </div>
+
+                   {/* Weight Slider */}
+                   <div className="mt-2">
+                     <div className="flex justify-between items-end mb-3">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
+                        <span className="text-sm font-black text-[#F4F7FB]">{weight} kg</span>
+                     </div>
+                     <input 
+                        type="range" 
+                        min={activeBounds.minW} 
+                        max={activeBounds.maxW} 
+                        value={weight} 
+                        onChange={(e) => setWeight(Number(e.target.value))} 
+                        className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" 
+                     />
+                     <div className="flex justify-between mt-2">
+                        <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase">{activeBounds.minW} kg<br/>MIN</span>
+                        <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-right">{activeBounds.maxW} kg<br/>MAX</span>
+                     </div>
+                   </div>
+                </div>
+
+                {/* Attributes Output Side */}
+                <div className="w-1/2 flex flex-col gap-2">
+                   <div className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-center mb-1">Affected Attributes</div>
+                   <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3 space-y-3">
+                      {["Acceleration", "Agility", "Balance", "Jumping", "Sprint Speed", "Strength"].map(stat => {
+                         const mod = physicalModifiers[stat] || 0;
+                         const val = currentStats[stat] || 70;
+                         
+                         let colorClass = "text-[#59657A]";
+                         let badgeClass = "bg-[#131A2A] text-[#8E9AAF]";
+                         let sign = "+/-";
+                         let modDisplay = "0";
+
+                         if (mod > 0) {
+                           colorClass = "text-[#21E6A4]";
+                           badgeClass = "bg-[#21E6A4]/10 text-[#21E6A4] border border-[#21E6A4]/30";
+                           sign = "+";
+                           modDisplay = mod.toString();
+                         } else if (mod < 0) {
+                           colorClass = "text-[#ff4d4d]";
+                           badgeClass = "bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/30";
+                           sign = ""; // negative sign included in the number
+                           modDisplay = mod.toString();
+                         }
+
+                         return (
+                           <div key={stat} className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold tracking-wide uppercase text-[#8E9AAF]">{stat}</span>
+                              <div className="flex items-center gap-2">
+                                 <span className={`w-6 text-center text-[9px] font-black rounded ${badgeClass}`}>
+                                    {sign}{modDisplay}
+                                 </span>
+                                 <span className={`text-[11px] font-black w-4 text-right ${colorClass}`}>{val}</span>
+                              </div>
+                           </div>
+                         );
+                      })}
+                   </div>
+                </div>
+
+             </div>
+          </div>
+        </div>
+      )}
 
       {/* EDIT CATEGORY MODAL */}
       {activeModal === 'edit_category' && editingCategory && currentStats && (
