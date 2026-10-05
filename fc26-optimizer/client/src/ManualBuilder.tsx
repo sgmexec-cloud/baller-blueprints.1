@@ -1607,7 +1607,8 @@ export default function ManualBuilder() {
                 <div className="grid grid-cols-2 gap-3">
                   <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-4 flex flex-col gap-2 relative overflow-hidden group text-left">
                      <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
-                     <div className="w-6 h-6 flex items-center justify-center mb-1">
+                     {/* Increased Gold Playstyle Icon Size */}
+                     <div className="w-10 h-10 flex items-center justify-center mb-1">
                        <img 
                          src={getPlaystyleIconPath(activePsPlus, true)} 
                          alt={activePsPlus} 
@@ -1645,7 +1646,7 @@ export default function ManualBuilder() {
                             <button 
                               key={ps.name}
                               onClick={() => setSelectedPsView(ps.name)}
-                              className={`rounded-xl p-3 flex flex-col gap-2 relative overflow-hidden text-left transition-all duration-200 border ${
+                              className={`rounded-xl p-3.5 flex flex-col gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${
                                 isSelected 
                                   ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' 
                                   : isEquipped 
@@ -1654,11 +1655,12 @@ export default function ManualBuilder() {
                               }`}
                             >
                               <div className="flex justify-between items-start">
-                                <div className="w-5 h-5 flex items-center justify-center mb-2">
+                                {/* Increased Grid Card Playstyle Icon Size */}
+                                <div className="w-7 h-7 flex items-center justify-center">
                                    <img 
                                      src={getPlaystyleIconPath(ps.name, isEquipped)} 
                                      alt={ps.name} 
-                                     className="w-full h-full object-contain"
+                                     className="w-full h-full object-contain drop-shadow-sm"
                                      onError={(e) => {
                                        e.currentTarget.style.display = 'none';
                                      }}
@@ -1689,15 +1691,16 @@ export default function ManualBuilder() {
                     <div className="p-5 flex flex-col gap-4">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 flex items-center justify-center">
+                          {/* Increased Drawer Header Playstyle Icon Size */}
+                          <div className="w-10 h-10 flex items-center justify-center">
                             <img 
                               src={getPlaystyleIconPath(ps.name, isEquipped)} 
                               alt={ps.name} 
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-contain drop-shadow-md"
                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
                             />
                           </div>
-                          <div className="ml-2">
+                          <div className="ml-1">
                              <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{ps.name}</h3>
                              <p className="text-[9px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{PLAYSTYLE_CATEGORIES.find(c => c.id === ps.category)?.label}</p>
                           </div>
