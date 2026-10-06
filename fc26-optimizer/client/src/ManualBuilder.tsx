@@ -420,12 +420,11 @@ const getStatCaps = (archName: string, statName: string) => {
   return capData[camelStat];
 };
 
-const getCustomColor = (val: number) => {
-  if (val >= 90) return "oklch(84.1% 0.238 128.85)";
-  if (val >= 80) return "oklch(53.2% 0.157 131.589)";
-  if (val >= 70) return "oklch(90.5% 0.182 98.111)";
-  if (val >= 50) return "oklch(75% 0.183 55.934)";
-  return "oklch(63.7% 0.237 25.331)";
+const getGradientColor = (value: number, max: number = 99) => {
+  const boundedValue = Math.max(0, Math.min(value, max));
+  const percentage = boundedValue / max;
+  const hue = percentage * 120;
+  return `hsl(${hue}, 80%, 50%)`;
 };
 
 const HalfCircleGauge = ({ value, color }: { value: number; color: string }) => {
@@ -824,7 +823,7 @@ export default function ManualBuilder() {
     if (!currentStats) return null;
     const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
     const catAvg = Math.round(catTotal / stats.length);
-    const avgColor = getCustomColor(catAvg);
+    const avgColor = getGradientColor(catAvg);
 
     return (
       <button
@@ -838,7 +837,7 @@ export default function ManualBuilder() {
         <div className="space-y-2">
           {stats.map(stat => {
             const value = currentStats[stat] || 70;
-            const color = getCustomColor(value);
+            const color = getGradientColor(value);
             const displayName = CSV_STAT_MAP[stat] || stat;
             return (
               <div key={stat}>
@@ -1377,7 +1376,7 @@ export default function ManualBuilder() {
                             CAP: {caps.max || 99} <span className="mx-1">•</span> {statApSpent} AP Spent
                           </div>
                         </div>
-                        <span className="text-2xl font-black tabular-nums tracking-tight" style={{ color: getCustomColor(value) }}>{value}</span>
+                        <span className="text-2xl font-black tabular-nums tracking-tight" style={{ color: getGradientColor(value) }}>{value}</span>
                       </div>
                       
                       <div className="flex items-center gap-3 mt-1">
@@ -1391,7 +1390,7 @@ export default function ManualBuilder() {
                           type="range" min="0" max="99" value={value} 
                           onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
                           className="flex-1 cursor-pointer bg-[#0D1220] rounded-lg h-1.5"
-                          style={{ accentColor: getCustomColor(value) }}
+                          style={{ accentColor: getGradientColor(value) }}
                         />
                         
                         <button 
@@ -1701,7 +1700,7 @@ export default function ManualBuilder() {
                                   <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>{currentVal} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-[#131A2A] rounded-full overflow-hidden">
-                                  <div className={`h-full rounded-full transition-all duration-500 ${isMet ? 'bg-[#21E6A4]' : isImpossible ? 'bg-[#ff4d4d]' : 'bg-[#4D8DFF]'}`} style={{ width: `${fillPct}%` }} />
+                                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${fillPct}%`, backgroundColor: getGradientColor(currentVal, targetVal) }} />
                                 </div>
                               </div>
                             )
