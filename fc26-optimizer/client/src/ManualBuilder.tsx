@@ -466,7 +466,7 @@ export default function ManualBuilder() {
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   
   // Dashboard Overlays State
-  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | 'physicals' | null>(null);
+  const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | 'physicals' | 'skills_wf' | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
@@ -857,6 +857,28 @@ export default function ManualBuilder() {
     );
   };
 
+  // --- SKILLS & WEAK FOOT CARD ---
+  const SkillsWfCard = () => (
+    <button
+      onClick={() => setActiveModal('skills_wf')}
+      className="w-full bg-[#0D1220] border border-[#26334A] rounded-xl p-3 text-left hover:bg-[#131A2A] hover:border-[#4D8DFF]/40 transition-all shadow-sm group mt-3"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <span className="text-[11px] font-black uppercase tracking-widest text-[#F4F7FB]" style={{ fontFamily: "'Orbitron', sans-serif" }}>Skills & W.Foot</span>
+      </div>
+      <div className="space-y-2">
+        <div className="flex justify-between items-end mb-1">
+          <span className="text-[9px] font-bold text-[#8E9AAF] tracking-wider uppercase group-hover:text-[#F4F7FB] transition-colors">Skill Moves</span>
+          <span className="text-[10px] font-black text-[#4D8DFF]">{smLevel} ★</span>
+        </div>
+        <div className="flex justify-between items-end mb-1">
+          <span className="text-[9px] font-bold text-[#8E9AAF] tracking-wider uppercase group-hover:text-[#F4F7FB] transition-colors">Weak Foot</span>
+          <span className="text-[10px] font-black text-[#4D8DFF]">{wfLevel} ★</span>
+        </div>
+      </div>
+    </button>
+  );
+
   if (isArchLoading || isProgLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#080B14]">
@@ -967,7 +989,7 @@ export default function ManualBuilder() {
 
         <section className="mb-6 animate-fade-in space-y-4">
 
-          {/* Archetype Selector (12-Column Staggered Pyramid Layout) */}
+          {/* 1. Archetypes */}
           <div>
             <div className="flex items-center gap-2 mb-3 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
@@ -977,7 +999,7 @@ export default function ManualBuilder() {
             </div>
             
             <div className="grid grid-cols-12 gap-2 pb-4">
-              {/* Top Row (5 items, spanning 2 columns each, offset by 1 column: cols 2, 4, 6, 8, 10) */}
+              {/* Top Row (5 items) */}
               {[
                 { name: 'Progressor', col: 'col-start-2 col-span-2' },
                 { name: 'Disruptor', col: 'col-start-4 col-span-2' },
@@ -987,36 +1009,16 @@ export default function ManualBuilder() {
               ].map(item => {
                 const isSelected = archetype === item.name;
                 const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
-                
                 return (
-                  <button
-                    key={item.name}
-                    onClick={() => handleArchetypeChange(item.name)}
-                    className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
-                      isSelected 
-                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
-                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
-                    }`}
-                  >
+                  <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
                     <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                      <img 
-                         src={`/archetypes/${iconFilename}`} 
-                         alt={item.name} 
-                         className="w-full h-full object-contain drop-shadow-md"
-                         onError={(e) => {
-                           e.currentTarget.onerror = null; 
-                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                         }}
-                      />
+                      <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                     </div>
-                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {item.name}
-                    </div>
+                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
                   </button>
                 );
               })}
-
-              {/* Bottom Row (6 items, spanning 2 columns each: cols 1, 3, 5, 7, 9, 11) */}
+              {/* Bottom Row (6 items) */}
               {[
                 { name: 'Boss', col: 'col-start-1 col-span-2' },
                 { name: 'Marauder', col: 'col-start-3 col-span-2' },
@@ -1027,74 +1029,19 @@ export default function ManualBuilder() {
               ].map(item => {
                 const isSelected = archetype === item.name;
                 const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
-                
                 return (
-                  <button
-                    key={item.name}
-                    onClick={() => handleArchetypeChange(item.name)}
-                    className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${
-                      isSelected 
-                        ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' 
-                        : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'
-                    }`}
-                  >
+                  <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
                     <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                      <img 
-                         src={`/archetypes/${iconFilename}`} 
-                         alt={item.name} 
-                         className="w-full h-full object-contain drop-shadow-md"
-                         onError={(e) => {
-                           e.currentTarget.onerror = null; 
-                           e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                         }}
-                      />
+                      <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                     </div>
-                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>
-                      {item.name}
-                    </div>
+                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Specialization Launch Card */}
-          {SPECIALIZATIONS_DATA[archetype] && (
-            <div className="animate-fade-up border-b border-[#26334A]/50 pb-4">
-              {equippedSpecialization ? (
-                <div 
-                  className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group"
-                  onClick={() => setActiveModal('specializations')}
-                >
-                  <div className="flex items-center gap-4">
-                     <div className="w-10 h-10 rounded-full bg-[#facc15]/10 flex items-center justify-center border border-[#facc15]/30 group-hover:scale-110 transition-transform">
-                        <div className="w-4 h-4 border-2 border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
-                     </div>
-                     <div>
-                       <div className="text-[11px] font-black tracking-widest uppercase text-[#facc15]" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                          {equippedSpecialization}
-                       </div>
-                       <div className="text-[9px] text-[#F4F7FB] font-bold tracking-wider mt-1 uppercase">Active Specialization</div>
-                     </div>
-                  </div>
-                  <span className="text-[#facc15] text-xs font-black">➔</span>
-                </div>
-              ) : (
-                <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                  <div>
-                    <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Choose a Specialization</div>
-                    <div className="text-[9px] text-[#8E9AAF] font-medium tracking-wide mt-1">Boost key attributes and unlock unique playstyle perks.</div>
-                  </div>
-                  <button onClick={() => setActiveModal('specializations')} className="flex items-center gap-2 bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#4D8DFF]/20 transition-colors shadow-[0_0_10px_rgba(77,141,255,0.1)]">
-                    <span className="w-3 h-3 flex items-center justify-center border border-[#4D8DFF] rounded-full text-[8px] leading-none">+</span>
-                    Browse
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Physicals & AcceleRATE Launcher Card */}
+          {/* 2. Physicals & AcceleRATE Launcher Card */}
           <div className="pt-2">
             <button 
               onClick={() => setActiveModal('physicals')} 
@@ -1102,70 +1049,51 @@ export default function ManualBuilder() {
             >
                <div className="flex items-center gap-5">
                   <div className="flex flex-col items-center">
-                     <img 
-                       src="/icons/height.png" 
-                       alt="Height" 
-                       className="w-4 h-4 mb-1 object-contain"
-                       onError={(e) => {
-                         e.currentTarget.onerror = null;
-                         e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2L8 6h3v12H8l4 4 4-4h-3V6h3l-4-4z"/></svg>';
-                       }}
-                     />
+                     <img src="/icons/height.png" alt="Height" className="w-4 h-4 mb-1 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2L8 6h3v12H8l4 4 4-4h-3V6h3l-4-4z"/></svg>'; }} />
                      <span className="text-xs font-bold text-[#F4F7FB]">{height} cm</span>
                   </div>
                   <div className="w-px h-6 bg-[#26334A]" />
                   <div className="flex flex-col items-center">
-                     <img 
-                       src="/icons/weight.png" 
-                       alt="Weight" 
-                       className="w-4 h-4 mb-1 object-contain"
-                       onError={(e) => {
-                         e.currentTarget.onerror = null;
-                         e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>';
-                       }}
-                     />
+                     <img src="/icons/weight.png" alt="Weight" className="w-4 h-4 mb-1 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'; }} />
                      <span className="text-xs font-bold text-[#F4F7FB]">{weight} kg</span>
                   </div>
                </div>
-
                <div className="flex items-center gap-3">
-                  <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${
-                     accelerate === 'Lengthy' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30' : 
-                     accelerate === 'Explosive' ? 'bg-[#4D8DFF]/20 text-[#4D8DFF] border border-[#4D8DFF]/30' : 
-                     'bg-[#26334A]/50 text-[#F4F7FB] border border-[#26334A]'
-                  }`}>
+                  <div className={`px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest ${accelerate === 'Lengthy' ? 'bg-[#8B5CF6]/20 text-[#8B5CF6] border border-[#8B5CF6]/30' : accelerate === 'Explosive' ? 'bg-[#4D8DFF]/20 text-[#4D8DFF] border border-[#4D8DFF]/30' : 'bg-[#26334A]/50 text-[#F4F7FB] border border-[#26334A]'}`}>
                     {accelerate}
                   </div>
                   <div className="text-[#8E9AAF] group-hover:text-[#F4F7FB] transition-colors text-xs">▼</div>
                </div>
             </button>
-
-            {/* Skills & WF Row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Skills</label>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => handleStarChange('sm', smLevel - 1)} disabled={smLevel <= activeStarCaps.sm.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
-                  <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{smLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                  <button onClick={() => handleStarChange('sm', smLevel + 1)} disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
-                </div>
-              </div>
-
-              <div className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF] w-1/3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>W.Foot</label>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => handleStarChange('wf', wfLevel - 1)} disabled={wfLevel <= activeStarCaps.wf.min} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">-</button>
-                  <span className="text-[#4D8DFF] font-black text-sm w-8 text-center">{wfLevel} <span className="opacity-70 text-[10px]">★</span></span>
-                  <button onClick={() => handleStarChange('wf', wfLevel + 1)} disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]} className="w-6 h-6 rounded bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-0.5">+</button>
-                </div>
-              </div>
+            
+            {/* 3. Masteries & Facilities Moved Here */}
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
+                 <div className="w-8 h-8 rounded-full bg-[#8B5CF6]/10 flex shrink-0 items-center justify-center group-hover:scale-110 transition-transform p-1.5 overflow-hidden border border-[#8B5CF6]/20">
+                     <img src="/icons/masteries.png" alt="Masteries" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238B5CF6"><path d="M12 2L2 9l10 7 10-7-10-7z"/></svg>'; }} />
+                 </div>
+                 <div className="text-left">
+                     <div className="text-[10px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Masteries</div>
+                     <div className="text-[8px] text-[#8E9AAF] font-bold uppercase mt-0.5 tracking-wider">{activeMasteriesCount} Active</div>
+                 </div>
+              </button>
+              
+              <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
+                 <div className="w-8 h-8 rounded-full bg-[#4D8DFF]/10 flex shrink-0 items-center justify-center group-hover:scale-110 transition-transform p-1.5 overflow-hidden border border-[#4D8DFF]/20">
+                     <img src="/icons/facilities.png" alt="Facilities" className="w-full h-full object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/icons/facilities/default.png'; }} />
+                 </div>
+                 <div className="text-left">
+                     <div className="text-[10px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Facilities</div>
+                     <div className="text-[8px] text-[#8E9AAF] font-bold uppercase mt-0.5 tracking-wider">{activeFacilitiesCount} Equipped</div>
+                 </div>
+              </button>
             </div>
           </div>
         </section>
 
-        {/* --- SIGNATURE PERKS --- */}
+        {/* 4. SIGNATURE PERKS */}
         {SIGNATURE_PERKS_DATA[archetype] && (
-          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6">
+          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mb-6">
             <div className="flex items-center gap-2 mb-4 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#21E6A4]" />
               <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
@@ -1176,38 +1104,18 @@ export default function ManualBuilder() {
             <div className="space-y-3">
               {SIGNATURE_PERKS_DATA[archetype].map((perk, index) => {
                 const isUnlocked = level >= perk.level;
-                
                 return (
-                  <div 
-                    key={index}
-                    className={`p-4 rounded-xl border transition-all ${
-                      isUnlocked 
-                        ? 'bg-[#131A2A] border-[#26334A] shadow-sm' 
-                        : 'bg-[#0D1220]/60 border-[#26334A]/50 opacity-70'
-                    }`}
-                  >
+                  <div key={index} className={`p-4 rounded-xl border transition-all ${isUnlocked ? 'bg-[#131A2A] border-[#26334A] shadow-sm' : 'bg-[#0D1220]/60 border-[#26334A]/50 opacity-70'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[12px] font-black uppercase tracking-wider ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                          {perk.name}
-                        </span>
+                        <span className={`text-[12px] font-black uppercase tracking-wider ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>{perk.name}</span>
                       </div>
-                      
                       <div className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnlocked ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                          LVL {perk.level}
-                        </span>
-                        {isUnlocked ? (
-                          <svg className="w-3.5 h-3.5 text-[#21E6A4]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                        ) : (
-                          <svg className="w-3.5 h-3.5 text-[#59657A]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 17a2 2 0 002-2v-1h-4v1a2 2 0 002 2zm3-6V9a3 3 0 00-6 0v2H8v8h8v-8h-1zm-5-2a2 2 0 014 0v2h-4V9z" /></svg>
-                        )}
+                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnlocked ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Rajdhani', sans-serif" }}>LVL {perk.level}</span>
+                        {isUnlocked ? <svg className="w-3.5 h-3.5 text-[#21E6A4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <svg className="w-3.5 h-3.5 text-[#59657A]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17a2 2 0 002-2v-1h-4v1a2 2 0 002 2zm3-6V9a3 3 0 00-6 0v2H8v8h8v-8h-1zm-5-2a2 2 0 014 0v2h-4V9z" /></svg>}
                       </div>
                     </div>
-                    
-                    <p className={`text-[10px] leading-relaxed font-medium ${isUnlocked ? 'text-[#8E9AAF]' : 'text-[#59657A]'}`}>
-                      <span className={`font-bold ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>Effect:</span> {perk.desc}
-                    </p>
+                    <p className={`text-[10px] leading-relaxed font-medium ${isUnlocked ? 'text-[#8E9AAF]' : 'text-[#59657A]'}`}><span className={`font-bold ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>Effect:</span> {perk.desc}</p>
                   </div>
                 );
               })}
@@ -1215,9 +1123,40 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* --- MAIN FUT CARD GRID --- */}
+        {/* 5. Specialization Launch Card Moved Here */}
+        {SPECIALIZATIONS_DATA[archetype] && (
+          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mb-6">
+            {equippedSpecialization ? (
+              <div onClick={() => setActiveModal('specializations')} className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-full bg-[#facc15]/10 flex items-center justify-center border border-[#facc15]/30 group-hover:scale-110 transition-transform">
+                      <div className="w-4 h-4 border-2 border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
+                   </div>
+                   <div>
+                     <div className="text-[11px] font-black tracking-widest uppercase text-[#facc15]" style={{ fontFamily: "'Orbitron', sans-serif" }}>{equippedSpecialization}</div>
+                     <div className="text-[9px] text-[#F4F7FB] font-bold tracking-wider mt-1 uppercase">Active Specialization</div>
+                   </div>
+                </div>
+                <span className="text-[#facc15] text-xs font-black">➔</span>
+              </div>
+            ) : (
+              <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div>
+                  <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Choose a Specialization</div>
+                  <div className="text-[9px] text-[#8E9AAF] font-medium tracking-wide mt-1">Boost key attributes and unlock unique playstyle perks.</div>
+                </div>
+                <button onClick={() => setActiveModal('specializations')} className="flex items-center gap-2 bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#4D8DFF]/20 transition-colors shadow-[0_0_10px_rgba(77,141,255,0.1)]">
+                  <span className="w-3 h-3 flex items-center justify-center border border-[#4D8DFF] rounded-full text-[8px] leading-none">+</span>
+                  Browse
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* 6. MAIN FUT CARD GRID */}
         {currentStats && serverArchetypes && (
-          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6">
+          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6 mb-6">
             <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-3 rounded-full bg-[#59657A]" />
@@ -1229,12 +1168,13 @@ export default function ManualBuilder() {
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-3">
+              <div className="space-y-3 flex flex-col">
                 <CategoryCard category="Pace" stats={STAT_GROUPS["Pace"]} />
                 <CategoryCard category="Passing" stats={STAT_GROUPS["Passing"]} />
                 <CategoryCard category="Defending" stats={STAT_GROUPS["Defending"]} />
+                <SkillsWfCard />
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 flex flex-col">
                 <CategoryCard category="Shooting" stats={STAT_GROUPS["Shooting"]} />
                 <CategoryCard category="Dribbling" stats={STAT_GROUPS["Dribbling"]} />
                 <CategoryCard category="Physical" stats={STAT_GROUPS["Physical"]} />
@@ -1243,66 +1183,27 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* --- APP DASHBOARD CARDS --- */}
-        <section className="mt-8 border-t border-[#26334A]/50 pt-6">
+        {/* 7. APP DASHBOARD (PlayStyle Hub left) */}
+        <section className="mt-6 border-t border-[#26334A]/50 pt-6">
           <div className="flex items-center gap-2 mb-3 pl-1">
-            <div className="w-1 h-3 rounded-full bg-[#8B5CF6]" />
+            <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
             <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-              Club Enhancements
+              PlayStyle Assignments
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            
-            <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
-               <div className="w-10 h-10 rounded-full bg-[#8B5CF6]/10 flex items-center justify-center group-hover:scale-110 transition-transform p-1.5 overflow-hidden">
-                   <img 
-                     src="/icons/masteries.png" 
-                     alt="Masteries" 
-                     className="w-full h-full object-contain"
-                     onError={(e) => {
-                       e.currentTarget.onerror = null;
-                       e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238B5CF6"><path d="M12 2L2 9l10 7 10-7-10-7z"/></svg>';
-                     }}
-                   />
-               </div>
-               <div className="text-center">
-                   <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Masteries</div>
-                   <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activeMasteriesCount} Active</div>
-               </div>
-            </button>
-            
-            <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex flex-col items-center justify-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
-               <div className="w-10 h-10 rounded-full bg-[#4D8DFF]/10 flex items-center justify-center group-hover:scale-110 transition-transform p-2 overflow-hidden">
-                   <img 
-                     src="/icons/facilities.png" 
-                     alt="Facilities" 
-                     className="w-full h-full object-contain"
-                     onError={(e) => {
-                       e.currentTarget.onerror = null;
-                       e.currentTarget.src = '/icons/facilities/default.png';
-                     }}
-                   />
-               </div>
-               <div className="text-center">
-                   <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Facilities</div>
-                   <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activeFacilitiesCount} Equipped</div>
-               </div>
-            </button>
-            
-            <button onClick={() => setActiveModal('playstyles')} className="col-span-2 bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
-               <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
-                       <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
-                   </div>
-                   <div className="text-left">
-                       <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle Hub</div>
-                       <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
-                   </div>
-               </div>
-               <div className="text-[#8E9AAF] text-xs font-black">➔</div>
-            </button>
-
-          </div>
+          
+          <button onClick={() => setActiveModal('playstyles')} className="w-full bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
+             <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
+                     <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
+                 </div>
+                 <div className="text-left">
+                     <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle Hub</div>
+                     <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
+                 </div>
+             </div>
+             <div className="text-[#8E9AAF] text-xs font-black">➔</div>
+          </button>
         </section>
 
       </div>
@@ -1334,14 +1235,7 @@ export default function ManualBuilder() {
                         <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
                         <span className="text-sm font-black text-[#F4F7FB]">{height} cm</span>
                      </div>
-                     <input 
-                        type="range" 
-                        min={activeBounds.minH} 
-                        max={activeBounds.maxH} 
-                        value={height} 
-                        onChange={(e) => setHeight(Number(e.target.value))} 
-                        className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" 
-                     />
+                     <input type="range" min={activeBounds.minH} max={activeBounds.maxH} value={height} onChange={(e) => setHeight(Number(e.target.value))} className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" />
                      <div className="flex justify-between mt-2">
                         <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase">{activeBounds.minH} cm<br/>MIN</span>
                         <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-right">{activeBounds.maxH} cm<br/>MAX</span>
@@ -1354,14 +1248,7 @@ export default function ManualBuilder() {
                         <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
                         <span className="text-sm font-black text-[#F4F7FB]">{weight} kg</span>
                      </div>
-                     <input 
-                        type="range" 
-                        min={activeBounds.minW} 
-                        max={activeBounds.maxW} 
-                        value={weight} 
-                        onChange={(e) => setWeight(Number(e.target.value))} 
-                        className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" 
-                     />
+                     <input type="range" min={activeBounds.minW} max={activeBounds.maxW} value={weight} onChange={(e) => setWeight(Number(e.target.value))} className="w-full cursor-pointer accent-[#4D8DFF] h-1.5 bg-[#131A2A] rounded-lg appearance-none" />
                      <div className="flex justify-between mt-2">
                         <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase">{activeBounds.minW} kg<br/>MIN</span>
                         <span className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-right">{activeBounds.maxW} kg<br/>MAX</span>
@@ -1390,7 +1277,7 @@ export default function ManualBuilder() {
                          } else if (mod < 0) {
                            colorClass = "text-[#ff4d4d]";
                            badgeClass = "bg-[#ff4d4d]/10 text-[#ff4d4d] border border-[#ff4d4d]/30";
-                           sign = ""; // negative sign included in the number
+                           sign = "";
                            modDisplay = mod.toString();
                          }
 
@@ -1398,9 +1285,7 @@ export default function ManualBuilder() {
                            <div key={stat} className="flex items-center justify-between">
                               <span className="text-[10px] font-bold tracking-wide uppercase text-[#8E9AAF]">{stat}</span>
                               <div className="flex items-center gap-2">
-                                 <span className={`w-6 text-center text-[9px] font-black rounded ${badgeClass}`}>
-                                    {sign}{modDisplay}
-                                 </span>
+                                 <span className={`w-6 text-center text-[9px] font-black rounded ${badgeClass}`}>{sign}{modDisplay}</span>
                                  <span className={`text-[11px] font-black w-4 text-right ${colorClass}`}>{val}</span>
                               </div>
                            </div>
@@ -1411,6 +1296,49 @@ export default function ManualBuilder() {
 
              </div>
           </div>
+        </div>
+      )}
+
+      {/* SKILLS & WEAK FOOT MODAL */}
+      {activeModal === 'skills_wf' && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-fade-in">
+           <div className="w-full max-w-lg mx-auto bg-[#080B14] rounded-t-3xl border-t border-[#4D8DFF]/50 shadow-[0_-15px_40px_rgba(0,0,0,0.6)] animate-fade-up overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="flex items-center justify-between p-5 bg-[#0D1220] border-b border-[#26334A]">
+                 <div>
+                    <h2 className="text-lg font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Skills & Weak Foot</h2>
+                    <div className="text-[10px] text-[#4D8DFF] font-bold uppercase tracking-widest mt-1">AP Remaining: {availableAp}</div>
+                 </div>
+                 <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-[#131A2A] text-[#8E9AAF] flex items-center justify-center hover:bg-[#192235] hover:text-[#F4F7FB] transition-colors">✕</button>
+              </div>
+              <div className="p-5 space-y-4 pb-12">
+                  
+                  {/* Skill Moves Row */}
+                  <div className="flex items-center justify-between bg-[#131A2A] p-4 rounded-xl border border-[#26334A]">
+                     <div>
+                        <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide">Skill Moves</div>
+                        <div className="text-[9px] text-[#59657A] font-medium tracking-widest uppercase mt-0.5">Min: {activeStarCaps.sm.min} <span className="mx-1">•</span> Max: {activeStarCaps.sm.max}</div>
+                     </div>
+                     <div className="flex items-center gap-4">
+                        <button onClick={() => handleStarChange('sm', smLevel - 1)} disabled={smLevel <= activeStarCaps.sm.min} className="w-10 h-10 rounded-lg bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-1 text-lg">-</button>
+                        <span className="text-[#4D8DFF] font-black text-xl w-10 text-center">{smLevel} <span className="opacity-70 text-[12px]">★</span></span>
+                        <button onClick={() => handleStarChange('sm', smLevel + 1)} disabled={smLevel >= activeStarCaps.sm.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.sm.tier][smLevel + 1]} className="w-10 h-10 rounded-lg bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-1 text-lg">+</button>
+                     </div>
+                  </div>
+
+                  {/* Weak Foot Row */}
+                  <div className="flex items-center justify-between bg-[#131A2A] p-4 rounded-xl border border-[#26334A]">
+                     <div>
+                        <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide">Weak Foot</div>
+                        <div className="text-[9px] text-[#59657A] font-medium tracking-widest uppercase mt-0.5">Min: {activeStarCaps.wf.min} <span className="mx-1">•</span> Max: {activeStarCaps.wf.max}</div>
+                     </div>
+                     <div className="flex items-center gap-4">
+                        <button onClick={() => handleStarChange('wf', wfLevel - 1)} disabled={wfLevel <= activeStarCaps.wf.min} className="w-10 h-10 rounded-lg bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-1 text-lg">-</button>
+                        <span className="text-[#4D8DFF] font-black text-xl w-10 text-center">{wfLevel} <span className="opacity-70 text-[12px]">★</span></span>
+                        <button onClick={() => handleStarChange('wf', wfLevel + 1)} disabled={wfLevel >= activeStarCaps.wf.max || availableAp < STAR_UPGRADE_COSTS[activeStarCaps.wf.tier][wfLevel + 1]} className="w-10 h-10 rounded-lg bg-[#0D1220] border border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB] hover:border-[#4D8DFF] disabled:opacity-30 flex items-center justify-center transition-all pb-1 text-lg">+</button>
+                     </div>
+                  </div>
+              </div>
+           </div>
         </div>
       )}
 
@@ -1506,7 +1434,6 @@ export default function ManualBuilder() {
             </div>
 
             <div className="flex-1 flex overflow-hidden">
-              {/* LEFT COLUMN: LIST */}
               <div className="w-[45%] overflow-y-auto border-r border-[#26334A] hide-scrollbar bg-[#0D1220]">
                 {Object.keys(FACILITIES).map(facName => {
                   const isSelected = selectedFacView === facName;
@@ -1516,15 +1443,7 @@ export default function ManualBuilder() {
                   return (
                     <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full p-3 flex items-center gap-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
                       <div className="w-8 h-8 shrink-0 rounded-full bg-[#080B14] border border-[#26334A] flex items-center justify-center p-1.5 overflow-hidden">
-                         <img 
-                             src={iconPath}
-                             alt={facName}
-                             className="w-full h-full object-contain"
-                             onError={(e) => {
-                                 e.currentTarget.onerror = null;
-                                 e.currentTarget.src = '/icons/facilities/default.png';
-                             }}
-                         />
+                         <img src={iconPath} alt={facName} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/icons/facilities/default.png'; }} />
                       </div>
                       <div>
                         <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
@@ -1535,21 +1454,12 @@ export default function ManualBuilder() {
                 })}
               </div>
               
-              {/* RIGHT COLUMN: INFORMATION PANEL */}
               <div className="w-[55%] p-4 flex flex-col items-center bg-[#080B14] overflow-y-auto">
                 {selectedFacView && FACILITIES[selectedFacView] && (
                   <>
                     <div className="w-full text-center mb-6 pt-2">
                       <div className="w-12 h-12 mx-auto rounded-full bg-[#131A2A] border border-[#26334A] flex items-center justify-center mb-3 overflow-hidden p-2">
-                        <img 
-                            src={`/icons/facilities/${selectedFacView.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-')}.png`} 
-                            alt={selectedFacView}
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = '/icons/facilities/default.png';
-                            }}
-                        />
+                        <img src={`/icons/facilities/${selectedFacView.toLowerCase().replace(/\./g, '').replace(/\s+/g, '-')}.png`} alt={selectedFacView} className="w-full h-full object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/icons/facilities/default.png'; }} />
                       </div>
                       <h3 className="text-sm font-black text-[#F4F7FB] mb-3 leading-tight">{selectedFacView}</h3>
                       <div className="flex items-center gap-4 justify-center">
@@ -1562,28 +1472,18 @@ export default function ManualBuilder() {
 
                     <div className="bg-[#0D1220] border border-[#26334A] p-4 rounded-xl w-full text-center mb-6 shadow-sm">
                       <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
-                      
-                      {/* FIXED STAT BOOST LAYOUT */}
                       <div className="flex flex-col gap-1.5 text-xs font-bold text-[#21E6A4] tracking-wide">
                         {FACILITIES[selectedFacView].stats.map(stat => (
                           <div key={stat}>{stat} +{FACILITIES[selectedFacView].boosts[viewingFacTier - 1]}</div>
                         ))}
                       </div>
-                      
                       {viewingFacTier === 3 && FACILITIES[selectedFacView].playstyle && (
                         <div className="mt-4 pt-3 border-t border-[#26334A]/50 animate-fade-in">
                            <div className="text-[9px] text-[#facc15] uppercase tracking-widest mb-2 flex items-center justify-center gap-1.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                             <div className="w-1 h-1 rounded-full bg-[#facc15]" />
-                             Tier 3 Team PlayStyle
-                             <div className="w-1 h-1 rounded-full bg-[#facc15]" />
+                             <div className="w-1 h-1 rounded-full bg-[#facc15]" />Tier 3 Team PlayStyle<div className="w-1 h-1 rounded-full bg-[#facc15]" />
                            </div>
                            <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider flex items-center justify-center gap-2">
-                             <img 
-                               src={getPlaystyleIconPath(FACILITIES[selectedFacView].playstyle, false)} 
-                               alt="" 
-                               className="w-4 h-4 object-contain"
-                               onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                             />
+                             <img src={getPlaystyleIconPath(FACILITIES[selectedFacView].playstyle, false)} alt="" className="w-4 h-4 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                              {FACILITIES[selectedFacView].playstyle}
                            </div>
                         </div>
@@ -1604,11 +1504,7 @@ export default function ManualBuilder() {
                            const targetCost = FACILITIES[selectedFacView].cost[viewingFacTier - 1];
                            const canAfford = remainingBudget + costToRefund >= targetCost;
                            return (
-                             <button 
-                               onClick={() => handleEquipFacilityTier(selectedFacView, viewingFacTier)} 
-                               disabled={!canAfford}
-                               className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all ${canAfford ? 'bg-[#4D8DFF] text-[#080B14] hover:bg-[#4D8DFF]/90 shadow-[0_0_15px_rgba(77,141,255,0.3)]' : 'bg-[#192235] text-[#59657A] cursor-not-allowed border border-[#26334A]'}`}
-                             >
+                             <button onClick={() => handleEquipFacilityTier(selectedFacView, viewingFacTier)} disabled={!canAfford} className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] transition-all ${canAfford ? 'bg-[#4D8DFF] text-[#080B14] hover:bg-[#4D8DFF]/90 shadow-[0_0_15px_rgba(77,141,255,0.3)]' : 'bg-[#192235] text-[#59657A] cursor-not-allowed border border-[#26334A]'}`}>
                                {canAfford ? (currentEquippedTier ? 'Upgrade' : 'Equip') : 'Insufficient Budget'}
                              </button>
                            );
@@ -1627,7 +1523,6 @@ export default function ManualBuilder() {
       {activeModal === 'masteries' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
-            
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Masteries</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
@@ -1638,18 +1533,12 @@ export default function ManualBuilder() {
                  <div className="text-[11px] font-bold text-[#F4F7FB] uppercase tracking-wider" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Mastery Progress</div>
                  <div className="text-sm font-black text-[#F4F7FB]">{masteryProgressPct}%</div>
               </div>
-              
               <div className="flex items-center gap-4">
                  <div className={`w-8 h-8 rounded border-2 flex flex-col items-center justify-center gap-0.5 ${masteryProgressPct >= 50 ? 'border-[#8B5CF6] bg-[#8B5CF6]/10' : masteryProgressPct > 0 ? 'border-[#4D8DFF] bg-[#4D8DFF]/10' : 'border-[#59657A] bg-[#0D1220]'}`}>
-                    <svg className={`w-4 h-4 ${masteryProgressPct >= 50 ? 'text-[#8B5CF6]' : masteryProgressPct > 0 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`} fill="currentColor" viewBox="0 0 24 24">
-                       <path d="M12 2L2 9l10 7 10-7-10-7zm0 10l-10-7v4l10 7 10-7v-4l-10 7z" />
-                    </svg>
+                    <svg className={`w-4 h-4 ${masteryProgressPct >= 50 ? 'text-[#8B5CF6]' : masteryProgressPct > 0 ? 'text-[#4D8DFF]' : 'text-[#59657A]'}`} fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 9l10 7 10-7-10-7zm0 10l-10-7v4l10 7 10-7v-4l-10 7z" /></svg>
                  </div>
                  <div className="flex-1 h-2 bg-[#080B14] rounded-full overflow-hidden border border-[#26334A]">
-                    <div 
-                      className="h-full bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] transition-all duration-500 ease-out"
-                      style={{ width: `${masteryProgressPct}%` }}
-                    />
+                    <div className="h-full bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] transition-all duration-500 ease-out" style={{ width: `${masteryProgressPct}%` }} />
                  </div>
               </div>
             </div>
@@ -1666,67 +1555,33 @@ export default function ManualBuilder() {
                 const masteryDef = MASTERIES[arch];
                 if (!masteryDef) return null;
                 const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
-                
                 return (
                   <div key={arch} className="flex bg-[#0D1220] rounded-xl border border-[#26334A] overflow-hidden hover:border-[#4D8DFF]/40 transition-colors">
-                    
                     <div className="w-1/3 bg-[#131A2A] p-3 flex flex-col items-center justify-center border-r border-[#26334A]">
                        <div className="w-6 h-6 mb-1.5 flex items-center justify-center">
-                          <img 
-                             src={`/archetypes/${iconFilename}`} 
-                             alt={arch} 
-                             className="w-full h-full object-contain drop-shadow-md"
-                             onError={(e) => {
-                               e.currentTarget.onerror = null; 
-                               e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                             }}
-                          />
+                          <img src={`/archetypes/${iconFilename}`} alt={arch} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                        </div>
                        <span className="text-[9px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
                     </div>
-                    
-                    <button 
-                      onClick={() => toggleMasteryUnlock(arch, 'l10')}
-                      className={`w-1/3 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
-                    >
+                    <button onClick={() => toggleMasteryUnlock(arch, 'l10')} className={`w-1/3 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
                        {Object.entries(masteryDef.l10).map(([stat, val]) => (
-                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>
-                             {STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span>
-                          </div>
+                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>{STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span></div>
                        ))}
                     </button>
-
-                    <button 
-                      onClick={() => toggleMasteryUnlock(arch, 'l30')}
-                      className={`w-1/3 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}
-                    >
+                    <button onClick={() => toggleMasteryUnlock(arch, 'l30')} className={`w-1/3 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
                        {Object.entries(masteryDef.l30).map(([stat, val]) => (
-                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>
-                             {STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span>
-                          </div>
+                          <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>{STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span></div>
                        ))}
                     </button>
-                    
                   </div>
                 );
               })}
             </div>
 
             <div className="absolute bottom-0 left-0 w-full p-4 bg-[#0D1220]/90 backdrop-blur-md border-t border-[#26334A] flex gap-3 z-20">
-               <button 
-                 onClick={() => setActiveModal(null)}
-                 className="flex-1 py-3 rounded-xl bg-[#131A2A] border border-[#26334A] text-[#8E9AAF] font-bold uppercase tracking-widest text-[10px] hover:bg-[#192235] hover:text-[#F4F7FB] transition-all"
-               >
-                 Cancel
-               </button>
-               <button 
-                 onClick={() => setActiveModal(null)}
-                 className="flex-[2] py-3 rounded-xl bg-[#4D8DFF] text-[#080B14] font-black uppercase tracking-widest text-[10px] shadow-[0_0_15px_rgba(77,141,255,0.3)] hover:bg-[#4D8DFF]/90 transition-all"
-               >
-                 Save to this Build Only
-               </button>
+               <button onClick={() => setActiveModal(null)} className="flex-1 py-3 rounded-xl bg-[#131A2A] border border-[#26334A] text-[#8E9AAF] font-bold uppercase tracking-widest text-[10px] hover:bg-[#192235] hover:text-[#F4F7FB] transition-all">Cancel</button>
+               <button onClick={() => setActiveModal(null)} className="flex-[2] py-3 rounded-xl bg-[#4D8DFF] text-[#080B14] font-black uppercase tracking-widest text-[10px] shadow-[0_0_15px_rgba(77,141,255,0.3)] hover:bg-[#4D8DFF]/90 transition-all">Save to this Build Only</button>
             </div>
-
           </div>
         </div>
       )}
@@ -1735,12 +1590,10 @@ export default function ManualBuilder() {
       {activeModal === 'playstyles' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
-            
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>PlayStyle Hub</h2>
               <button onClick={() => { setActiveModal(null); setSelectedPsView(null); }} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-            
             <div className="flex items-center justify-between p-3 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
                <div className="flex gap-2">
                  <div className="text-[9px] font-bold text-[#59657A] uppercase tracking-widest">Slots</div>
@@ -1748,9 +1601,7 @@ export default function ManualBuilder() {
                    {[0, 1, 2].map((slotIndex) => {
                      const isUnlocked = level >= [5, 15, 40][slotIndex];
                      const isFilled = equippedPlaystyles[slotIndex] !== '';
-                     return (
-                       <div key={slotIndex} className={`w-3 h-3 rounded-[3px] border ${!isUnlocked ? 'border-red-500/30 bg-red-500/10' : isFilled ? 'border-[#21E6A4] bg-[#21E6A4]/20' : 'border-[#4D8DFF]/40 bg-[#080B14]'}`} />
-                     );
+                     return <div key={slotIndex} className={`w-3 h-3 rounded-[3px] border ${!isUnlocked ? 'border-red-500/30 bg-red-500/10' : isFilled ? 'border-[#21E6A4] bg-[#21E6A4]/20' : 'border-[#4D8DFF]/40 bg-[#080B14]'}`} />
                    })}
                  </div>
                </div>
@@ -1761,7 +1612,6 @@ export default function ManualBuilder() {
             </div>
 
             <div className={`flex-1 overflow-y-auto p-4 space-y-6 ${selectedPsView ? 'pb-64' : 'pb-8'} hide-scrollbar`}>
-              
               <div>
                 <div className="flex items-center gap-2 mb-3 border-b border-[#26334A] pb-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-[#facc15]" />
@@ -1770,18 +1620,9 @@ export default function ManualBuilder() {
                 <div className="grid grid-cols-2 gap-3">
                   <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-3.5 flex flex-row items-center gap-3 relative overflow-hidden group text-left">
                      <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
-                     {/* 50% width left container for icon */}
                      <div className="w-1/2 flex items-center justify-center">
-                       <img 
-                         src={getPlaystyleIconPath(activePsPlus, true)} 
-                         alt={activePsPlus} 
-                         className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]"
-                         onError={(e) => {
-                           e.currentTarget.style.display = 'none';
-                         }}
-                       />
+                       <img src={getPlaystyleIconPath(activePsPlus, true)} alt={activePsPlus} className="w-10 h-10 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                      </div>
-                     {/* 50% width right container for name/status */}
                      <div className="w-1/2 flex flex-col justify-center">
                        <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider leading-tight">{activePsPlus}</div>
                        <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">{isPsPlusUnlocked ? (equippedSpecialization ? 'From Spec.' : 'Active') : 'Locked'}</div>
@@ -1793,43 +1634,21 @@ export default function ManualBuilder() {
               {PLAYSTYLE_CATEGORIES.map(category => {
                  const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && ps.name !== activePsPlus);
                  if (categoryStyles.length === 0) return null;
-
                  return (
                    <div key={category.id}>
                      <div className="flex items-center gap-2 mb-3 border-b border-[#26334A] pb-2">
                        <div className="w-1.5 h-1.5 rounded-full bg-[#8E9AAF]" />
                        <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{category.label}</span>
                      </div>
-                     
                      <div className="grid grid-cols-2 gap-3">
                         {categoryStyles.map(ps => {
                           const isEquipped = equippedPlaystyles.includes(ps.name);
                           const isSelected = selectedPsView === ps.name;
-                          
                           return (
-                            <button 
-                              key={ps.name}
-                              onClick={() => setSelectedPsView(ps.name)}
-                              className={`rounded-xl p-3 flex flex-row items-center gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${
-                                isSelected 
-                                  ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' 
-                                  : isEquipped 
-                                    ? 'bg-[#131A2A] border-[#21E6A4]/60' 
-                                    : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'
-                              }`}
-                            >
-                              {/* Left 50% for Icon */}
+                            <button key={ps.name} onClick={() => setSelectedPsView(ps.name)} className={`rounded-xl p-3 flex flex-row items-center gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' : isEquipped ? 'bg-[#131A2A] border-[#21E6A4]/60' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'}`}>
                               <div className="w-1/2 flex items-center justify-center">
-                                 <img 
-                                   src={getPlaystyleIconPath(ps.name, isEquipped)} 
-                                   alt={ps.name} 
-                                   className="w-8 h-8 object-contain drop-shadow-sm"
-                                   onError={(e) => {
-                                     e.currentTarget.style.display = 'none';
-                                   }}
-                                 />
+                                 <img src={getPlaystyleIconPath(ps.name, isEquipped)} alt={ps.name} className="w-8 h-8 object-contain drop-shadow-sm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               </div>
-                              {/* Right 50% for Name and Equipped status */}
                               <div className="w-1/2 flex flex-col justify-center">
                                 {isEquipped && <span className="text-[7px] bg-[#21E6A4]/20 text-[#21E6A4] border border-[#21E6A4]/40 px-1 py-0.5 rounded font-black tracking-widest uppercase mb-0.5 w-fit">Equipped</span>}
                                 <div className={`text-[10px] font-black uppercase tracking-wider leading-tight ${isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
@@ -1848,21 +1667,14 @@ export default function ManualBuilder() {
                 {(() => {
                   const ps = PLAYSTYLES_DATA.find(p => p.name === selectedPsView);
                   if (!ps) return null;
-                  
                   const { canEquip, cost, upgrades, reason } = getUpgradeData(ps.reqs);
                   const isEquipped = equippedPlaystyles.includes(ps.name);
-
                   return (
                     <div className="p-5 flex flex-col gap-4">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 flex items-center justify-center">
-                            <img 
-                              src={getPlaystyleIconPath(ps.name, isEquipped)} 
-                              alt={ps.name} 
-                              className="w-full h-full object-contain drop-shadow-md"
-                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                            />
+                            <img src={getPlaystyleIconPath(ps.name, isEquipped)} alt={ps.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           </div>
                           <div className="ml-1">
                              <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{ps.name}</h3>
@@ -1882,20 +1694,14 @@ export default function ManualBuilder() {
                             const capMax = getStatCaps(archetype, req.stat).max || 99;
                             const isImpossible = targetVal > capMax;
                             const fillPct = Math.min(100, (currentVal / targetVal) * 100);
-
                             return (
                               <div key={req.stat}>
                                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
                                   <span className={isMet ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}>{req.stat}</span>
-                                  <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>
-                                    {currentVal} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}
-                                  </span>
+                                  <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>{currentVal} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-[#131A2A] rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full rounded-full transition-all duration-500 ${isMet ? 'bg-[#21E6A4]' : isImpossible ? 'bg-[#ff4d4d]' : 'bg-[#4D8DFF]'}`} 
-                                    style={{ width: `${fillPct}%` }}
-                                  />
+                                  <div className={`h-full rounded-full transition-all duration-500 ${isMet ? 'bg-[#21E6A4]' : isImpossible ? 'bg-[#ff4d4d]' : 'bg-[#4D8DFF]'}`} style={{ width: `${fillPct}%` }} />
                                 </div>
                               </div>
                             )
@@ -1903,28 +1709,8 @@ export default function ManualBuilder() {
                         </div>
                       </div>
 
-                      <button 
-                        onClick={() => handleActionPlaystyle(ps.name, upgrades, isEquipped)}
-                        disabled={!isEquipped && (!canEquip || (!hasEmptySlot && Object.keys(upgrades).length === 0 && cost === 0))}
-                        className={`w-full py-3.5 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
-                          isEquipped 
-                            ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
-                            : !canEquip
-                              ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
-                              : !hasEmptySlot
-                                ? 'bg-[#131A2A] text-[#ff4d4d] border border-red-500/30 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white shadow-[0_0_20px_rgba(77,141,255,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)]'
-                        }`}
-                      >
-                        {isEquipped 
-                          ? 'Deselect Element' 
-                          : !canEquip 
-                            ? reason 
-                            : !hasEmptySlot
-                              ? 'Slots Full'
-                              : cost > 0 
-                                ? `Quick Equip [ ${cost} AP ]` 
-                                : 'Equip PlayStyle'}
+                      <button onClick={() => handleActionPlaystyle(ps.name, upgrades, isEquipped)} disabled={!isEquipped && (!canEquip || (!hasEmptySlot && Object.keys(upgrades).length === 0 && cost === 0))} className={`w-full py-3.5 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${isEquipped ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20' : !canEquip ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed' : !hasEmptySlot ? 'bg-[#131A2A] text-[#ff4d4d] border border-red-500/30 cursor-not-allowed' : 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white shadow-[0_0_20px_rgba(77,141,255,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)]'}`}>
+                        {isEquipped ? 'Deselect Element' : !canEquip ? reason : !hasEmptySlot ? 'Slots Full' : cost > 0 ? `Quick Equip [ ${cost} AP ]` : 'Equip PlayStyle'}
                       </button>
                     </div>
                   );
@@ -1939,12 +1725,10 @@ export default function ManualBuilder() {
       {activeModal === 'specializations' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
-            
             <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
               <h2 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>Browse Specializations</h2>
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
-            
             <div className="flex items-center justify-between p-3 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
                <div className="text-[10px] text-[#8E9AAF] tracking-wide font-medium">Select a path for <span className="font-bold text-[#F4F7FB] uppercase tracking-widest">{archetype}</span></div>
                <div className="text-right">
@@ -1960,11 +1744,9 @@ export default function ManualBuilder() {
                 SPECIALIZATIONS_DATA[archetype].map((spec) => {
                   const isEquipped = equippedSpecialization === spec.name;
                   const { canEquip, cost, upgrades, reason } = getUpgradeData(spec.reqs);
-                  
                   return (
                     <div key={spec.name} className={`bg-[#0D1220] rounded-2xl overflow-hidden transition-all duration-300 border ${isEquipped ? 'border-[#facc15] shadow-[0_0_20px_rgba(250,204,21,0.15)] ring-1 ring-[#facc15]/30' : 'border-[#26334A]'}`}>
                        <div className="p-4 flex flex-col gap-4">
-                          
                           <div className="flex justify-between items-start gap-4">
                              <div className="flex-1">
                                <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{spec.name}</div>
@@ -1974,7 +1756,6 @@ export default function ManualBuilder() {
                                  {spec.desc}
                                </div>
                              </div>
-                             
                              <div className="w-[120px] shrink-0 bg-[#080B14] rounded-xl border border-[#26334A] p-3 shadow-inner">
                                <div className="space-y-2.5">
                                  {spec.reqs.map(req => {
@@ -1982,16 +1763,11 @@ export default function ManualBuilder() {
                                     const targetVal = req.min;
                                     const isMet = currentVal >= targetVal;
                                     const isImpossible = targetVal > (getStatCaps(archetype, req.stat).max || 99);
-                                    
                                     return (
                                        <div key={req.stat}>
                                           <div className="flex justify-between items-end mb-1">
-                                             <span className="text-[9px] font-bold uppercase tracking-wide text-[#8E9AAF] leading-none" style={{ fontFamily: "'Inter', sans-serif" }}>
-                                               {STAT_ABBR[req.stat]}
-                                             </span>
-                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>
-                                               {currentVal}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}
-                                             </span>
+                                             <span className="text-[9px] font-bold uppercase tracking-wide text-[#8E9AAF] leading-none" style={{ fontFamily: "'Inter', sans-serif" }}>{STAT_ABBR[req.stat]}</span>
+                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>{currentVal}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}</span>
                                           </div>
                                        </div>
                                     )
@@ -1999,25 +1775,8 @@ export default function ManualBuilder() {
                                </div>
                              </div>
                           </div>
-
-                          <button 
-                            onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)}
-                            disabled={!isEquipped && !canEquip}
-                            className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${
-                              isEquipped 
-                                ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]'
-                                : !canEquip
-                                  ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed'
-                                  : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'
-                            }`}
-                          >
-                            {isEquipped 
-                              ? '✔ Equipped' 
-                              : !canEquip 
-                                ? reason 
-                                : cost > 0 
-                                  ? `Unlock (${cost} AP)` 
-                                  : 'Equip Path'}
+                          <button onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)} disabled={!isEquipped && !canEquip} className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${isEquipped ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]' : !canEquip ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed' : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'}`}>
+                            {isEquipped ? '✔ Equipped' : !canEquip ? reason : cost > 0 ? `Unlock (${cost} AP)` : 'Equip Path'}
                           </button>
                        </div>
                     </div>
@@ -2025,7 +1784,6 @@ export default function ManualBuilder() {
                 })
               )}
             </div>
-
           </div>
         </div>
       )}
