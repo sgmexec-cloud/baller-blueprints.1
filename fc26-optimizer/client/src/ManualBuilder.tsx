@@ -106,6 +106,19 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
+// Position mapping logic based on user prompt requirements
+const getArchetypeDisplayPosition = (archetype: string, fallbackType: string): string => {
+  const defArchetypes = ['Progressor', 'Boss', 'Marauder'];
+  const midArchetypes = ['Disruptor', 'Recycler', 'Maestro', 'Creator'];
+  const attArchetypes = ['Spark', 'Magician', 'Finisher', 'Target', 'Target Forward'];
+
+  if (defArchetypes.includes(archetype)) return 'DEF';
+  if (midArchetypes.includes(archetype)) return 'MID';
+  if (attArchetypes.includes(archetype)) return 'ATT';
+  if (archetype.includes('Keeper') || archetype.includes('Stopper')) return 'GK';
+  return fallbackType === 'GK' ? 'GK' : 'ATT';
+};
+
 const STAR_UPGRADE_COSTS: Record<string, number[]> = {
   star0: [0, 0, 5, 10, 25, 40],
   star1: [0, 0, 8, 15, 25, 40],
@@ -956,7 +969,7 @@ export default function ManualBuilder() {
            {/* Dynamic Card Container[span_5](start_span)[span_5](end_span) */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               
-              {/* Card Graphic (Left) - Scaled to match Canva 256x256 absolute measurements */}
+              {/* Card Graphic (Left) - Scaled to match Canva 256x256 absolute measurements with precise rating placement */}
               <div 
                  className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
                    faceStats.ovr >= 75 
@@ -967,14 +980,9 @@ export default function ManualBuilder() {
                    backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
                  }}
               >
-                 {/* Rating (x: 58.9, y: 49.7) */}
-                 <div className="absolute z-20 flex flex-col items-center" style={{ left: '23%', top: '19.4%' }}>
-                    <span className="text-[#080B14] font-black text-3xl leading-none tracking-tighter">{faceStats.ovr}</span>
-                 </div>
-
-                 {/* Position (x: 67, y: 80.1) */}
-                 <div className="absolute z-20 flex flex-col items-center" style={{ left: '26.1%', top: '31.2%' }}>
-                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                 {/* Rating (x: 58.8, y: 50.2, size: 30.6px x 25.5px scaled relative to 256px card container) */}
+                 <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '23%', top: '19.6%', width: '12%', height: '10%' }}>
+                    <span className="text-[#080B14] font-black text-2xl leading-none tracking-tighter">{faceStats.ovr}</span>
                  </div>
                  
                  {/* User Photo / Placeholder (x: 68.9, y: 34.3, size: 127.4x127.4 scaled to card proportions) */}
@@ -1015,7 +1023,7 @@ export default function ManualBuilder() {
                  </div>
                  
                  <div className="mt-3">
-                    <span className="bg-[#4caf50] text-white px-2 py-0.5 rounded-sm font-bold text-[9px] uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                    <span className="bg-[#4caf50] text-white px-2 py-0.5 rounded-sm font-bold text-[9px] uppercase">{getArchetypeDisplayPosition(archetype, activeBounds.type)}</span>
                  </div>
               </div>
            </div>
