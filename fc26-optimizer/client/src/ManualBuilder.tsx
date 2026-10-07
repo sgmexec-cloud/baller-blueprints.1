@@ -958,7 +958,7 @@ export default function ManualBuilder() {
               
               {/* Card Graphic (Left) */}
               <div 
-                 className={`w-[90px] h-[130px] rounded-md relative p-2 flex flex-col justify-between overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
+                 className={`w-[90px] h-[130px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
                    faceStats.ovr >= 75 
                      ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' // Gold glow
                      : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]' // Silver glow
@@ -967,27 +967,32 @@ export default function ManualBuilder() {
                    backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
                  }}
               >
-                 <div className="relative z-10 flex flex-col">
+                 {/* OVR & Position (Top Left) */}
+                 <div className="absolute top-2 left-2 z-20 flex flex-col items-center">
                     <span className="text-[#080B14] font-black text-3xl leading-none tracking-tighter">{faceStats.ovr}</span>
-                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase -mt-0.5">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
                  </div>
                  
                  {/* User Photo / Placeholder */}
-                 <div className="absolute bottom-0 right-[-15px] w-24 h-24">
+                 <div className="absolute bottom-[22%] right-[-5px] w-[80px] h-[80px] z-10">
                     <img 
                       src="/default-avatar.png" 
                       alt="Pro" 
-                      className="w-full h-full object-cover object-top drop-shadow-md" 
+                      className="w-full h-full object-cover object-bottom drop-shadow-md" 
                       onError={(e) => { 
                         e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23080B14" opacity="0.4"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'; 
                       }} 
                     />
                  </div>
                  
-                 {/* Badge Placeholders */}
-                 <div className="relative z-10 flex flex-col gap-0.5 mt-auto pb-1 w-fit">
-                    <div className="w-6 h-3.5 bg-white border border-black/20 flex items-center justify-center text-[5px] text-black font-black">ENG</div>
-                    <div className="w-4 h-4 bg-white rounded-full border border-black/20 flex items-center justify-center text-[6px] text-black font-black">DNA</div>
+                 {/* Archetype Icon (Bottom Center) */}
+                 <div className="absolute bottom-1.5 left-0 w-full flex justify-center z-20">
+                    <img 
+                       src={`/archetypes/${archetype.replace(/\s+/g, '-').toLowerCase()}.png`}
+                       alt={archetype}
+                       className="w-7 h-7 object-contain brightness-0 opacity-85 drop-shadow-sm"
+                       onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
                  </div>
               </div>
 
