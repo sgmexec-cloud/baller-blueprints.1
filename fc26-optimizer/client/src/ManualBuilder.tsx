@@ -956,33 +956,46 @@ export default function ManualBuilder() {
            {/* Dynamic Card Container[span_5](start_span)[span_5](end_span) */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               
-              {/* Card Graphic (Left)[span_6](start_span)[span_6](end_span) */}
-              <div className="w-[90px] h-[130px] bg-gradient-to-br from-[#d4af37] via-[#facc15] to-[#aa8c2c] rounded-md relative p-2 shadow-[0_0_15px_rgba(250,204,21,0.2)] flex flex-col justify-between overflow-hidden shrink-0">
-                 {/* Background Pattern */}
-                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '10px 10px' }}></div>
-                 
+              {/* Card Graphic (Left) */}
+              <div 
+                 className={`w-[90px] h-[130px] rounded-md relative p-2 flex flex-col justify-between overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
+                   faceStats.ovr >= 75 
+                     ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' // Gold glow
+                     : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]' // Silver glow
+                 }`}
+                 style={{ 
+                   backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
+                 }}
+              >
                  <div className="relative z-10 flex flex-col">
                     <span className="text-[#080B14] font-black text-3xl leading-none tracking-tighter">{faceStats.ovr}</span>
                     <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
                  </div>
                  
-                 {/* User Photo / Placeholder[span_7](start_span)[span_7](end_span) */}
+                 {/* User Photo / Placeholder */}
                  <div className="absolute bottom-0 right-[-15px] w-24 h-24">
-                    <img src="/default-avatar.png" alt="Pro" className="w-full h-full object-cover object-top drop-shadow-md" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23080B14" opacity="0.4"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'; }} />
+                    <img 
+                      src="/default-avatar.png" 
+                      alt="Pro" 
+                      className="w-full h-full object-cover object-top drop-shadow-md" 
+                      onError={(e) => { 
+                        e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23080B14" opacity="0.4"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'; 
+                      }} 
+                    />
                  </div>
                  
-                 {/* Badge Placeholders[span_8](start_span)[span_8](end_span) */}
+                 {/* Badge Placeholders */}
                  <div className="relative z-10 flex flex-col gap-0.5 mt-auto pb-1 w-fit">
                     <div className="w-6 h-3.5 bg-white border border-black/20 flex items-center justify-center text-[5px] text-black font-black">ENG</div>
                     <div className="w-4 h-4 bg-white rounded-full border border-black/20 flex items-center justify-center text-[6px] text-black font-black">DNA</div>
                  </div>
               </div>
 
-              {/* Stats Breakdown (Right)[span_9](start_span)[span_9](end_span) */}
+              {/* Stats Breakdown (Right)[span_6](start_span)[span_6](end_span) */}
               <div className="flex-1 flex flex-col justify-center py-1">
                  <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
                  
-                 {/* Face Stats Grid[span_10](start_span)[span_10](end_span) */}
+                 {/* Face Stats Grid[span_7](start_span)[span_7](end_span) */}
                  <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pac}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.sho}</span></div>
@@ -998,7 +1011,7 @@ export default function ManualBuilder() {
               </div>
            </div>
 
-           {/* Tab Navigation[span_11](start_span)[span_11](end_span) */}
+           {/* Tab Navigation[span_8](start_span)[span_8](end_span) */}
            <div className="flex gap-2.5 mt-5 overflow-x-auto hide-scrollbar pb-1 px-1">
               {[
                 { id: 'info', label: 'Info' }, 
