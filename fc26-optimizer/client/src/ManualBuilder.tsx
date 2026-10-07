@@ -922,17 +922,17 @@ export default function ManualBuilder() {
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-4 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
-        {/* COMPANION APP STYLE TOP BAR[span_0](start_span)[span_0](end_span) */}
+        {/* COMPANION APP STYLE TOP BAR */}
         <div className="flex justify-between items-center mb-4 px-1 pt-2">
           <div className="flex items-center gap-2">
             <span className="text-[#8E9AAF] text-lg leading-none font-bold cursor-pointer">〈</span>
             <span className="text-[#F4F7FB] font-black tracking-wide text-[15px]">Player Details</span>
           </div>
           
-          {/* Top Right AP & Level (Like Coin/Points Balance)[span_1](start_span)[span_1](end_span) */}
+          {/* Top Right AP & Level (Like Coin/Points Balance) */}
           <div className="flex items-center gap-5">
             
-            {/* Available AP Balance[span_2](start_span)[span_2](end_span) */}
+            {/* Available AP Balance */}
             <div className="flex items-center gap-1.5">
               <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
               <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
@@ -940,7 +940,7 @@ export default function ManualBuilder() {
               </div>
             </div>
             
-            {/* Level Dropdown[span_3](start_span)[span_3](end_span) */}
+            {/* Level Dropdown */}
             <div className="flex items-center gap-1.5 relative group">
               <select 
                 value={level} 
@@ -959,14 +959,14 @@ export default function ManualBuilder() {
           </div>
         </div>
 
-        {/* STICKY HEADER CARD[span_4](start_span)[span_4](end_span) */}
+        {/* STICKY HEADER CARD */}
         <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
            
            <div className="text-center mb-3">
               <span className="text-[#F4F7FB] font-bold text-[15px]">Player Bio</span>
            </div>
 
-           {/* Dynamic Card Container[span_5](start_span)[span_5](end_span) */}
+           {/* Dynamic Card Container */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               
               {/* Card Graphic (Left) - Scaled to match Canva 256x256 absolute measurements with precise rating placement */}
@@ -980,9 +980,9 @@ export default function ManualBuilder() {
                    backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
                  }}
               >
-                 {/* Rating (x: 58.8, y: 50.2, size: 30.6px x 25.5px scaled relative to 256px card container) */}
-                 <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '23%', top: '19.6%', width: '12%', height: '10%' }}>
-                    <span className="text-[#080B14] font-black text-2xl leading-none tracking-tighter">{faceStats.ovr}</span>
+                 {/* Rating adjusted: moved left and sized down to prevent overlapping the avatar */}
+                 <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '15%', top: '20%', width: '15%' }}>
+                    <span className="text-[#080B14] font-black text-[20px] leading-none tracking-tighter">{faceStats.ovr}</span>
                  </div>
                  
                  {/* User Photo / Placeholder (x: 68.9, y: 34.3, size: 127.4x127.4 scaled to card proportions) */}
@@ -1008,11 +1008,11 @@ export default function ManualBuilder() {
                  </div>
               </div>
 
-              {/* Stats Breakdown (Right)[span_6](start_span)[span_6](end_span) */}
+              {/* Stats Breakdown (Right) */}
               <div className="flex-1 flex flex-col justify-center py-1">
                  <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
                  
-                 {/* Face Stats Grid[span_7](start_span)[span_7](end_span) */}
+                 {/* Face Stats Grid */}
                  <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pac}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.sho}</span></div>
@@ -1028,7 +1028,7 @@ export default function ManualBuilder() {
               </div>
            </div>
 
-           {/* Tab Navigation[span_8](start_span)[span_8](end_span) */}
+           {/* Tab Navigation */}
            <div className="flex gap-2.5 mt-5 overflow-x-auto hide-scrollbar pb-1 px-1">
               {[
                 { id: 'info', label: 'Info' }, 
