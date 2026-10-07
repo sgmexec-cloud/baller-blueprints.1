@@ -464,7 +464,8 @@ export default function ManualBuilder() {
   const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   
-  // Dashboard Overlays State
+  // Navigation & UI State
+  const [activeTab, setActiveTab] = useState<'info' | 'archetype' | 'foundation' | 'attributes' | 'playstyles'>('attributes');
   const [activeModal, setActiveModal] = useState<'facilities' | 'masteries' | 'playstyles' | 'specializations' | 'edit_category' | 'physicals' | 'skills_wf' | null>(null);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [selectedFacView, setSelectedFacView] = useState<string>('');
@@ -644,6 +645,23 @@ export default function ManualBuilder() {
   }, [addedPoints, serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, smLevel, wfLevel]);
 
   const availableAp = maxAp - spentAp;
+
+  const faceStats = useMemo(() => {
+    if (!currentStats) return { pac: 70, sho: 70, pas: 70, dri: 70, def: 70, phy: 70, ovr: 70 };
+    
+    const calc = (group: string[]) => Math.round(group.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0) / group.length);
+    
+    const pac = calc(STAT_GROUPS["Pace"]);
+    const sho = calc(STAT_GROUPS["Shooting"]);
+    const pas = calc(STAT_GROUPS["Passing"]);
+    const dri = calc(STAT_GROUPS["Dribbling"]);
+    const def = calc(STAT_GROUPS["Defending"]);
+    const phy = calc(STAT_GROUPS["Physical"]);
+    
+    const ovr = Math.round((pac + sho + pas + dri + def + phy) / 6) + 4;
+    
+    return { pac, sho, pas, dri, def, phy, ovr };
+  }, [currentStats]);
 
   // ------------------------------------------
   // QUICK EQUIP ENGINE
@@ -888,83 +906,119 @@ export default function ManualBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-6 pb-16 px-4">
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-4 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
-        {/* Header Branding */}
-        <div className="flex justify-center mb-6 pt-2">
-          <img 
-            src="/clubs-dna-logo.png"
-            alt="ClubsDNA" 
-            className="w-full max-w-[280px] h-auto object-contain drop-shadow-[0_0_15px_rgba(77,141,255,0.15)]" 
-          />
-        </div>
-
-        {/* STICKY TOP DASHBOARD (5-SQUARE GRID) */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md py-3 -mx-4 px-4 sm:mx-0 sm:px-4 sm:rounded-2xl border-b sm:border border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] mb-6">
-          <div className="grid grid-cols-5 gap-2">
+        {/* COMPANION APP STYLE TOP BAR[span_0](start_span)[span_0](end_span) */}
+        <div className="flex justify-between items-center mb-4 px-1 pt-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[#8E9AAF] text-lg leading-none font-bold cursor-pointer">〈</span>
+            <span className="text-[#F4F7FB] font-black tracking-wide text-[15px]">Player Details</span>
+          </div>
+          
+          {/* Top Right AP & Level (Like Coin/Points Balance)[span_1](start_span)[span_1](end_span) */}
+          <div className="flex items-center gap-5">
             
-            {/* Square 1: Logo */}
-            <div className="flex items-center justify-center h-14 relative overflow-hidden">
-              <img 
-                src="/app-icon.png" 
-                alt="ClubsDNA" 
-                className="w-7 h-7 object-contain drop-shadow-[0_0_10px_rgba(56,130,255,0.2)]"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>';
-                }}
-              />
+            {/* Available AP Balance[span_2](start_span)[span_2](end_span) */}
+            <div className="flex items-center gap-1.5">
+              <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
+              <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
+                <span className="text-[#080B14] font-black text-[6px]">AP</span>
+              </div>
             </div>
-
-            {/* Square 2: Blank */}
-            <div className="flex items-center justify-center h-14">
-            </div>
-
-            {/* Square 3: Archetype Icon (No Name) */}
-            <div className="flex items-center justify-center h-14 p-2.5 relative">
-               <img 
-                  src={`/archetypes/${archetype ? archetype.replace(/\s+/g, '-').toLowerCase() : ''}.png`} 
-                  alt={archetype} 
-                  className="w-full h-full object-contain opacity-90 drop-shadow-md"
-                  onError={(e) => {
-                    e.currentTarget.onerror = null; 
-                    e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%238E9AAF"><circle cx="12" cy="12" r="10" /></svg>';
-                  }}
-               />
-            </div>
-
-            {/* Square 4: Level Dropdown */}
-            <div className="flex flex-col items-center justify-center h-14 relative group">
-              <span className="text-[8px] font-bold text-[#F7F8FA] uppercase tracking-widest absolute top-1">Lvl</span>
+            
+            {/* Level Dropdown[span_3](start_span)[span_3](end_span) */}
+            <div className="flex items-center gap-1.5 relative group">
               <select 
                 value={level} 
                 onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-                className="bg-transparent text-lg font-black text-[#3882FF] outline-none appearance-none cursor-pointer mt-3 w-full text-center"
+                className="bg-transparent font-bold text-[#21E6A4] text-[13px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
               >
                 {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
-                  <option key={l} value={l} className="bg-[#131A2A] text-[#3882FF] text-sm">
-                    {l}
-                  </option>
+                  <option key={l} value={l} className="bg-[#131A2A] text-[#21E6A4]">{l}</option>
                 ))}
               </select>
-              <div className="absolute right-1 top-[55%] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity">
-                <svg className="w-2.5 h-2.5 text-[#3882FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+              <div className="w-3.5 h-3.5 rounded-full bg-[#21E6A4] flex items-center justify-center border border-[#10b981]">
+                 <svg className="w-2 h-2 text-[#080B14]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
               </div>
-            </div>
-
-            {/* Square 5: Available AP */}
-            <div className="flex flex-col items-center justify-center h-14 relative">
-              <span className="text-[8px] font-bold text-[#F7F8FA] uppercase tracking-widest absolute top-1">AP</span>
-              <span className="text-xl font-black text-[#3882FF] mt-2.5 leading-none" style={{ fontFamily: "'Orbitron', sans-serif" }}>
-                {availableAp}
-              </span>
             </div>
 
           </div>
         </div>
 
-        {/* Global Dataset Toggles */}
+        {/* STICKY HEADER CARD[span_4](start_span)[span_4](end_span) */}
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+           
+           <div className="text-center mb-3">
+              <span className="text-[#F4F7FB] font-bold text-[15px]">Player Bio</span>
+           </div>
+
+           {/* Dynamic Card Container[span_5](start_span)[span_5](end_span) */}
+           <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
+              
+              {/* Card Graphic (Left)[span_6](start_span)[span_6](end_span) */}
+              <div className="w-[90px] h-[130px] bg-gradient-to-br from-[#d4af37] via-[#facc15] to-[#aa8c2c] rounded-md relative p-2 shadow-[0_0_15px_rgba(250,204,21,0.2)] flex flex-col justify-between overflow-hidden shrink-0">
+                 {/* Background Pattern */}
+                 <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '10px 10px' }}></div>
+                 
+                 <div className="relative z-10 flex flex-col">
+                    <span className="text-[#080B14] font-black text-3xl leading-none tracking-tighter">{faceStats.ovr}</span>
+                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                 </div>
+                 
+                 {/* User Photo / Placeholder[span_7](start_span)[span_7](end_span) */}
+                 <div className="absolute bottom-0 right-[-15px] w-24 h-24">
+                    <img src="/default-avatar.png" alt="Pro" className="w-full h-full object-cover object-top drop-shadow-md" onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23080B14" opacity="0.4"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'; }} />
+                 </div>
+                 
+                 {/* Badge Placeholders[span_8](start_span)[span_8](end_span) */}
+                 <div className="relative z-10 flex flex-col gap-0.5 mt-auto pb-1 w-fit">
+                    <div className="w-6 h-3.5 bg-white border border-black/20 flex items-center justify-center text-[5px] text-black font-black">ENG</div>
+                    <div className="w-4 h-4 bg-white rounded-full border border-black/20 flex items-center justify-center text-[6px] text-black font-black">DNA</div>
+                 </div>
+              </div>
+
+              {/* Stats Breakdown (Right)[span_9](start_span)[span_9](end_span) */}
+              <div className="flex-1 flex flex-col justify-center py-1">
+                 <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
+                 
+                 {/* Face Stats Grid[span_10](start_span)[span_10](end_span) */}
+                 <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pac}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.sho}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pas}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.dri}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.def}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.phy}</span></div>
+                 </div>
+                 
+                 <div className="mt-3">
+                    <span className="bg-[#4caf50] text-white px-2 py-0.5 rounded-sm font-bold text-[9px] uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                 </div>
+              </div>
+           </div>
+
+           {/* Tab Navigation[span_11](start_span)[span_11](end_span) */}
+           <div className="flex gap-2.5 mt-5 overflow-x-auto hide-scrollbar pb-1 px-1">
+              {[
+                { id: 'info', label: 'Info' }, 
+                { id: 'archetype', label: 'Archetype' }, 
+                { id: 'foundation', label: 'Foundation' }, 
+                { id: 'attributes', label: 'Attributes' }, 
+                { id: 'playstyles', label: 'PlayStyles' }
+              ].map(tab => (
+                 <button 
+                   key={tab.id}
+                   onClick={() => setActiveTab(tab.id as any)}
+                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap ${activeTab === tab.id ? 'bg-[#192235] text-[#21E6A4] border-[#21E6A4]/50 shadow-[0_0_10px_rgba(33,230,164,0.1)]' : 'bg-[#131A2A] text-[#8E9AAF] border-transparent hover:bg-[#192235]'}`}
+                 >
+                   {tab.label}
+                 </button>
+              ))}
+           </div>
+        </div>
+
+        {/* Global Dataset Toggles (Placed below sticky header) */}
         <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
           <button
             onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
@@ -986,62 +1040,166 @@ export default function ManualBuilder() {
           </button>
         </div>
 
-        <section className="mb-6 animate-fade-in space-y-4">
+        {/* =========================================
+            TAB CONTENT SECTIONS
+        ========================================= */}
 
-          {/* 1. Archetypes */}
-          <div>
+        {/* TAB 1: INFO */}
+        {activeTab === 'info' && (
+          <section className="animate-fade-up space-y-4">
+             <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-4">
+                <div className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF] mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Build Summary</div>
+                <div className="space-y-3">
+                   <div className="flex justify-between items-center border-b border-[#26334A]/50 pb-2">
+                      <span className="text-xs text-[#59657A] font-bold uppercase">Archetype</span>
+                      <span className="text-sm text-[#F4F7FB] font-black">{archetype}</span>
+                   </div>
+                   <div className="flex justify-between items-center border-b border-[#26334A]/50 pb-2">
+                      <span className="text-xs text-[#59657A] font-bold uppercase">Height & Weight</span>
+                      <span className="text-sm text-[#F4F7FB] font-black">{height}cm / {weight}kg</span>
+                   </div>
+                   <div className="flex justify-between items-center border-b border-[#26334A]/50 pb-2">
+                      <span className="text-xs text-[#59657A] font-bold uppercase">AcceleRATE</span>
+                      <span className="text-sm text-[#F4F7FB] font-black">{accelerate}</span>
+                   </div>
+                   <div className="flex justify-between items-center border-b border-[#26334A]/50 pb-2">
+                      <span className="text-xs text-[#59657A] font-bold uppercase">Mastery Progress</span>
+                      <span className="text-sm text-[#4D8DFF] font-black">{masteryProgressPct}%</span>
+                   </div>
+                   <div className="flex justify-between items-center">
+                      <span className="text-xs text-[#59657A] font-bold uppercase">Skills / W.Foot</span>
+                      <span className="text-sm text-[#facc15] font-black">{smLevel}★ / {wfLevel}★</span>
+                   </div>
+                </div>
+             </div>
+          </section>
+        )}
+
+        {/* TAB 2: ARCHETYPE & SPECIALIZATIONS */}
+        {activeTab === 'archetype' && (
+          <section className="animate-fade-up space-y-6">
+            <div>
+              <div className="flex items-center gap-2 mb-3 pl-1">
+                <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
+                <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                  Select Archetype
+                </span>
+              </div>
+              <div className="grid grid-cols-12 gap-2 pb-4">
+                {/* Top Row (5 items) */}
+                {[
+                  { name: 'Progressor', col: 'col-start-2 col-span-2' },
+                  { name: 'Disruptor', col: 'col-start-4 col-span-2' },
+                  { name: 'Maestro', col: 'col-start-6 col-span-2' },
+                  { name: 'Spark', col: 'col-start-8 col-span-2' },
+                  { name: 'Finisher', col: 'col-start-10 col-span-2' }
+                ].map(item => {
+                  const isSelected = archetype === item.name;
+                  const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
+                  return (
+                    <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
+                      <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
+                        <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
+                      </div>
+                      <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
+                    </button>
+                  );
+                })}
+                {/* Bottom Row (6 items) */}
+                {[
+                  { name: 'Boss', col: 'col-start-1 col-span-2' },
+                  { name: 'Marauder', col: 'col-start-3 col-span-2' },
+                  { name: 'Recycler', col: 'col-start-5 col-span-2' },
+                  { name: 'Creator', col: 'col-start-7 col-span-2' },
+                  { name: 'Magician', col: 'col-start-9 col-span-2' },
+                  { name: 'Target', col: 'col-start-11 col-span-2' }
+                ].map(item => {
+                  const isSelected = archetype === item.name;
+                  const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
+                  return (
+                    <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
+                      <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
+                        <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
+                      </div>
+                      <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {SIGNATURE_PERKS_DATA[archetype] && (
+              <div className="border-t border-[#26334A]/50 pt-6">
+                <div className="flex items-center gap-2 mb-4 pl-1">
+                  <div className="w-1 h-3 rounded-full bg-[#21E6A4]" />
+                  <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                    Signature Perks
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {SIGNATURE_PERKS_DATA[archetype].map((perk, index) => {
+                    const isUnlocked = level >= perk.level;
+                    return (
+                      <div key={index} className={`p-4 rounded-xl border transition-all ${isUnlocked ? 'bg-[#131A2A] border-[#26334A] shadow-sm' : 'bg-[#0D1220]/60 border-[#26334A]/50 opacity-70'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[12px] font-black uppercase tracking-wider ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>{perk.name}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnlocked ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Rajdhani', sans-serif" }}>LVL {perk.level}</span>
+                            {isUnlocked ? <svg className="w-3.5 h-3.5 text-[#21E6A4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <svg className="w-3.5 h-3.5 text-[#59657A]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17a2 2 0 002-2v-1h-4v1a2 2 0 002 2zm3-6V9a3 3 0 00-6 0v2H8v8h8v-8h-1zm-5-2a2 2 0 014 0v2h-4V9z" /></svg>}
+                          </div>
+                        </div>
+                        <p className={`text-[10px] leading-relaxed font-medium ${isUnlocked ? 'text-[#8E9AAF]' : 'text-[#59657A]'}`}><span className={`font-bold ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>Effect:</span> {perk.desc}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {SPECIALIZATIONS_DATA[archetype] && (
+              <div className="border-t border-[#26334A]/50 pt-6">
+                {equippedSpecialization ? (
+                  <div onClick={() => setActiveModal('specializations')} className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group">
+                    <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-full bg-[#facc15]/10 flex items-center justify-center border border-[#facc15]/30 group-hover:scale-110 transition-transform">
+                          <div className="w-4 h-4 border-2 border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
+                       </div>
+                       <div>
+                         <div className="text-[11px] font-black tracking-widest uppercase text-[#facc15]" style={{ fontFamily: "'Orbitron', sans-serif" }}>{equippedSpecialization}</div>
+                         <div className="text-[9px] text-[#F4F7FB] font-bold tracking-wider mt-1 uppercase">Active Specialization</div>
+                       </div>
+                    </div>
+                    <span className="text-[#facc15] text-xs font-black">➔</span>
+                  </div>
+                ) : (
+                  <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                    <div>
+                      <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Choose a Specialization</div>
+                      <div className="text-[9px] text-[#8E9AAF] font-medium tracking-wide mt-1">Boost key attributes and unlock unique playstyle perks.</div>
+                    </div>
+                    <button onClick={() => setActiveModal('specializations')} className="flex items-center gap-2 bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#4D8DFF]/20 transition-colors shadow-[0_0_10px_rgba(77,141,255,0.1)]">
+                      <span className="w-3 h-3 flex items-center justify-center border border-[#4D8DFF] rounded-full text-[8px] leading-none">+</span>
+                      Browse
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* TAB 3: FOUNDATION */}
+        {activeTab === 'foundation' && (
+          <section className="animate-fade-up space-y-4">
             <div className="flex items-center gap-2 mb-3 pl-1">
               <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
               <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Archetypes
+                Physicals & Base Setup
               </span>
             </div>
             
-            <div className="grid grid-cols-12 gap-2 pb-4">
-              {/* Top Row (5 items) */}
-              {[
-                { name: 'Progressor', col: 'col-start-2 col-span-2' },
-                { name: 'Disruptor', col: 'col-start-4 col-span-2' },
-                { name: 'Maestro', col: 'col-start-6 col-span-2' },
-                { name: 'Spark', col: 'col-start-8 col-span-2' },
-                { name: 'Finisher', col: 'col-start-10 col-span-2' }
-              ].map(item => {
-                const isSelected = archetype === item.name;
-                const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
-                return (
-                  <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
-                    <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                      <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
-                    </div>
-                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
-                  </button>
-                );
-              })}
-              {/* Bottom Row (6 items) */}
-              {[
-                { name: 'Boss', col: 'col-start-1 col-span-2' },
-                { name: 'Marauder', col: 'col-start-3 col-span-2' },
-                { name: 'Recycler', col: 'col-start-5 col-span-2' },
-                { name: 'Creator', col: 'col-start-7 col-span-2' },
-                { name: 'Magician', col: 'col-start-9 col-span-2' },
-                { name: 'Target', col: 'col-start-11 col-span-2' }
-              ].map(item => {
-                const isSelected = archetype === item.name;
-                const iconFilename = item.name.replace(/\s+/g, '-').toLowerCase() + '.png';
-                return (
-                  <button key={item.name} onClick={() => handleArchetypeChange(item.name)} className={`${item.col} flex flex-col items-center justify-center p-2 rounded-2xl transition-all duration-300 border-2 ${isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_15px_rgba(77,141,255,0.2)] scale-[1.02]' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/40 opacity-70 hover:opacity-100'}`}>
-                    <div className="w-7 h-7 mb-1.5 flex items-center justify-center">
-                      <img src={`/archetypes/${iconFilename}`} alt={item.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
-                    </div>
-                    <div className={`font-black text-[7.5px] sm:text-[8.5px] text-center uppercase tracking-wider leading-tight ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Inter', sans-serif" }}>{item.name}</div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 2. Physicals & AcceleRATE Launcher Card */}
-          <div className="pt-2">
             <button 
               onClick={() => setActiveModal('physicals')} 
               className="w-full bg-[#131A2A] border border-[#26334A] rounded-xl p-3 flex items-center justify-between hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all shadow-sm group mb-3"
@@ -1065,7 +1223,6 @@ export default function ManualBuilder() {
                </div>
             </button>
             
-            {/* 3. Masteries & Facilities Moved Here */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <button onClick={() => setActiveModal('masteries')} className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center gap-3 hover:bg-[#192235] hover:border-[#8B5CF6]/40 transition-all group">
                  <div className="w-8 h-8 rounded-full bg-[#8B5CF6]/10 flex shrink-0 items-center justify-center group-hover:scale-110 transition-transform p-1.5 overflow-hidden border border-[#8B5CF6]/20">
@@ -1087,75 +1244,12 @@ export default function ManualBuilder() {
                  </div>
               </button>
             </div>
-          </div>
-        </section>
-
-        {/* 4. SIGNATURE PERKS */}
-        {SIGNATURE_PERKS_DATA[archetype] && (
-          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mb-6">
-            <div className="flex items-center gap-2 mb-4 pl-1">
-              <div className="w-1 h-3 rounded-full bg-[#21E6A4]" />
-              <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-                Signature Perks
-              </span>
-            </div>
-            
-            <div className="space-y-3">
-              {SIGNATURE_PERKS_DATA[archetype].map((perk, index) => {
-                const isUnlocked = level >= perk.level;
-                return (
-                  <div key={index} className={`p-4 rounded-xl border transition-all ${isUnlocked ? 'bg-[#131A2A] border-[#26334A] shadow-sm' : 'bg-[#0D1220]/60 border-[#26334A]/50 opacity-70'}`}>
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[12px] font-black uppercase tracking-wider ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#59657A]'}`} style={{ fontFamily: "'Orbitron', sans-serif" }}>{perk.name}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-bold uppercase tracking-widest ${isUnlocked ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`} style={{ fontFamily: "'Rajdhani', sans-serif" }}>LVL {perk.level}</span>
-                        {isUnlocked ? <svg className="w-3.5 h-3.5 text-[#21E6A4]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <svg className="w-3.5 h-3.5 text-[#59657A]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17a2 2 0 002-2v-1h-4v1a2 2 0 002 2zm3-6V9a3 3 0 00-6 0v2H8v8h8v-8h-1zm-5-2a2 2 0 014 0v2h-4V9z" /></svg>}
-                      </div>
-                    </div>
-                    <p className={`text-[10px] leading-relaxed font-medium ${isUnlocked ? 'text-[#8E9AAF]' : 'text-[#59657A]'}`}><span className={`font-bold ${isUnlocked ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>Effect:</span> {perk.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
           </section>
         )}
 
-        {/* 5. Specialization Launch Card Moved Here */}
-        {SPECIALIZATIONS_DATA[archetype] && (
-          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mb-6">
-            {equippedSpecialization ? (
-              <div onClick={() => setActiveModal('specializations')} className="bg-gradient-to-r from-[#192235] to-[#131A2A] border border-[#facc15]/40 rounded-2xl p-4 flex items-center justify-between shadow-[0_0_15px_rgba(250,204,21,0.1)] cursor-pointer hover:border-[#facc15]/70 transition-all group">
-                <div className="flex items-center gap-4">
-                   <div className="w-10 h-10 rounded-full bg-[#facc15]/10 flex items-center justify-center border border-[#facc15]/30 group-hover:scale-110 transition-transform">
-                      <div className="w-4 h-4 border-2 border-[#facc15] rotate-45 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-[#facc15] -rotate-45" /></div>
-                   </div>
-                   <div>
-                     <div className="text-[11px] font-black tracking-widest uppercase text-[#facc15]" style={{ fontFamily: "'Orbitron', sans-serif" }}>{equippedSpecialization}</div>
-                     <div className="text-[9px] text-[#F4F7FB] font-bold tracking-wider mt-1 uppercase">Active Specialization</div>
-                   </div>
-                </div>
-                <span className="text-[#facc15] text-xs font-black">➔</span>
-              </div>
-            ) : (
-              <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center justify-between shadow-sm">
-                <div>
-                  <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Choose a Specialization</div>
-                  <div className="text-[9px] text-[#8E9AAF] font-medium tracking-wide mt-1">Boost key attributes and unlock unique playstyle perks.</div>
-                </div>
-                <button onClick={() => setActiveModal('specializations')} className="flex items-center gap-2 bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] px-3 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-[#4D8DFF]/20 transition-colors shadow-[0_0_10px_rgba(77,141,255,0.1)]">
-                  <span className="w-3 h-3 flex items-center justify-center border border-[#4D8DFF] rounded-full text-[8px] leading-none">+</span>
-                  Browse
-                </button>
-              </div>
-            )}
-          </section>
-        )}
-
-        {/* 6. MAIN FUT CARD GRID */}
-        {currentStats && serverArchetypes && (
-          <section className="animate-fade-up border-t border-[#26334A]/50 pt-6 mt-6 mb-6">
+        {/* TAB 4: ATTRIBUTES */}
+        {activeTab === 'attributes' && currentStats && serverArchetypes && (
+          <section className="animate-fade-up">
             <div className="flex items-center justify-between mb-4 px-1">
               <div className="flex items-center gap-2">
                 <div className="w-1 h-3 rounded-full bg-[#59657A]" />
@@ -1182,28 +1276,60 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* 7. APP DASHBOARD (PlayStyle Hub left) */}
-        <section className="mt-6 border-t border-[#26334A]/50 pt-6">
-          <div className="flex items-center gap-2 mb-3 pl-1">
-            <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
-            <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-              PlayStyle Assignments
-            </span>
-          </div>
-          
-          <button onClick={() => setActiveModal('playstyles')} className="w-full bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group">
-             <div className="flex items-center gap-4">
-                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
-                     <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
+        {/* TAB 5: PLAYSTYLES */}
+        {activeTab === 'playstyles' && (
+          <section className="animate-fade-up">
+            <div className="flex items-center gap-2 mb-3 pl-1">
+              <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
+              <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
+                PlayStyle Assignments
+              </span>
+            </div>
+            
+            <button onClick={() => setActiveModal('playstyles')} className="w-full bg-[#131A2A] border border-[#26334A] p-4 rounded-2xl flex items-center justify-between hover:bg-[#192235] hover:border-[#F4F7FB]/40 transition-all group mb-4">
+               <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#4D8DFF] to-[#8B5CF6] opacity-90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-[0_0_15px_rgba(77,141,255,0.2)]">
+                       <div className="w-3 h-3 rounded-sm bg-white rotate-45" />
+                   </div>
+                   <div className="text-left">
+                       <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle Hub</div>
+                       <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
+                   </div>
+               </div>
+               <div className="text-[#8E9AAF] text-xs font-black">➔</div>
+            </button>
+
+            {/* Read-only list of equipped styles (optional nice touch for the tab) */}
+            <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-4 space-y-3">
+               <div className="text-[9px] font-bold uppercase tracking-widest text-[#59657A]">Currently Equipped</div>
+               
+               <div className="flex items-center gap-3">
+                 <div className="w-8 h-8 flex items-center justify-center">
+                    <img src={getPlaystyleIconPath(activePsPlus, true)} alt={activePsPlus} className="w-8 h-8 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                  </div>
-                 <div className="text-left">
-                     <div className="text-[11px] font-bold tracking-widest uppercase text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle Hub</div>
-                     <div className="text-[9px] text-[#8E9AAF] font-bold uppercase mt-1 tracking-wider">{activePlaystylesCount} Silver <span className="mx-1">•</span> {isPsPlusUnlocked ? '1 Gold' : 'Gold Locked'}</div>
+                 <div>
+                    <div className="text-[10px] font-black text-[#F4F7FB] uppercase tracking-wider">{activePsPlus}</div>
+                    <div className="text-[8px] text-[#facc15] font-bold uppercase tracking-widest mt-0.5">PlayStyle+</div>
                  </div>
-             </div>
-             <div className="text-[#8E9AAF] text-xs font-black">➔</div>
-          </button>
-        </section>
+               </div>
+
+               {equippedPlaystyles.map((ps, i) => {
+                 if (!ps) return null;
+                 return (
+                   <div key={i} className="flex items-center gap-3">
+                     <div className="w-8 h-8 flex items-center justify-center">
+                        <img src={getPlaystyleIconPath(ps, false)} alt={ps} className="w-6 h-6 object-contain" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                     </div>
+                     <div>
+                        <div className="text-[10px] font-black text-[#F4F7FB] uppercase tracking-wider">{ps}</div>
+                        <div className="text-[8px] text-[#21E6A4] font-bold uppercase tracking-widest mt-0.5">PlayStyle</div>
+                     </div>
+                   </div>
+                 )
+               })}
+            </div>
+          </section>
+        )}
 
       </div>
 
