@@ -980,9 +980,9 @@ export default function ManualBuilder() {
                    backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
                  }}
               >
-                 {/* Rating adjusted: moved further left, up, set to 24px, Montserrat and weight 900 */}
-                 <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '10%', top: '15%', width: '15%' }}>
-                    <span className="text-[#080B14] text-[24px] leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900 }}>{faceStats.ovr}</span>
+                 {/* Rating adjusted: font size matches header stats ([15px] font-bold), moved right by 2% to 12% */}
+                 <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
+                    <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>{faceStats.ovr}</span>
                  </div>
                  
                  {/* User Photo / Placeholder (x: 68.9, y: 34.3, size: 127.4x127.4 scaled to card proportions) */}
