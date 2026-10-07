@@ -956,25 +956,29 @@ export default function ManualBuilder() {
            {/* Dynamic Card Container[span_5](start_span)[span_5](end_span) */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               
-              {/* Card Graphic (Left) */}
+              {/* Card Graphic (Left) - Scaled to match Canva 256x256 absolute measurements */}
               <div 
-                 className={`w-[90px] h-[130px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
+                 className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
                    faceStats.ovr >= 75 
-                     ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' // Gold glow
-                     : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]' // Silver glow
+                     ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' 
+                     : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]'
                  }`}
                  style={{ 
                    backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` 
                  }}
               >
-                 {/* OVR & Position (Top Left) */}
-                 <div className="absolute top-2 left-2 z-20 flex flex-col items-center">
+                 {/* Rating (x: 58.9, y: 49.7) */}
+                 <div className="absolute z-20 flex flex-col items-center" style={{ left: '23%', top: '19.4%' }}>
                     <span className="text-[#080B14] font-black text-3xl leading-none tracking-tighter">{faceStats.ovr}</span>
-                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase -mt-0.5">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
+                 </div>
+
+                 {/* Position (x: 67, y: 80.1) */}
+                 <div className="absolute z-20 flex flex-col items-center" style={{ left: '26.1%', top: '31.2%' }}>
+                    <span className="text-[#080B14] font-bold text-[10px] leading-tight uppercase">{activeBounds.type === 'MID_ATT' ? 'CAM' : activeBounds.type}</span>
                  </div>
                  
-                 {/* User Photo / Placeholder */}
-                 <div className="absolute bottom-[22%] right-[-5px] w-[80px] h-[80px] z-10">
+                 {/* User Photo / Placeholder (x: 68.9, y: 34.3, size: 127.4x127.4 scaled to card proportions) */}
+                 <div className="absolute z-10" style={{ left: '26.9%', top: '13.4%', width: '49.8%', height: '49.8%' }}>
                     <img 
                       src="/default-avatar.png" 
                       alt="Pro" 
@@ -985,12 +989,12 @@ export default function ManualBuilder() {
                     />
                  </div>
                  
-                 {/* Archetype Icon (Bottom Center) */}
-                 <div className="absolute bottom-1.5 left-0 w-full flex justify-center z-20">
+                 {/* Archetype Icon (x: 99.7, y: 168.6, size: 56.6x56.6 scaled) */}
+                 <div className="absolute z-20 flex justify-center" style={{ left: '38.9%', top: '65.8%', width: '22.1%', height: '22.1%' }}>
                     <img 
                        src={`/archetypes/${archetype.replace(/\s+/g, '-').toLowerCase()}.png`}
                        alt={archetype}
-                       className="w-7 h-7 object-contain brightness-0 opacity-85 drop-shadow-sm"
+                       className="w-full h-full object-contain brightness-0 opacity-90 drop-shadow-sm"
                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                     />
                  </div>
