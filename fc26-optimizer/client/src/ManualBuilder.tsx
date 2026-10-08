@@ -106,7 +106,6 @@ const ARCH_PHYSICALS: Record<string, { baseH: number, minH: number, maxH: number
   'Target Forward': { baseH: 186, minH: 177, maxH: 195, baseW: 90, minW: 80, maxW: 100, type: 'MID_ATT' } 
 };
 
-// Position mapping logic based on user prompt requirements
 const getArchetypeDisplayPosition = (archetype: string, fallbackType: string): string => {
   const defArchetypes = ['Progressor', 'Boss', 'Marauder'];
   const midArchetypes = ['Disruptor', 'Recycler', 'Maestro', 'Creator'];
@@ -471,6 +470,10 @@ export default function ManualBuilder() {
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
   const [selectedPsView, setSelectedPsView] = useState<string | null>(null);
+  
+  // Carousel Touch State
+  const [facTouchStart, setFacTouchStart] = useState<number | null>(null);
+  const [facTouchEnd, setFacTouchEnd] = useState<number | null>(null);
 
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
@@ -539,6 +542,22 @@ export default function ManualBuilder() {
       delete next[facName];
       return next;
     });
+  };
+
+  const handleFacTouchStart = (e: React.TouchEvent) => {
+    setFacTouchEnd(null);
+    setFacTouchStart(e.targetTouches[0].clientX);
+  };
+  
+  const handleFacTouchMove = (e: React.TouchEvent) => {
+    setFacTouchEnd(e.targetTouches[0].clientX);
+  };
+  
+  const handleFacTouchEnd = () => {
+    if (!facTouchStart || !facTouchEnd) return;
+    const distance = facTouchStart - facTouchEnd;
+    if (distance > 40) setViewingFacTier(Math.min(3, viewingFacTier + 1));
+    if (distance < -40) setViewingFacTier(Math.max(1, viewingFacTier - 1));
   };
 
   const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30') => {
@@ -819,9 +838,7 @@ export default function ManualBuilder() {
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const totalMasteriesCount = 28; 
   const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
-  
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
-  const activePlaystylesCount = equippedPlaystyles.filter(ps => ps !== '').length;
   
   const isPsPlusUnlocked = level >= 20;
   const basePsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
@@ -833,51 +850,59 @@ export default function ManualBuilder() {
   const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
 
+  // Precompute specific playstyle selections for components
+  const facilityPlaystyles = useMemo(() => {
+     return Object.entries(equippedFacilities)
+       .filter(([_, tier]) => tier === 3)
+       .map(([name, _]) => FACILITIES[name]?.playstyle)
+       .filter(Boolean);
+  }, [equippedFacilities]);
+  const fac1 = facilityPlaystyles[0] || null;
+  const fac2 = facilityPlaystyles[1] || null;
+  const specPlaystyle = equippedSpecialization ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk : null;
+
   // ------------------------------------------
   // REUSABLE COMPONENTS
   // ------------------------------------------
 
-  // Extracted EA-style 6-Slot Playstyle Component
+  // Extracted EA-style Playstyle Component for Sticky Header
   const PlaystyleSlotsRow = ({ interactive = false }: { interactive?: boolean }) => {
-    const facilityPlaystyle = Object.entries(equippedFacilities)
-      .filter(([_, tier]) => tier === 3)
-      .map(([name, _]) => FACILITIES[name]?.playstyle)
-      .find(ps => ps) || null;
-
-    const specPlaystyle = equippedSpecialization ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk : null;
-
     const slotsData = [
        { id: 'base', type: 'gold', name: basePsPlus, unlocked: true, unlockText: '' },
+       { id: 'spec', type: 'gold', name: specPlaystyle, unlocked: !!equippedSpecialization, unlockText: 'SPEC' },
        { id: 'lvl5', type: 'silver', name: equippedPlaystyles[0], unlocked: level >= 5, unlockText: 'LVL 5' },
        { id: 'lvl15', type: 'silver', name: equippedPlaystyles[1], unlocked: level >= 15, unlockText: 'LVL 15' },
        { id: 'lvl40', type: 'silver', name: equippedPlaystyles[2], unlocked: level >= 40, unlockText: 'LVL 40' },
-       { id: 'spec', type: 'gold', name: specPlaystyle, unlocked: !!equippedSpecialization, unlockText: 'SPEC' },
-       { id: 'facil', type: 'silver', name: facilityPlaystyle, unlocked: !!facilityPlaystyle, unlockText: 'FACIL' }
+       { id: 'facil1', type: 'silver', name: fac1, unlocked: !!fac1, unlockText: 'FAC 1' },
+       { id: 'facil2', type: 'silver', name: fac2, unlocked: !!fac2, unlockText: 'FAC 2' }
     ];
 
     return (
-       <div className="flex justify-center gap-1.5 w-full">
+       <div className="flex justify-center gap-[4px] sm:gap-1.5 w-full">
           {slotsData.map(slot => {
              const handleSlotClick = () => {
-                if (interactive && slot.unlocked) setActiveModal(slot.id === 'spec' ? 'specializations' : 'playstyles');
+                if (interactive && slot.unlocked) {
+                   if (slot.id === 'spec') setActiveModal('specializations');
+                   else if (slot.id.startsWith('lvl')) setActiveModal('playstyles');
+                }
              };
 
              return (
                <button 
                  key={slot.id} 
                  onClick={handleSlotClick}
-                 disabled={!interactive || !slot.unlocked}
-                 className={`w-9 h-9 md:w-10 md:h-10 rounded bg-[#131A2A] border ${slot.name && slot.type === 'gold' ? 'border-[#facc15]/50 shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'border-[#26334A]'} flex items-center justify-center relative overflow-hidden transition-all ${interactive && slot.unlocked ? 'hover:bg-[#192235] cursor-pointer' : 'cursor-default'}`}
+                 disabled={!interactive || !slot.unlocked || (!slot.id.startsWith('lvl') && slot.id !== 'spec')}
+                 className={`w-[2.3rem] h-[2.3rem] md:w-10 md:h-10 rounded bg-[#131A2A] border ${slot.name && slot.type === 'gold' ? 'border-[#facc15]/50 shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'border-[#26334A]'} flex items-center justify-center relative overflow-hidden transition-all ${interactive && slot.unlocked && (slot.id.startsWith('lvl') || slot.id === 'spec') ? 'hover:bg-[#192235] cursor-pointer' : 'cursor-default'}`}
                >
                   {!slot.unlocked ? (
                      <div className="flex flex-col items-center justify-center opacity-40">
                         <svg className="w-3.5 h-3.5 mb-0.5 text-[#F4F7FB]" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
-                        <span className="text-[6px] font-bold text-[#F4F7FB] uppercase">{slot.unlockText}</span>
+                        <span className="text-[6px] font-bold text-[#F4F7FB] uppercase leading-none">{slot.unlockText}</span>
                      </div>
                   ) : slot.name ? (
-                     <img src={getPlaystyleIconPath(slot.name, slot.type === 'gold')} className="w-6 h-6 object-contain" alt={slot.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                     <img src={getPlaystyleIconPath(slot.name, slot.type === 'gold')} className="w-5 h-5 md:w-6 md:h-6 object-contain" alt={slot.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   ) : (
-                     <div className="flex items-center justify-center w-full h-full border-2 border-dashed border-[#26334A] opacity-50">
+                     <div className="flex items-center justify-center w-full h-full opacity-50">
                         <span className="text-[12px] text-[#59657A] font-bold">+</span>
                      </div>
                   )}
@@ -888,104 +913,27 @@ export default function ManualBuilder() {
     )
   }
 
-  // --- FUT STYLE ATTRIBUTE CATEGORY CARD ---
-  const FUTCatCard = ({ category, stats }: { category: string, stats: string[] }) => {
-    if (!currentStats) return null;
-    const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
-    const catAvg = Math.round(catTotal / stats.length);
-
-    return (
-      <div className="mb-4 shadow-sm animate-fade-in">
-         {/* FUT Header Style */}
-         <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
-            <span className="text-[14px] font-bold text-[#F4F7FB]">{category}</span>
-            <span className="text-[14px] font-black text-[#4caf50] drop-shadow-[0_0_5px_rgba(76,175,80,0.3)]">{catAvg}</span>
-         </div>
-         
-         {/* Stats List */}
-         <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0">
-            {stats.map(stat => {
-              const val = currentStats[stat] || 70;
-              const displayName = CSV_STAT_MAP[stat] || stat;
-              
-              const caps = getStatCaps(archetype, stat);
-              const physMod = physicalModifiers[stat] || 0;
-              const facMod = facilityModifiers[stat] || 0;
-              const mastMod = masteryModifiers[stat] || 0;
-              
-              const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
-              const invested = addedPoints[stat] || 0;
-              
-              return (
-                <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
-                   
-                   {/* Header Row: Stat Name + Badges + Value */}
-                   <div className="flex justify-between items-center mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
-                        
-                        {/* --- MODIFIER INDICATOR BADGES --- */}
-                        <div className="flex items-center gap-1">
-                           {/* Physical Modifier (Height/Weight) */}
-                           {physMod !== 0 && (
-                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${physMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
-                               <span className="text-[8.5px] font-black">{physMod > 0 ? '+' : ''}{physMod}</span>
-                             </div>
-                           )}
-                           {/* Facility Modifier */}
-                           {facMod !== 0 && (
-                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${facMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 11V3H7v4H3v14h18V11h-4zm-8-6h4v14H9V5zm-4 6h2v10H5v-10zm14 10h-2v-8h2v8z"/></svg>
-                               <span className="text-[8.5px] font-black">{facMod > 0 ? '+' : ''}{facMod}</span>
-                             </div>
-                           )}
-                           {/* Mastery Modifier */}
-                           {mastMod !== 0 && (
-                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-                               <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
-                             </div>
-                           )}
-                        </div>
-                      </div>
-                      <span className="text-[13px] font-bold text-[#F4F7FB]">{val}</span>
-                   </div>
-                   
-                   {/* Interactive FUT Progress Bar Slider */}
-                   <div className="flex items-center gap-3 w-full group">
-                      <button 
-                        onClick={() => handleSliderChange(stat, val - 1)} 
-                        disabled={invested <= 0}
-                        className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0"
-                      >
-                         -
-                      </button>
-                      
-                      <div className="flex-1 h-2 bg-[#192235] rounded-full relative overflow-hidden group-hover:ring-1 ring-[#4D8DFF]/30 transition-all cursor-pointer">
-                         <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${val}%` }} />
-                         <input 
-                            type="range" min="0" max="99" value={val} 
-                            onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
-                         />
-                      </div>
-                      
-                      <button 
-                        onClick={() => handleSliderChange(stat, val + 1)} 
-                        disabled={val >= (caps.max || 99) || availableAp < getApCost(archetype, stat, val + 1)}
-                        className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0"
-                      >
-                         +
-                      </button>
-                   </div>
-                </div>
-              );
-            })}
-         </div>
-      </div>
-    );
-  };
+  // Large Grid Slots for the PlayStyles Tab specifically
+  const GridSlot = ({ slot, interactive, onClick }: any) => (
+     <button 
+       onClick={() => { if (interactive && slot.unlocked && onClick) onClick(); }}
+       disabled={!interactive || !slot.unlocked}
+       className={`h-[70px] rounded-xl bg-[#0D1220] border ${slot.name && slot.type === 'gold' ? 'border-[#facc15]/50 shadow-[0_0_8px_rgba(250,204,21,0.15)]' : 'border-[#26334A]'} flex items-center justify-center relative overflow-hidden transition-all ${interactive && slot.unlocked ? 'hover:bg-[#192235] hover:border-[#4D8DFF]/50 cursor-pointer ring-1 ring-transparent hover:ring-[#4D8DFF]/20' : 'cursor-default'}`}
+     >
+        {!slot.unlocked ? (
+           <div className="flex flex-col items-center justify-center opacity-40">
+              <svg className="w-6 h-6 mb-1 text-[#F4F7FB]" fill="currentColor" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM9 6c0-1.66 1.34-3 3-3s3 1.34 3 3v2H9V6zm9 14H6V10h12v10zm-6-3c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/></svg>
+              <span className="text-[9px] font-bold text-[#F4F7FB] uppercase tracking-widest">{slot.unlockText}</span>
+           </div>
+        ) : slot.name ? (
+           <img src={getPlaystyleIconPath(slot.name, slot.type === 'gold')} className="w-10 h-10 object-contain drop-shadow-md" alt={slot.name} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+        ) : (
+           <div className="flex items-center justify-center w-full h-full opacity-50">
+              <span className="text-[18px] text-[#59657A] font-bold">+</span>
+           </div>
+        )}
+     </button>
+  );
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -1007,10 +955,9 @@ export default function ManualBuilder() {
             <span className="text-[#F4F7FB] font-black tracking-wide text-[15px]">Player Details</span>
           </div>
           
-          {/* Top Right AP & Level (Like Coin/Points Balance) */}
+          {/* Top Right AP & Level */}
           <div className="flex items-center gap-5">
             
-            {/* Available AP Balance */}
             <div className="flex items-center gap-1.5">
               <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
               <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
@@ -1018,7 +965,6 @@ export default function ManualBuilder() {
               </div>
             </div>
             
-            {/* Level Dropdown */}
             <div className="flex items-center gap-1.5 relative group">
               <select 
                 value={level} 
@@ -1084,12 +1030,12 @@ export default function ManualBuilder() {
                  <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
                  
                  <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pac}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.sho}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.pas}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.dri}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.def}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px]">{faceStats.phy}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pac}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.sho}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pas}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.dri}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.def}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
                  <div className="mt-3">
@@ -1098,7 +1044,7 @@ export default function ManualBuilder() {
               </div>
            </div>
 
-           {/* Central 6-Slot Framework placed gracefully in Sticky Header */}
+           {/* Central 7-Slot Framework placed gracefully in Sticky Header */}
            <div className="mt-4 px-2">
               <PlaystyleSlotsRow interactive={true} />
            </div>
@@ -1166,13 +1112,9 @@ export default function ManualBuilder() {
                       <span className="text-xs text-[#59657A] font-bold uppercase">Mastery Progress</span>
                       <span className="text-sm text-[#4D8DFF] font-black">{masteryProgressPct}%</span>
                    </div>
-                   <div className="flex justify-between items-center pb-2 border-b border-[#26334A]/50">
+                   <div className="flex justify-between items-center">
                       <span className="text-xs text-[#59657A] font-bold uppercase">Skills / W.Foot</span>
                       <span className="text-sm text-[#facc15] font-black">{smLevel}★ / {wfLevel}★</span>
-                   </div>
-                   <div className="pt-2">
-                      <span className="text-xs text-[#59657A] font-bold uppercase block mb-3">PlayStyle Assignments</span>
-                      <PlaystyleSlotsRow interactive={false} />
                    </div>
                 </div>
              </div>
@@ -1190,7 +1132,6 @@ export default function ManualBuilder() {
                 </span>
               </div>
               <div className="grid grid-cols-12 gap-2 pb-4">
-                {/* Top Row (5 items) */}
                 {[
                   { name: 'Progressor', col: 'col-start-2 col-span-2' },
                   { name: 'Disruptor', col: 'col-start-4 col-span-2' },
@@ -1209,7 +1150,6 @@ export default function ManualBuilder() {
                     </button>
                   );
                 })}
-                {/* Bottom Row (6 items) */}
                 {[
                   { name: 'Boss', col: 'col-start-1 col-span-2' },
                   { name: 'Marauder', col: 'col-start-3 col-span-2' },
@@ -1232,7 +1172,6 @@ export default function ManualBuilder() {
               </div>
             </div>
 
-            {/* Specializations (Moved Above Signature Perks) */}
             {SPECIALIZATIONS_DATA[archetype] && (
               <div className="border-t border-[#26334A]/50 pt-6">
                 <div className="flex items-center gap-2 mb-4 pl-1">
@@ -1269,7 +1208,6 @@ export default function ManualBuilder() {
               </div>
             )}
 
-            {/* Signature Perks (Accordion Layout) */}
             {SIGNATURE_PERKS_DATA[archetype] && (
               <div className="border-t border-[#26334A]/50 pt-6">
                 <div className="flex items-center gap-2 mb-4 pl-1">
@@ -1362,7 +1300,7 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* TAB 4: ATTRIBUTES (EA FC Ultimate Team Style UI) */}
+        {/* TAB 4: ATTRIBUTES */}
         {activeTab === 'attributes' && currentStats && serverArchetypes && (
           <section className="animate-fade-up">
             <div className="flex items-center justify-between mb-4 px-1">
@@ -1376,14 +1314,73 @@ export default function ManualBuilder() {
             </div>
             
             <div className="space-y-4 pb-20">
-              <FUTCatCard category="Pace" stats={STAT_GROUPS["Pace"]} />
-              <FUTCatCard category="Shooting" stats={STAT_GROUPS["Shooting"]} />
-              <FUTCatCard category="Passing" stats={STAT_GROUPS["Passing"]} />
-              <FUTCatCard category="Dribbling" stats={STAT_GROUPS["Dribbling"]} />
-              <FUTCatCard category="Defending" stats={STAT_GROUPS["Defending"]} />
-              <FUTCatCard category="Physical" stats={STAT_GROUPS["Physical"]} />
+              {/* Mapping natively in render to prevent scroll jumping on state updates */}
+              {Object.entries(STAT_GROUPS).map(([category, stats]) => {
+                const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
+                const catAvg = Math.round(catTotal / stats.length);
+                
+                return (
+                  <div key={category} className="mb-4 shadow-sm animate-fade-in">
+                     <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
+                        <span className="text-[14px] font-bold text-[#F4F7FB]">{category}</span>
+                        <span className="text-[14px] font-black text-[#4caf50] drop-shadow-[0_0_5px_rgba(76,175,80,0.3)]">{catAvg}</span>
+                     </div>
+                     <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0">
+                        {stats.map(stat => {
+                          const val = currentStats[stat] || 70;
+                          const displayName = CSV_STAT_MAP[stat] || stat;
+                          const caps = getStatCaps(archetype, stat);
+                          const physMod = physicalModifiers[stat] || 0;
+                          const facMod = facilityModifiers[stat] || 0;
+                          const mastMod = masteryModifiers[stat] || 0;
+                          const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
+                          const invested = addedPoints[stat] || 0;
+                          
+                          return (
+                            <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
+                               <div className="flex justify-between items-center mb-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
+                                    <div className="flex items-center gap-1">
+                                       {physMod !== 0 && (
+                                         <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${physMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                                           <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+                                           <span className="text-[8.5px] font-black">{physMod > 0 ? '+' : ''}{physMod}</span>
+                                         </div>
+                                       )}
+                                       {facMod !== 0 && (
+                                         <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${facMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                                           <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 11V3H7v4H3v14h18V11h-4zm-8-6h4v14H9V5zm-4 6h2v10H5v-10zm14 10h-2v-8h2v8z"/></svg>
+                                           <span className="text-[8.5px] font-black">{facMod > 0 ? '+' : ''}{facMod}</span>
+                                         </div>
+                                       )}
+                                       {mastMod !== 0 && (
+                                         <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                                           <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                           <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
+                                         </div>
+                                       )}
+                                    </div>
+                                  </div>
+                                  <span className="text-[13px] font-bold text-[#F4F7FB]">{val}</span>
+                               </div>
+                               <div className="flex items-center gap-3 w-full group">
+                                  <button onClick={() => handleSliderChange(stat, val - 1)} disabled={invested <= 0} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">-</button>
+                                  <div className="flex-1 h-2 bg-[#192235] rounded-full relative overflow-hidden group-hover:ring-1 ring-[#4D8DFF]/30 transition-all cursor-pointer">
+                                     <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${val}%` }} />
+                                     <input type="range" min="0" max="99" value={val} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                  </div>
+                                  <button onClick={() => handleSliderChange(stat, val + 1)} disabled={val >= (caps.max || 99) || availableAp < getApCost(archetype, stat, val + 1)} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
+                               </div>
+                            </div>
+                          );
+                        })}
+                     </div>
+                  </div>
+                );
+              })}
               
-              {/* Skills/WF appended directly to stack to match flow */}
+              {/* Skills & WF */}
               <div className="mb-4 shadow-sm">
                  <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
                     <span className="text-[14px] font-bold text-[#F4F7FB]">Skills & W.Foot</span>
@@ -1403,7 +1400,7 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* TAB 5: PLAYSTYLES */}
+        {/* TAB 5: PLAYSTYLES (New Restructured Grid) */}
         {activeTab === 'playstyles' && (
           <section className="animate-fade-up">
             <div className="flex items-center gap-2 mb-3 pl-1">
@@ -1413,12 +1410,48 @@ export default function ManualBuilder() {
               </span>
             </div>
             
-            <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-4 space-y-4">
-               <div className="text-[9px] font-bold uppercase tracking-widest text-[#59657A] flex justify-between">
-                  <span>Currently Equipped</span>
-                  <span className="text-[#21E6A4]">Tap slot to edit</span>
+            <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-4 space-y-5">
+               {/* ROW 1: PlayStyle+ */}
+               <div>
+                  <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
+                     <span>PlayStyle+</span>
+                     <span className="text-[8px] text-[#59657A]">SIGNATURE & SPEC</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                     <GridSlot slot={{ id: 'base', type: 'gold', name: basePsPlus, unlocked: true, unlockText: 'SIG' }} interactive={false} />
+                     <GridSlot slot={{ id: 'spec', type: 'gold', name: specPlaystyle, unlocked: !!equippedSpecialization, unlockText: 'SPEC' }} interactive={true} onClick={() => setActiveModal('specializations')} />
+                  </div>
                </div>
-               <PlaystyleSlotsRow interactive={true} />
+
+               {/* ROW 2: Pro Level Unlocks */}
+               <div>
+                  <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
+                     <span>Pro Level Unlocks</span>
+                     <span className="text-[8px] text-[#21E6A4]">TAP TO EDIT</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                     {[0, 1, 2].map(idx => (
+                        <GridSlot 
+                           key={idx}
+                           slot={{ id: `lvl${idx}`, type: 'silver', name: equippedPlaystyles[idx], unlocked: level >= [5, 15, 40][idx], unlockText: `LVL ${[5, 15, 40][idx]}` }} 
+                           interactive={true} 
+                           onClick={() => setActiveModal('playstyles')} 
+                        />
+                     ))}
+                  </div>
+               </div>
+
+               {/* ROW 3: Facility Unlocks */}
+               <div>
+                  <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
+                     <span>Facility Unlocks</span>
+                     <span className="text-[8px] text-[#59657A]">VIA BUDGET</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                     <GridSlot slot={{ id: 'facil1', type: 'silver', name: fac1, unlocked: !!fac1, unlockText: 'FAC 1' }} interactive={false} />
+                     <GridSlot slot={{ id: 'facil2', type: 'silver', name: fac2, unlocked: !!fac2, unlockText: 'FAC 2' }} interactive={false} />
+                  </div>
+               </div>
             </div>
           </section>
         )}
@@ -1446,7 +1479,6 @@ export default function ManualBuilder() {
                 
                 {/* Sliders Side */}
                 <div className="w-1/2 flex flex-col gap-6 pt-2">
-                   {/* Height Slider */}
                    <div>
                      <div className="flex justify-between items-end mb-3">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Height</label>
@@ -1459,7 +1491,6 @@ export default function ManualBuilder() {
                      </div>
                    </div>
 
-                   {/* Weight Slider */}
                    <div className="mt-2">
                      <div className="flex justify-between items-end mb-3">
                         <label className="text-[10px] font-bold uppercase tracking-widest text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Weight</label>
@@ -1528,8 +1559,6 @@ export default function ManualBuilder() {
                  <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-[#131A2A] text-[#8E9AAF] flex items-center justify-center hover:bg-[#192235] hover:text-[#F4F7FB] transition-colors">✕</button>
               </div>
               <div className="p-5 space-y-4 pb-12">
-                  
-                  {/* Skill Moves Row */}
                   <div className="flex items-center justify-between bg-[#131A2A] p-4 rounded-xl border border-[#26334A]">
                      <div>
                         <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide">Skill Moves</div>
@@ -1542,7 +1571,6 @@ export default function ManualBuilder() {
                      </div>
                   </div>
 
-                  {/* Weak Foot Row */}
                   <div className="flex items-center justify-between bg-[#131A2A] p-4 rounded-xl border border-[#26334A]">
                      <div>
                         <div className="text-xs font-bold text-[#F4F7FB] uppercase tracking-wide">Weak Foot</div>
@@ -1559,7 +1587,7 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* FACILITIES MODAL (Perspective Carousel Style) */}
+      {/* FACILITIES MODAL */}
       {activeModal === 'facilities' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
@@ -1585,17 +1613,17 @@ export default function ManualBuilder() {
             </div>
 
             <div className="flex flex-col h-full overflow-hidden bg-[#080B14]">
-               {/* Selection Dropdown/List for Mobile (Top Area) */}
                <div className="w-full bg-[#0D1220] border-b border-[#26334A] max-h-[140px] overflow-y-auto hide-scrollbar z-30">
                   {Object.keys(FACILITIES).map(facName => {
                     const isSelected = selectedFacView === facName;
                     const equippedTier = equippedFacilities[facName];
-                    const iconPath = `/icons/facilities/default.png`;
+                    const iconSlug = facName.toLowerCase().replace(/\s+/g, '-');
+                    const iconPath = `/icons/facilities/${iconSlug}.png`;
                     
                     return (
                       <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full px-4 py-2.5 flex items-center gap-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
                         <div className="w-7 h-7 shrink-0 rounded bg-[#080B14] border border-[#26334A] flex items-center justify-center p-1 overflow-hidden">
-                           <img src={iconPath} alt={facName} className="w-full h-full object-contain opacity-80" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                           <img src={iconPath} alt={facName} className="w-full h-full object-contain opacity-80" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                         </div>
                         <div className="flex-1 flex justify-between items-center">
                           <div className={`text-[11px] font-bold leading-snug tracking-wide ${isSelected ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}`}>{facName}</div>
@@ -1606,10 +1634,14 @@ export default function ManualBuilder() {
                   })}
                </div>
 
-               {/* 3D Carousel Viewer Area */}
-               <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-8 perspective-[1000px] overflow-hidden">
-                  
-                  <div className="w-full flex justify-center items-center relative h-[300px]">
+               {/* 3D Carousel Area with swipe capabilities */}
+               <div 
+                 className="flex-1 relative flex flex-col items-center justify-center p-4 pt-8 perspective-[1000px] overflow-hidden"
+                 onTouchStart={handleFacTouchStart}
+                 onTouchMove={handleFacTouchMove}
+                 onTouchEnd={handleFacTouchEnd}
+               >
+                  <div className="w-full flex justify-center items-center relative h-[340px]">
                      {[1, 2, 3].map(tier => {
                         const facility = FACILITIES[selectedFacView];
                         if (!facility) return null;
@@ -1629,7 +1661,6 @@ export default function ManualBuilder() {
                            opacityStyle = 0.5;
                         }
 
-                        // Completely hide tiers that are 2 steps away for cleaner look
                         if (Math.abs(tier - viewingFacTier) > 1) {
                            opacityStyle = 0;
                            zIndexStyle = 10;
@@ -1642,9 +1673,7 @@ export default function ManualBuilder() {
                              className="absolute transition-all duration-500 ease-out cursor-pointer"
                              style={{ transform: transformStyle, zIndex: zIndexStyle, opacity: opacityStyle }}
                            >
-                              <div className={`w-[220px] h-[280px] rounded-xl flex flex-col bg-gradient-to-b from-[#192235] to-[#0D1220] border ${isActive ? 'border-[#4D8DFF]/60 shadow-[0_15px_40px_rgba(0,0,0,0.8)]' : 'border-[#26334A] shadow-xl'} overflow-hidden`}>
-                                 
-                                 {/* Card Header & Title */}
+                              <div className={`w-[220px] h-[320px] rounded-xl flex flex-col bg-gradient-to-b from-[#192235] to-[#0D1220] border ${isActive ? 'border-[#4D8DFF]/60 shadow-[0_15px_40px_rgba(0,0,0,0.8)]' : 'border-[#26334A] shadow-xl'} overflow-hidden`}>
                                  <div className="pt-5 pb-3 px-3 text-center border-b border-[#26334A]/50 bg-[#131A2A]">
                                     <h3 className="text-[12px] font-black text-[#F4F7FB] uppercase tracking-widest leading-tight">{selectedFacView}</h3>
                                     <div className="flex justify-center gap-1 mt-2">
@@ -1653,8 +1682,6 @@ export default function ManualBuilder() {
                                        ))}
                                     </div>
                                  </div>
-                                 
-                                 {/* Card Body - Boosts */}
                                  <div className="flex-1 p-4 flex flex-col justify-center items-center">
                                     <div className="text-[10px] text-[#4D8DFF] uppercase tracking-widest mb-3 font-bold" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Boosts</div>
                                     <div className="flex flex-col gap-2 w-full">
@@ -1665,7 +1692,6 @@ export default function ManualBuilder() {
                                          </div>
                                        ))}
                                     </div>
-                                    
                                     {tier === 3 && facility.playstyle && (
                                        <div className="mt-4 w-full text-center">
                                           <div className="text-[9px] text-[#facc15] uppercase tracking-widest mb-1.5" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Unlocks PlayStyle</div>
@@ -1676,8 +1702,6 @@ export default function ManualBuilder() {
                                        </div>
                                     )}
                                  </div>
-                                 
-                                 {/* Card Footer - Cost */}
                                  <div className="py-4 bg-[#080B14] text-center border-t border-[#26334A]">
                                     <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-1" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Purchase Cost</div>
                                     <div className="text-xl font-black text-[#4D8DFF] drop-shadow-[0_0_8px_rgba(77,141,255,0.4)]">{facility.cost[tier - 1].toLocaleString()}</div>
@@ -1688,15 +1712,11 @@ export default function ManualBuilder() {
                      })}
                   </div>
 
-                  {/* Carousel Controls & Equip Action */}
                   <div className="w-full px-6 mt-4 z-40">
-                     {/* Arrows */}
                      <div className="flex justify-center gap-10 mb-4">
                         <button onClick={() => setViewingFacTier(Math.max(1, viewingFacTier - 1))} className="p-2 text-[#8E9AAF] hover:text-white transition-colors bg-[#131A2A] rounded-full border border-[#26334A] w-10 h-10 flex items-center justify-center font-bold">◄</button>
                         <button onClick={() => setViewingFacTier(Math.min(3, viewingFacTier + 1))} className="p-2 text-[#8E9AAF] hover:text-white transition-colors bg-[#131A2A] rounded-full border border-[#26334A] w-10 h-10 flex items-center justify-center font-bold">►</button>
                      </div>
-                     
-                     {/* Equip Logic */}
                      {(() => {
                         const currentEquippedTier = equippedFacilities[selectedFacView];
                         if (currentEquippedTier === viewingFacTier) {
@@ -1820,7 +1840,6 @@ export default function ManualBuilder() {
                 <div className="grid grid-cols-2 gap-3">
                   <button className="bg-[#131A2A] border border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)] rounded-xl p-3.5 flex flex-row items-center gap-3 relative overflow-hidden group text-left">
                      <div className="absolute top-0 right-0 w-12 h-12 bg-[#facc15]/10 rounded-full blur-xl" />
-                     {/* Increased icon size from w-10 to w-14 */}
                      <div className="w-1/2 flex items-center justify-center">
                        <img src={getPlaystyleIconPath(activePsPlus, true)} alt={activePsPlus} className="w-14 h-14 object-contain drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                      </div>
@@ -1846,7 +1865,6 @@ export default function ManualBuilder() {
                           const isEquipped = equippedPlaystyles.includes(ps.name);
                           const isSelected = selectedPsView === ps.name;
                           const { canEquip } = getUpgradeData(ps.reqs);
-                          // Logic for graying out unavailable playstyles
                           const isUnavailable = !canEquip && !isEquipped;
 
                           return (
@@ -1856,7 +1874,6 @@ export default function ManualBuilder() {
                               disabled={isUnavailable}
                               className={`rounded-xl p-3 flex flex-row items-center gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${isUnavailable ? 'opacity-30 grayscale cursor-not-allowed bg-[#0D1220] border-[#26334A]' : isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)] ring-1 ring-[#4D8DFF]/50' : isEquipped ? 'bg-[#131A2A] border-[#21E6A4]/60' : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'}`}
                             >
-                              {/* Increased icon size from w-8 to w-14 */}
                               <div className="w-1/2 flex items-center justify-center">
                                  <img src={getPlaystyleIconPath(ps.name, false)} alt={ps.name} className="w-12 h-12 object-contain drop-shadow-sm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                               </div>
