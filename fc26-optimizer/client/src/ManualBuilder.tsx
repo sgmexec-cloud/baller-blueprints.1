@@ -888,7 +888,7 @@ export default function ManualBuilder() {
     )
   }
 
-  // --- FUT STYLE ATTRIBUTE CATEGORY CARD[span_4](start_span)[span_4](end_span) ---
+  // --- FUT STYLE ATTRIBUTE CATEGORY CARD ---
   const FUTCatCard = ({ category, stats }: { category: string, stats: string[] }) => {
     if (!currentStats) return null;
     const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
@@ -912,13 +912,43 @@ export default function ManualBuilder() {
               const physMod = physicalModifiers[stat] || 0;
               const facMod = facilityModifiers[stat] || 0;
               const mastMod = masteryModifiers[stat] || 0;
+              
               const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
               const invested = addedPoints[stat] || 0;
               
               return (
                 <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
+                   
+                   {/* Header Row: Stat Name + Badges + Value */}
                    <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
+                        
+                        {/* --- MODIFIER INDICATOR BADGES --- */}
+                        <div className="flex items-center gap-1">
+                           {/* Physical Modifier (Height/Weight) */}
+                           {physMod !== 0 && (
+                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${physMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
+                               <span className="text-[8.5px] font-black">{physMod > 0 ? '+' : ''}{physMod}</span>
+                             </div>
+                           )}
+                           {/* Facility Modifier */}
+                           {facMod !== 0 && (
+                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${facMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 11V3H7v4H3v14h18V11h-4zm-8-6h4v14H9V5zm-4 6h2v10H5v-10zm14 10h-2v-8h2v8z"/></svg>
+                               <span className="text-[8.5px] font-black">{facMod > 0 ? '+' : ''}{facMod}</span>
+                             </div>
+                           )}
+                           {/* Mastery Modifier */}
+                           {mastMod !== 0 && (
+                             <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
+                               <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                               <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
+                             </div>
+                           )}
+                        </div>
+                      </div>
                       <span className="text-[13px] font-bold text-[#F4F7FB]">{val}</span>
                    </div>
                    
@@ -1321,7 +1351,6 @@ export default function ManualBuilder() {
               
               <button onClick={openFacilitiesModal} className="bg-[#131A2A] border border-[#26334A] p-3 rounded-xl flex items-center gap-3 hover:bg-[#192235] hover:border-[#4D8DFF]/40 transition-all group">
                  <div className="w-8 h-8 shrink-0 rounded-full bg-[#080B14] border border-[#26334A] flex items-center justify-center p-1.5 overflow-hidden group-hover:scale-110 transition-transform">
-                     {/* Consistent Default Facility Icon */}
                      <img src="/icons/facilities/default.png" alt="Facilities" className="w-full h-full object-contain opacity-80" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                  </div>
                  <div className="text-left">
@@ -1530,7 +1559,7 @@ export default function ManualBuilder() {
         </div>
       )}
 
-      {/* FACILITIES MODAL (Perspective Carousel Style)[span_5](start_span)[span_5](end_span)[span_6](start_span)[span_6](end_span)[span_7](start_span)[span_7](end_span) */}
+      {/* FACILITIES MODAL (Perspective Carousel Style) */}
       {activeModal === 'facilities' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
@@ -1561,7 +1590,7 @@ export default function ManualBuilder() {
                   {Object.keys(FACILITIES).map(facName => {
                     const isSelected = selectedFacView === facName;
                     const equippedTier = equippedFacilities[facName];
-                    const iconPath = `/icons/facilities/default.png`; // Fallback standardized icon as requested
+                    const iconPath = `/icons/facilities/default.png`;
                     
                     return (
                       <button key={facName} onClick={() => handleSelectFacilityView(facName)} className={`w-full px-4 py-2.5 flex items-center gap-3 text-left border-b border-[#26334A]/30 transition-colors ${isSelected ? 'bg-[#192235]' : 'hover:bg-[#131A2A]'}`}>
@@ -1577,7 +1606,7 @@ export default function ManualBuilder() {
                   })}
                </div>
 
-               {/* 3D Carousel Viewer Area[span_8](start_span)[span_8](end_span)[span_9](start_span)[span_9](end_span)[span_10](start_span)[span_10](end_span) */}
+               {/* 3D Carousel Viewer Area */}
                <div className="flex-1 relative flex flex-col items-center justify-center p-4 pt-8 perspective-[1000px] overflow-hidden">
                   
                   <div className="w-full flex justify-center items-center relative h-[300px]">
