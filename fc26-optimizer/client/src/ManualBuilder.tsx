@@ -534,13 +534,11 @@ export default function ManualBuilder() {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     try {
-      // Step 1: Call LLM to create the player blueprint profile
       const blueprint = await generateReportMutation.mutateAsync({
         playerIdentity: aiPrompt,
         gameVersion: gameVersion
       });
 
-      // Step 2: Determine Target Archetype and Skill/WF requirements early
       const targetArch = blueprint.archetype && serverArchetypes?.[blueprint.archetype] 
         ? blueprint.archetype 
         : archetype;
@@ -549,12 +547,10 @@ export default function ManualBuilder() {
       const targetSm = blueprint.skillMoves || starCaps.sm.min;
       const targetWf = blueprint.weakFoot || starCaps.wf.min;
 
-      // Step 3: PRE-CALCULATE Skill & Weak Foot AP Cost so the Math Engine doesn't overspend!
       const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
       const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
       const availableApForMath = Math.max(0, maxAp - smCost - wfCost);
 
-      // Step 4: Pass to math engine with the STRICTly reduced budget
       const mathResult = await calculateStatsMutation.mutateAsync({
         blueprint,
         apBudget: availableApForMath,
@@ -562,20 +558,16 @@ export default function ManualBuilder() {
         unlockedMasteries: {} 
       });
 
-      // Map Archetype
       setArchetype(targetArch);
       
-      // Map Physicals
       const newHeight = blueprint.heightRange ? parseInt(blueprint.heightRange) : height;
       const newWeight = blueprint.weightRange ? parseInt(blueprint.weightRange) : weight;
       if (!isNaN(newHeight)) setHeight(newHeight);
       if (!isNaN(newWeight)) setWeight(newWeight);
 
-      // Map Skills & Weak Foot
       setSmLevel(targetSm);
       setWfLevel(targetWf);
 
-      // Step 5: Inline Physical Modifiers Calculation
       const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
       const hModRaw = getModifier(newHeight, activeBounds.baseH, 4);
       const wModRaw = getModifier(newWeight, activeBounds.baseW, 8);
@@ -594,7 +586,6 @@ export default function ManualBuilder() {
         inlinePhysMods["Balance"] = -hModRaw + wModRaw;
       }
 
-      // Map Attribute Points
       if (mathResult && mathResult.stats) {
         const newAddedPoints: Record<string, number> = {};
         
@@ -602,23 +593,20 @@ export default function ManualBuilder() {
           const statName = statObj.attribute;
           const finalVal = statObj.final;
           
-          const baseObj = serverArchetypes?.[targetArch]?.base || {};
-          const baseVal = baseObj[statName] || 70;
+          const caps = getStatCaps(targetArch, statName);
+          const rawBase = caps.min || serverArchetypes?.[targetArch]?.base?.[statName] || 70;
           const physMod = inlinePhysMods[statName] || 0;
           
-          // Calculate difference from the *Physically Modified Base*
-          const dynamicBase = baseVal + physMod;
-          const diff = finalVal - dynamicBase;
+          const targetInvested = finalVal - (rawBase + physMod);
           
-          if (diff > 0) {
-            newAddedPoints[statName] = diff;
+          if (targetInvested > 0) {
+            newAddedPoints[statName] = targetInvested;
           }
         });
         
         setAddedPoints(newAddedPoints);
       }
 
-      // Map PlayStyles
       if (mathResult && mathResult.playstyles) {
         const standardList = mathResult.playstyles.standard || [];
         const newEquipped = ['', '', ''];
@@ -627,7 +615,6 @@ export default function ManualBuilder() {
         });
         setEquippedPlaystyles(newEquipped);
 
-        // Map Specialization (CASE INSENSITIVE FIX)
         if (mathResult.playstyles.specialisation) {
           const specUpper = mathResult.playstyles.specialisation.toUpperCase();
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
@@ -768,14 +755,17 @@ export default function ManualBuilder() {
     if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
     const baseObj = serverArchetypes[archetype].base;
+
     for (const statKey in baseObj) {
       const caps = getStatCaps(archetype, statKey);
       const physMod = physicalModifiers[statKey] || 0;
       const facMod = facilityModifiers[statKey] || 0;
       const mastMod = masteryModifiers[statKey] || 0;
+      const rawBase = caps.min || baseObj[statKey] || 70;
+
       const invested = addedPoints[statKey] || 0;
-      const dynamicBase = (caps.min || baseObj[statKey] || 70) + physMod + facMod + mastMod;
-      computed[statKey] = Math.max(dynamicBase, Math.min(caps.max || 99, dynamicBase + invested));
+      const totalBeforeCap = rawBase + physMod + facMod + mastMod + invested;
+      computed[statKey] = Math.max(rawBase, Math.min(caps.max || 99, totalBeforeCap));
     }
     return computed;
   }, [serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, addedPoints]);
@@ -783,19 +773,21 @@ export default function ManualBuilder() {
   const spentAp = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
+
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
-      const physMod = physicalModifiers[statKey] || 0;
-      const facMod = facilityModifiers[statKey] || 0;
-      const mastMod = masteryModifiers[statKey] || 0;
-      const base = (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod;
-      total += getCostForPoints(archetype, statKey, base, addedPoints[statKey]);
+      const rawBase = caps.min || serverArchetypes[archetype].base[statKey] || 70;
+      const pointsAdded = addedPoints[statKey] || 0;
+
+      total += getCostForPoints(archetype, statKey, rawBase, pointsAdded);
     }
+
     const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
     total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
+
     return total;
-  }, [addedPoints, serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, smLevel, wfLevel]);
+  }, [addedPoints, serverArchetypes, archetype, smLevel, wfLevel]);
 
   const availableAp = maxAp - spentAp;
 
@@ -848,14 +840,14 @@ export default function ManualBuilder() {
         const physMod = physicalModifiers[statName] || 0;
         const facMod = facilityModifiers[statName] || 0;
         const mastMod = masteryModifiers[statName] || 0;
-        const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70) + physMod + facMod + mastMod);
+        const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70;
         
+        const targetInvested = targetVal - (rawBase + physMod + facMod + mastMod);
         const currentInvested = addedPoints[statName] || 0;
-        const targetInvested = targetVal - baseVal;
         
         if (targetInvested > currentInvested) {
-            const costCurrent = getCostForPoints(archetype, statName, baseVal, currentInvested);
-            const costTarget = getCostForPoints(archetype, statName, baseVal, targetInvested);
+            const costCurrent = getCostForPoints(archetype, statName, rawBase, currentInvested);
+            const costTarget = getCostForPoints(archetype, statName, rawBase, targetInvested);
             totalCost += (costTarget - costCurrent);
             upgrades[statName] = targetInvested;
         }
@@ -880,7 +872,7 @@ export default function ManualBuilder() {
         if (Object.keys(upgrades).length > 0) {
           setAddedPoints(prev => {
             const next = { ...prev };
-            for (const stat in upgrades) next[stat] = upgrades[stat];
+            for (const stat in upgrades) next[stat] = Math.max(next[stat] || 0, upgrades[stat]);
             return next;
           });
         }
@@ -900,7 +892,7 @@ export default function ManualBuilder() {
       if (Object.keys(upgrades).length > 0) {
         setAddedPoints(prev => {
           const next = { ...prev };
-          for (const stat in upgrades) next[stat] = upgrades[stat];
+          for (const stat in upgrades) next[stat] = Math.max(next[stat] || 0, upgrades[stat]);
           return next;
         });
       }
@@ -933,37 +925,45 @@ export default function ManualBuilder() {
   const handleSliderChange = (statKey: string, targetValue: number) => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return;
     const caps = getStatCaps(archetype, statKey);
+    const rawBase = caps.min || serverArchetypes[archetype].base[statKey] || 70;
+    
     const physMod = physicalModifiers[statKey] || 0;
     const facMod = facilityModifiers[statKey] || 0;
     const mastMod = masteryModifiers[statKey] || 0;
-    const baseVal = Math.max(1, (caps.min || serverArchetypes[archetype].base[statKey] || 70) + physMod + facMod + mastMod);
-    
-    let safeTarget = Math.max(baseVal, Math.min(caps.max || 99, targetValue));
-    let newPointsAdded = safeTarget - baseVal;
+    const totalMods = physMod + facMod + mastMod;
     
     const currentInvestedPts = addedPoints[statKey] || 0;
-    const currentCost = getCostForPoints(archetype, statKey, baseVal, currentInvestedPts);
-    const targetCost = getCostForPoints(archetype, statKey, baseVal, newPointsAdded);
+    const maxPossiblePoints = (caps.max || 99) - rawBase;
+    
+    let targetInvested = Math.max(0, targetValue - rawBase - totalMods);
+    targetInvested = Math.min(maxPossiblePoints, targetInvested);
+    
+    const currentCost = getCostForPoints(archetype, statKey, rawBase, currentInvestedPts);
+    const targetCost = getCostForPoints(archetype, statKey, rawBase, targetInvested);
 
     if (targetCost - currentCost > availableAp) {
       let affordablePoints = currentInvestedPts;
       let costAccumulator = currentCost;
-      for (let i = currentInvestedPts; i < newPointsAdded; i++) {
-        let stepCost = getApCost(archetype, statKey, baseVal + affordablePoints + 1);
-        if (costAccumulator + stepCost <= currentCost + availableAp) { affordablePoints++; costAccumulator += stepCost; } 
-        else break;
+      if (targetInvested > currentInvestedPts) {
+        for (let i = currentInvestedPts; i < targetInvested; i++) {
+          let stepCost = getApCost(archetype, statKey, rawBase + affordablePoints + 1);
+          if (costAccumulator + stepCost <= currentCost + availableAp) { 
+            affordablePoints++; 
+            costAccumulator += stepCost; 
+          } else break;
+        }
+        targetInvested = affordablePoints;
       }
-      newPointsAdded = affordablePoints;
     }
 
     setAddedPoints(prev => {
       const next = { ...prev };
-      if (newPointsAdded <= 0) delete next[statKey]; else next[statKey] = newPointsAdded;
+      if (targetInvested <= 0) delete next[statKey]; 
+      else next[statKey] = targetInvested;
       return next;
     });
   };
 
-  // Safe syntax fix implemented below:
   let accelerate = 'Controlled';
   if (currentStats) {
     const acc = currentStats["Acceleration"] || 70;
@@ -1463,8 +1463,12 @@ export default function ManualBuilder() {
                           const physMod = physicalModifiers[stat] || 0;
                           const facMod = facilityModifiers[stat] || 0;
                           const mastMod = masteryModifiers[stat] || 0;
-                          const baseVal = Math.max(1, (caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70) + physMod + facMod + mastMod);
+                          const totalMods = physMod + facMod + mastMod;
+                          const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
+                          
+                          // Determine actual manually added points applied vs base
                           const invested = addedPoints[stat] || 0;
+                          const trueBase = rawBase + totalMods; // Only used for the slider UI representation
                           
                           return (
                             <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
@@ -1500,7 +1504,7 @@ export default function ManualBuilder() {
                                      <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${val}%` }} />
                                      <input type="range" min="0" max="99" value={val} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                   </div>
-                                  <button onClick={() => handleSliderChange(stat, val + 1)} disabled={val >= (caps.max || 99) || availableAp < getApCost(archetype, stat, val + 1)} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
+                                  <button onClick={() => handleSliderChange(stat, val + 1)} disabled={val >= (caps.max || 99) || availableAp < getApCost(archetype, stat, rawBase + invested + 1)} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
                                </div>
                             </div>
                           );
