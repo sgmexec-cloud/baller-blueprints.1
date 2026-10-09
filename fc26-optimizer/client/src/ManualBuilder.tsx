@@ -475,8 +475,18 @@ export default function ManualBuilder() {
   const [facTouchStart, setFacTouchStart] = useState<number | null>(null);
   const [facTouchEnd, setFacTouchEnd] = useState<number | null>(null);
 
+  // AI Feature State
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+
+  // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
+  
+  // AI Mutations
+  const generateReportMutation = trpc.scout.generateReport.useMutation();
+  const calculateStatsMutation = trpc.scout.calculateStats.useMutation();
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
@@ -514,6 +524,84 @@ export default function ManualBuilder() {
     setSelectedPsView(null);
     setEquippedSpecialization(null);
     setExpandedPerk(null);
+  };
+
+  // ------------------------------------------
+  // AI INTEGRATION LOGIC
+  // ------------------------------------------
+
+  const handleRunAiBuild = async () => {
+    if (!aiPrompt.trim()) return;
+    setIsGeneratingAi(true);
+    try {
+      const blueprint = await generateReportMutation.mutateAsync({
+        playerIdentity: aiPrompt,
+        gameVersion: gameVersion
+      });
+
+      const mathResult = await calculateStatsMutation.mutateAsync({
+        blueprint,
+        apBudget: maxAp,
+        gameVersion: gameVersion,
+        unlockedMasteries: {} 
+      });
+
+      if (blueprint.archetype && serverArchetypes?.[blueprint.archetype]) {
+        setArchetype(blueprint.archetype);
+      }
+      
+      if (blueprint.heightRange) {
+        const parsedH = parseInt(blueprint.heightRange);
+        if (!isNaN(parsedH)) setHeight(parsedH);
+      }
+      if (blueprint.weightRange) {
+        const parsedW = parseInt(blueprint.weightRange);
+        if (!isNaN(parsedW)) setWeight(parsedW);
+      }
+
+      if (blueprint.skillMoves) setSmLevel(blueprint.skillMoves);
+      if (blueprint.weakFoot) setWfLevel(blueprint.weakFoot);
+
+      if (mathResult && mathResult.stats) {
+        const newAddedPoints: Record<string, number> = {};
+        
+        mathResult.stats.forEach((statObj: any) => {
+          const statName = statObj.attribute;
+          const finalVal = statObj.final;
+          
+          const baseObj = serverArchetypes?.[blueprint.archetype]?.base || {};
+          const baseVal = baseObj[statName] || 70;
+          const diff = finalVal - baseVal;
+          
+          if (diff > 0) {
+            newAddedPoints[statName] = diff;
+          }
+        });
+        
+        setAddedPoints(newAddedPoints);
+      }
+
+      if (mathResult && mathResult.playstyles) {
+        const standardList = mathResult.playstyles.standard || [];
+        const newEquipped = ['', '', ''];
+        standardList.slice(0, 3).forEach((psName: string, idx: number) => {
+          newEquipped[idx] = psName;
+        });
+        setEquippedPlaystyles(newEquipped);
+
+        if (mathResult.playstyles.specialisation) {
+          setEquippedSpecialization(mathResult.playstyles.specialisation);
+        }
+      }
+
+      setIsAiModalOpen(false);
+      setAiPrompt("");
+    } catch (error) {
+      console.error("AI Generation failed:", error);
+      alert("Failed to generate build. Check your inputs or API key.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
   };
 
   // ------------------------------------------
@@ -835,6 +923,9 @@ export default function ManualBuilder() {
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
 
+  const activeMasteriesCount = Object.values(unlockedMasteries).reduce(( && acc >= 80) accelerate = 'Explosive';
+  }
+
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const totalMasteriesCount = 28; 
   const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
@@ -850,7 +941,6 @@ export default function ManualBuilder() {
   const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
 
-  // Precompute specific playstyle selections for components
   const facilityPlaystyles = useMemo(() => {
      return Object.entries(equippedFacilities)
        .filter(([_, tier]) => tier === 3)
@@ -865,7 +955,6 @@ export default function ManualBuilder() {
   // REUSABLE COMPONENTS
   // ------------------------------------------
 
-  // Extracted EA-style Playstyle Component for Sticky Header
   const PlaystyleSlotsRow = ({ interactive = false }: { interactive?: boolean }) => {
     const slotsData = [
        { id: 'base', type: 'gold', name: basePsPlus, unlocked: true, unlockText: '' },
@@ -913,7 +1002,6 @@ export default function ManualBuilder() {
     )
   }
 
-  // Large Grid Slots for the PlayStyles Tab specifically
   const GridSlot = ({ slot, interactive, onClick }: any) => (
      <button 
        onClick={() => { if (interactive && slot.unlocked && onClick) onClick(); }}
@@ -955,9 +1043,15 @@ export default function ManualBuilder() {
             <span className="text-[#F4F7FB] font-black tracking-wide text-[15px]">Player Details</span>
           </div>
           
-          {/* Top Right AP & Level */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4">
             
+            <button 
+              onClick={() => setIsAiModalOpen(true)}
+              className="bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(77,141,255,0.3)] hover:opacity-90 transition-all"
+            >
+              <span>✨ AI Auto-Build</span>
+            </button>
+
             <div className="flex items-center gap-1.5">
               <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
               <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
@@ -990,10 +1084,8 @@ export default function ManualBuilder() {
               <span className="text-[#F4F7FB] font-bold text-[15px]">Player Bio</span>
            </div>
 
-           {/* Dynamic Card Container */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               
-              {/* Card Graphic (Left) */}
               <div 
                  className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
                    faceStats.ovr >= 75 
@@ -1025,7 +1117,6 @@ export default function ManualBuilder() {
                  </div>
               </div>
 
-              {/* Stats Breakdown (Right) */}
               <div className="flex-1 flex flex-col justify-center py-1">
                  <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
                  
@@ -1044,12 +1135,10 @@ export default function ManualBuilder() {
               </div>
            </div>
 
-           {/* Central 7-Slot Framework placed gracefully in Sticky Header */}
            <div className="mt-4 px-2">
               <PlaystyleSlotsRow interactive={true} />
            </div>
 
-           {/* Tab Navigation */}
            <div className="flex gap-2.5 mt-5 overflow-x-auto hide-scrollbar pb-1 px-1">
               {[
                 { id: 'info', label: 'Info' }, 
@@ -1069,7 +1158,6 @@ export default function ManualBuilder() {
            </div>
         </div>
 
-        {/* Global Dataset Toggles */}
         <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
           <button
             onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
@@ -1082,10 +1170,6 @@ export default function ManualBuilder() {
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >FC 27 DATA</button>
         </div>
-
-        {/* =========================================
-            TAB CONTENT SECTIONS
-        ========================================= */}
 
         {/* TAB 1: INFO */}
         {activeTab === 'info' && (
@@ -1314,7 +1398,6 @@ export default function ManualBuilder() {
             </div>
             
             <div className="space-y-4 pb-20">
-              {/* Mapping natively in render to prevent scroll jumping on state updates */}
               {Object.entries(STAT_GROUPS).map(([category, stats]) => {
                 const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
                 const catAvg = Math.round(catTotal / stats.length);
@@ -1380,7 +1463,6 @@ export default function ManualBuilder() {
                 );
               })}
               
-              {/* Skills & WF */}
               <div className="mb-4 shadow-sm">
                  <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
                     <span className="text-[14px] font-bold text-[#F4F7FB]">Skills & W.Foot</span>
@@ -1400,7 +1482,7 @@ export default function ManualBuilder() {
           </section>
         )}
 
-        {/* TAB 5: PLAYSTYLES (New Restructured Grid) */}
+        {/* TAB 5: PLAYSTYLES */}
         {activeTab === 'playstyles' && (
           <section className="animate-fade-up">
             <div className="flex items-center gap-2 mb-3 pl-1">
@@ -1411,7 +1493,6 @@ export default function ManualBuilder() {
             </div>
             
             <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-4 space-y-5">
-               {/* ROW 1: PlayStyle+ */}
                <div>
                   <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
                      <span>PlayStyle+</span>
@@ -1423,7 +1504,6 @@ export default function ManualBuilder() {
                   </div>
                </div>
 
-               {/* ROW 2: Pro Level Unlocks */}
                <div>
                   <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
                      <span>Pro Level Unlocks</span>
@@ -1441,7 +1521,6 @@ export default function ManualBuilder() {
                   </div>
                </div>
 
-               {/* ROW 3: Facility Unlocks */}
                <div>
                   <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
                      <span>Facility Unlocks</span>
@@ -1462,6 +1541,49 @@ export default function ManualBuilder() {
           MODALS / OVERLAYS
       ========================================= */}
 
+      {/* AI GENERATOR MODAL */}
+      {isAiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-[#080B14] border border-[#4D8DFF]/40 rounded-2xl p-5 shadow-2xl relative">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>AI Player Creator</h3>
+              <button 
+                onClick={() => !isGeneratingAi && setIsAiModalOpen(false)} 
+                disabled={isGeneratingAi}
+                className="text-[#8E9AAF] hover:text-white transition-colors"
+              >✕</button>
+            </div>
+            
+            <p className="text-[11px] text-[#8E9AAF] mb-4 leading-relaxed">
+              Type a player name, era, or description (e.g., <span className="text-[#F4F7FB] font-semibold">"Prime Gareth Bale 2013"</span> or <span className="text-[#F4F7FB] font-semibold">"A fast, physical box-to-box midfielder"</span>). Our AI scout and math engine will configure everything for you based on your current available AP.
+            </p>
+
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder="Enter player description..."
+              disabled={isGeneratingAi}
+              className="w-full bg-[#131A2A] border border-[#26334A] rounded-xl p-3 text-xs text-[#F4F7FB] focus:outline-none focus:border-[#4D8DFF] h-28 resize-none mb-4 disabled:opacity-50 transition-colors"
+            />
+
+            <button
+              onClick={handleRunAiBuild}
+              disabled={isGeneratingAi || !aiPrompt.trim()}
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(77,141,255,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              {isGeneratingAi ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-t-white border-transparent animate-spin" />
+                  <span>Scouting & Optimizing Math...</span>
+                </>
+              ) : (
+                <span>Generate Build ✨</span>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* PHYSICALS MODAL */}
       {activeModal === 'physicals' && currentStats && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -1477,7 +1599,6 @@ export default function ManualBuilder() {
              
              <div className="p-4 overflow-y-auto hide-scrollbar pb-12 flex gap-4">
                 
-                {/* Sliders Side */}
                 <div className="w-1/2 flex flex-col gap-6 pt-2">
                    <div>
                      <div className="flex justify-between items-end mb-3">
@@ -1504,7 +1625,6 @@ export default function ManualBuilder() {
                    </div>
                 </div>
 
-                {/* Attributes Output Side */}
                 <div className="w-1/2 flex flex-col gap-2">
                    <div className="text-[9px] font-bold text-[#59657A] tracking-wider uppercase text-center mb-1">Affected Attributes</div>
                    <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3 space-y-3">
@@ -1634,7 +1754,6 @@ export default function ManualBuilder() {
                   })}
                </div>
 
-               {/* 3D Carousel Area with swipe capabilities */}
                <div 
                  className="flex-1 relative flex flex-col items-center justify-center p-4 pt-8 perspective-[1000px] overflow-hidden"
                  onTouchStart={handleFacTouchStart}
