@@ -229,58 +229,58 @@ const SIGNATURE_PERKS_DATA: Record<string, { name: string; level: number; desc: 
 const SPECIALIZATIONS_DATA: Record<string, { name: string; perk: string; inspiredBy: string; desc: string; reqs: StatReq[] }[]> = {
   "Boss": [
     { name: "BOSS+", perk: "Slide Tackle+", inspiredBy: "Inspired by Nemanja Vidić", desc: "Gain defensive dominance with a massive boost to tackling.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 92 } ] },
-    { name: "ENFORCER", perk: "Press Proven+", inspiredBy: "Inspired by Roy Keane", desc: "Control the defensive transition with extreme ball retention.", reqs: [ { stat: "Composure", min: 92 }, { stat: "Vision", min: 90 }, { stat: "Ball Control", min: 90 } ] },
+    { name: "ENFORCER", perk: "Press Proven+", inspiredBy: "Inspired by Patrick Vieira", desc: "Control the defensive transition with extreme ball retention.", reqs: [ { stat: "Composure", min: 92 }, { stat: "Vision", min: 90 }, { stat: "Ball Control", min: 90 } ] },
     { name: "CAPITANO", perk: "Block+", inspiredBy: "Inspired by Paolo Maldini", desc: "Read the game flawlessly and block critical passes.", reqs: [ { stat: "Def Awareness", min: 92 }, { stat: "Reactions", min: 90 }, { stat: "Agility", min: 90 } ] }
   ],
   "Progressor": [
-    { name: "PROGRESSOR+", perk: "Jockey+", inspiredBy: "Inspired by Philipp Lahm", desc: "Dominate your flank with elite defensive awareness.", reqs: [ { stat: "Long Passing", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] },
-    { name: "PIONEER", perk: "Pinged Pass+", inspiredBy: "Inspired by Trent Alexander-Arnold", desc: "Transform defense into instant offense.", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 90 } ] },
-    { name: "JANITOR", perk: "Quick Step+", inspiredBy: "Inspired by N'Golo Kanté", desc: "Sweep up every loose ball with relentless pace.", reqs: [ { stat: "Acceleration", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] }
+    { name: "PROGRESSOR+", perk: "Jockey+", inspiredBy: "Inspired by Fernando Hierro", desc: "Signature Perk: Wall Bounce", reqs: [ { stat: "Long Passing", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] },
+    { name: "PIONEER", perk: "Pinged Pass+", inspiredBy: "Inspired by Franco Baresi", desc: "Signature Perk: Unexpected Forward", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 90 } ] },
+    { name: "JANITOR", perk: "Quick Step+", inspiredBy: "Inspired by Rio Ferdinand", desc: "Signature Perk: Last Player Back", reqs: [ { stat: "Acceleration", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] }
   ],
   "Marauder": [
-    { name: "MARAUDER+", perk: "Slide Tackle+", inspiredBy: "Inspired by Roberto Carlos", desc: "Aggressive defending meets explosive overlap.", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] },
-    { name: "SPEEDSTER", perk: "Rapid+", inspiredBy: "Inspired by Alphonso Davies", desc: "Burn past the opposition with blistering pace.", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Sprint Speed", min: 92 }, { stat: "Acceleration", min: 90 } ] },
-    { name: "ATHLETE", perk: "Bruiser+", inspiredBy: "Inspired by Kyle Walker", desc: "Physically dominate any winger on the pitch.", reqs: [ { stat: "Strength", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Def Awareness", min: 90 } ] }
-  ],
-  "Maestro": [
-    { name: "MAESTRO+", perk: "Technical+", inspiredBy: "Inspired by Andrés Iniesta", desc: "Dictate the tempo with elite dribbling and vision.", reqs: [ { stat: "Balance", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Dribbling", min: 90 } ] },
-    { name: "CRASHER", perk: "First Touch+", inspiredBy: "Inspired by Zinedine Zidane", desc: "Control impossible passes in the final third.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 } ] },
-    { name: "HEARTBEAT", perk: "Relentless+", inspiredBy: "Inspired by Luka Modrić", desc: "The engine of the team that never stops running.", reqs: [ { stat: "Agility", min: 92 }, { stat: "Stamina", min: 90 }, { stat: "Aggression", min: 90 } ] }
-  ],
-  "Creator": [
-    { name: "CREATOR+", perk: "Whipped Pass+", inspiredBy: "Inspired by Kevin De Bruyne", desc: "Deliver devastating crosses from anywhere.", reqs: [ { stat: "Vision", min: 92 }, { stat: "Crossing", min: 90 }, { stat: "Long Passing", min: 90 } ] },
-    { name: "ARCHITECT", perk: "Dead Ball+", inspiredBy: "Inspired by David Beckham", desc: "Turn every set piece into a guaranteed chance.", reqs: [ { stat: "Crossing", min: 92 }, { stat: "FK Accuracy", min: 90 }, { stat: "Shot Power", min: 90 } ] },
-    { name: "SNIPER", perk: "Power Shot+", inspiredBy: "Inspired by Steven Gerrard", desc: "Lethal strikes from outside the box.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] }
-  ],
-  "Recycler": [
-    { name: "RECYCLER+", perk: "Pinged Pass+", inspiredBy: "Inspired by Sergio Busquets", desc: "Break lines effortlessly with drilled passes.", reqs: [ { stat: "Strength", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
-    { name: "DRIVER", perk: "Enforcer+", inspiredBy: "Inspired by Yaya Touré", desc: "Carry the ball through the midfield with pure power.", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Balance", min: 92 }, { stat: "Strength", min: 90 } ] },
-    { name: "THIEF", perk: "Anticipate+", inspiredBy: "Inspired by Claude Makélélé", desc: "Win the ball before the opponent even realizes.", reqs: [ { stat: "Interceptions", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] }
+    { name: "MARAUDER+", perk: "Slide Tackle+", inspiredBy: "Inspired by Cafu", desc: "Signature Perk: On the Move", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Sliding Tackle", min: 90 } ] },
+    { name: "SPEEDSTER", perk: "Rapid+", inspiredBy: "Inspired by Roberto Carlos", desc: "Signature Perk: Wing Burner", reqs: [ { stat: "Dribbling", min: 92 }, { stat: "Sprint Speed", min: 92 }, { stat: "Acceleration", min: 90 } ] },
+    { name: "ATHLETE", perk: "Bruiser+", inspiredBy: "Inspired by Lilian Thuram", desc: "Signature Perk: Wide Recovery", reqs: [ { stat: "Strength", min: 92 }, { stat: "Aggression", min: 90 }, { stat: "Def Awareness", min: 90 } ] }
   ],
   "Disruptor": [
-    { name: "DISRUPTOR+", perk: "Intercept+", inspiredBy: "Inspired by Patrick Vieira", desc: "Shut down passing lanes permanently.", reqs: [ { stat: "Balance", min: 90 }, { stat: "Reactions", min: 90 }, { stat: "Interceptions", min: 92 } ] },
-    { name: "DESTROYER", perk: "Slide Tackle+", inspiredBy: "Inspired by Gennaro Gattuso", desc: "Fearless tackling to stop any counter-attack.", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Strength", min: 92 }, { stat: "Sliding Tackle", min: 90 } ] },
-    { name: "ANCHOR", perk: "Bruiser+", inspiredBy: "Inspired by Casemiro", desc: "The ultimate physical presence in front of the defense.", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Dribbling", min: 90 }, { stat: "Short Passing", min: 90 } ] }
-  ],
-  "Magician": [
-    { name: "MAGICIAN+", perk: "First Touch+", inspiredBy: "Inspired by Ronaldinho", desc: "One, Two: Do a pass and go in the opponent's half for a short boost to Acceleration, Ball Control, and Balance.", reqs: [ { stat: "Acceleration", min: 90 }, { stat: "Composure", min: 90 }, { stat: "Ball Control", min: 92 } ] },
-    { name: "HOTSHOT", perk: "Power Shot+", inspiredBy: "Inspired by Thierry Henry", desc: "Cut and Shoot: Shoot after entering the box from the wing for a short boost to Finishing, Curve, and Shot Power.", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] },
-    { name: "INVADER", perk: "Incisive Pass+", inspiredBy: "Inspired by Mia Hamm", desc: "Silver Platter: Your through pass gives receiver boosts to composure, finishing and ball control in the box.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Long Passing", min: 90 } ] }
+    { name: "DISRUPTOR+", perk: "Intercept+", inspiredBy: "Inspired by Roy Keane", desc: "Signature Perk: Wide Recovery", reqs: [ { stat: "Balance", min: 90 }, { stat: "Reactions", min: 90 }, { stat: "Interceptions", min: 92 } ] },
+    { name: "DESTROYER", perk: "Slide Tackle+", inspiredBy: "Inspired by Gennaro Gattuso", desc: "Signature Perk: Give and GOOO", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Strength", min: 92 }, { stat: "Sliding Tackle", min: 90 } ] },
+    { name: "ANCHOR", perk: "Bruiser+", inspiredBy: "Inspired by Frank Rijkaard", desc: "Signature Perk: Workhorse", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Dribbling", min: 90 }, { stat: "Short Passing", min: 90 } ] }
   ],
   "Finisher": [
-    { name: "FINISHER+", perk: "Chip Shot+", inspiredBy: "Inspired by Lionel Messi", desc: "Ultimate composure in 1v1 situations.", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 }, { stat: "Reactions", min: 90 } ] },
-    { name: "PRESSER", perk: "Relentless+", inspiredBy: "Inspired by Wayne Rooney", desc: "Lead the press from the front with endless energy.", reqs: [ { stat: "Agility", min: 90 }, { stat: "Stamina", min: 92 }, { stat: "Aggression", min: 90 } ] },
-    { name: "HUNTER", perk: "Gamechanger+", inspiredBy: "Inspired by Gerd Müller", desc: "Elite positioning to finish every half-chance.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Finishing", min: 90 }, { stat: "Curve", min: 92 } ] }
-  ],
-  "Spark": [
-    { name: "SPARK+", perk: "Quick Step+", inspiredBy: "Inspired by Neymar Jr.", desc: "Explosive acceleration to beat the first man instantly.", reqs: [ { stat: "Agility", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Acceleration", min: 90 } ] },
-    { name: "JOKER", perk: "Whipped Pass+", inspiredBy: "Inspired by Luis Figo", desc: "Pinpoint delivery from wide areas.", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Crossing", min: 92 }, { stat: "Long Passing", min: 90 } ] },
-    { name: "ACE", perk: "Chip Shot+", inspiredBy: "Inspired by Eden Hazard", desc: "Unpredictable flair and lethal finishing.", reqs: [ { stat: "Reactions", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Finishing", min: 92 } ] }
+    { name: "FINISHER+", perk: "Chip Shot+", inspiredBy: "Inspired by Alex Morgan", desc: "Signature Perk: 6th Sense", reqs: [ { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 }, { stat: "Reactions", min: 90 } ] },
+    { name: "PRESSER", perk: "Relentless+", inspiredBy: "Inspired by Carlos Tévez", desc: "Signature Perk: Turnover Finisher", reqs: [ { stat: "Agility", min: 90 }, { stat: "Stamina", min: 92 }, { stat: "Aggression", min: 90 } ] },
+    { name: "HUNTER", perk: "Gamechanger+", inspiredBy: "Inspired by Birgit Prinz", desc: "Signature Perk: First Time Finisher", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Finishing", min: 90 }, { stat: "Curve", min: 92 } ] }
   ],
   "Target": [
-    { name: "TARGET+", perk: "Acrobatic+", inspiredBy: "Inspired by Zlatan Ibrahimović", desc: "Convert impossible crosses into spectacular goals.", reqs: [ { stat: "Agility", min: 90 }, { stat: "Jumping", min: 92 }, { stat: "Volleys", min: 90 } ] },
-    { name: "ROAMER", perk: "Incisive Pass+", inspiredBy: "Inspired by Harry Kane", desc: "Drop deep and orchestrate the attack.", reqs: [ { stat: "Vision", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
-    { name: "RUNNER", perk: "Enforcer+", inspiredBy: "Inspired by Erling Haaland", desc: "Unstoppable power and pace in behind.", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Strength", min: 90 }, { stat: "Attack Positioning", min: 90 } ] }
+    { name: "TARGET+", perk: "Acrobatic+", inspiredBy: "Inspired by Zlatan Ibrahimović", desc: "Signature Perk: Line Breaker", reqs: [ { stat: "Agility", min: 90 }, { stat: "Jumping", min: 92 }, { stat: "Volleys", min: 90 } ] },
+    { name: "ROAMER", perk: "Incisive Pass+", inspiredBy: "Inspired by Dennis Bergkamp", desc: "Signature Perk: Blind Passer", reqs: [ { stat: "Vision", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
+    { name: "RUNNER", perk: "Enforcer+", inspiredBy: "Inspired by Ronaldo", desc: "Signature Perk: High Speed Shooter", reqs: [ { stat: "Sprint Speed", min: 92 }, { stat: "Strength", min: 90 }, { stat: "Attack Positioning", min: 90 } ] }
+  ],
+  "Magician": [
+    { name: "MAGICIAN+", perk: "First Touch+", inspiredBy: "Inspired by Ronaldinho", desc: "Signature Perk: One, Two", reqs: [ { stat: "Acceleration", min: 90 }, { stat: "Composure", min: 90 }, { stat: "Ball Control", min: 92 } ] },
+    { name: "HOTSHOT", perk: "Power Shot+", inspiredBy: "Inspired by Thierry Henry", desc: "Signature Perk: Cut and Shoot", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] },
+    { name: "INVADER", perk: "Incisive Pass+", inspiredBy: "Inspired by Mia Hamm", desc: "Signature Perk: Silver Platter", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Long Passing", min: 90 } ] }
+  ],
+  "Maestro": [
+    { name: "MAESTRO+", perk: "Technical+", inspiredBy: "Inspired by Toni Kroos", desc: "Signature Perk: Give and GOOO", reqs: [ { stat: "Balance", min: 90 }, { stat: "Vision", min: 92 }, { stat: "Dribbling", min: 90 } ] },
+    { name: "CRASHER", perk: "First Touch+", inspiredBy: "Inspired by Frank Lampard", desc: "Signature Perk: Raider", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Composure", min: 92 } ] },
+    { name: "HEARTBEAT", perk: "Relentless+", inspiredBy: "Inspired by Pavel Nedvěd", desc: "Signature Perk: Foot in and Run", reqs: [ { stat: "Agility", min: 92 }, { stat: "Stamina", min: 90 }, { stat: "Aggression", min: 90 } ] }
+  ],
+  "Creator": [
+    { name: "CREATOR+", perk: "Whipped Pass+", inspiredBy: "Inspired by Andrés Iniesta", desc: "Signature Perk: Assistant", reqs: [ { stat: "Vision", min: 92 }, { stat: "Crossing", min: 90 }, { stat: "Long Passing", min: 90 } ] },
+    { name: "ARCHITECT", perk: "Dead Ball+", inspiredBy: "Inspired by David Beckham", desc: "Signature Perk: Air Mail", reqs: [ { stat: "Crossing", min: 92 }, { stat: "FK Accuracy", min: 90 }, { stat: "Shot Power", min: 90 } ] },
+    { name: "SNIPER", perk: "Power Shot+", inspiredBy: "Inspired by Zinedine Zidane", desc: "Signature Perk: Stunning Shooter", reqs: [ { stat: "Finishing", min: 90 }, { stat: "Shot Power", min: 92 }, { stat: "Long Shots", min: 90 } ] }
+  ],
+  "Recycler": [
+    { name: "RECYCLER+", perk: "Pinged Pass+", inspiredBy: "Inspired by Claude Makélélé", desc: "Signature Perk: Hard and Fast", reqs: [ { stat: "Strength", min: 90 }, { stat: "Long Passing", min: 90 }, { stat: "Short Passing", min: 92 } ] },
+    { name: "DRIVER", perk: "Enforcer+", inspiredBy: "Inspired by Yaya Touré", desc: "Signature Perk: Heart", reqs: [ { stat: "Sprint Speed", min: 90 }, { stat: "Balance", min: 92 }, { stat: "Strength", min: 90 } ] },
+    { name: "THIEF", perk: "Anticipate+", inspiredBy: "Inspired by Michaël Essien", desc: "Signature Perk: Quick Fix", reqs: [ { stat: "Interceptions", min: 90 }, { stat: "Def Awareness", min: 90 }, { stat: "Standing Tackle", min: 92 } ] }
+  ],
+  "Spark": [
+    { name: "SPARK+", perk: "Quick Step+", inspiredBy: "Inspired by Luís Figo", desc: "Signature Perk: Twinkle Toes", reqs: [ { stat: "Agility", min: 92 }, { stat: "Sprint Speed", min: 90 }, { stat: "Acceleration", min: 90 } ] },
+    { name: "JOKER", perk: "Whipped Pass+", inspiredBy: "Inspired by Eden Hazard", desc: "Signature Perk: Selfless", reqs: [ { stat: "Attack Positioning", min: 90 }, { stat: "Crossing", min: 92 }, { stat: "Long Passing", min: 90 } ] },
+    { name: "ACE", perk: "Chip Shot+", inspiredBy: "Inspired by Jay-Jay Okocha", desc: "Signature Perk: Stunning Shooter", reqs: [ { stat: "Reactions", min: 90 }, { stat: "Ball Control", min: 90 }, { stat: "Finishing", min: 92 } ] }
   ]
 };
 
