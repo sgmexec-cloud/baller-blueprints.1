@@ -923,9 +923,6 @@ export default function ManualBuilder() {
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
 
-  const activeMasteriesCount = Object.values(unlockedMasteries).reduce(( && acc >= 80) accelerate = 'Explosive';
-  }
-
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
   const totalMasteriesCount = 28; 
   const masteryProgressPct = Math.round((activeMasteriesCount / totalMasteriesCount) * 100);
