@@ -470,6 +470,7 @@ export default function ManualBuilder() {
   const [selectedFacView, setSelectedFacView] = useState<string>('');
   const [viewingFacTier, setViewingFacTier] = useState<number>(1);
   const [selectedPsView, setSelectedPsView] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'boosted' | 'raw'>('raw'); 
   
   // Carousel Touch State
   const [facTouchStart, setFacTouchStart] = useState<number | null>(null);
@@ -823,12 +824,17 @@ export default function ManualBuilder() {
 
     for (const req of reqs) {
       const statName = req.stat;
-      const currentVal = currentStats?.[statName] || 70;
       const targetVal = req.min;
+      
+      const caps = getStatCaps(archetype, statName);
+      const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70;
+      const currentInvested = addedPoints[statName] || 0;
+      
+      // Calculate tracking against Raw Stats to match game logic precisely
+      const userStatWithoutMods = rawBase + currentInvested;
 
-      if (currentVal < targetVal) {
+      if (userStatWithoutMods < targetVal) {
         allMet = false;
-        const caps = getStatCaps(archetype, statName);
         const capMax = caps.max || 99;
 
         if (targetVal > capMax) {
@@ -836,14 +842,8 @@ export default function ManualBuilder() {
           reason = 'CAP EXCEEDED';
           break;
         }
-
-        const physMod = physicalModifiers[statName] || 0;
-        const facMod = facilityModifiers[statName] || 0;
-        const mastMod = masteryModifiers[statName] || 0;
-        const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70;
         
-        const targetInvested = targetVal - (rawBase + physMod + facMod + mastMod);
-        const currentInvested = addedPoints[statName] || 0;
+        const targetInvested = targetVal - rawBase;
         
         if (targetInvested > currentInvested) {
             const costCurrent = getCostForPoints(archetype, statName, rawBase, currentInvested);
@@ -935,8 +935,11 @@ export default function ManualBuilder() {
     const currentInvestedPts = addedPoints[statKey] || 0;
     const maxPossiblePoints = (caps.max || 99) - rawBase;
     
-    let targetInvested = Math.max(0, targetValue - rawBase - totalMods);
-    targetInvested = Math.min(maxPossiblePoints, targetInvested);
+    let targetInvested = viewMode === 'raw' 
+      ? targetValue - rawBase 
+      : targetValue - rawBase - totalMods;
+      
+    targetInvested = Math.max(0, Math.min(maxPossiblePoints, targetInvested));
     
     const currentCost = getCostForPoints(archetype, statKey, rawBase, currentInvestedPts);
     const targetCost = getCostForPoints(archetype, statKey, rawBase, targetInvested);
@@ -1441,12 +1444,52 @@ export default function ManualBuilder() {
                   Player Attributes
                 </span>
               </div>
-              <span className="text-[9px] text-[#4caf50] font-bold tracking-widest uppercase">Live Editing Active</span>
+              
+              {/* RAW VS BOOSTED TOGGLE */}
+              <div className="flex bg-[#131A2A] border border-[#26334A] rounded-lg p-0.5">
+                <button 
+                  onClick={() => setViewMode('raw')}
+                  className={`px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-md transition-colors ${viewMode === 'raw' ? 'bg-[#192235] text-[#21E6A4]' : 'text-[#59657A] hover:text-[#8E9AAF]'}`}
+                >
+                  Raw Stats
+                </button>
+                <button 
+                  onClick={() => setViewMode('boosted')}
+                  className={`px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-md transition-colors ${viewMode === 'boosted' ? 'bg-[#192235] text-[#4D8DFF]' : 'text-[#59657A] hover:text-[#8E9AAF]'}`}
+                >
+                  Boosted
+                </button>
+              </div>
+            </div>
+
+            {/* MOVED SKILLS & WEAK FOOT TO TOP */}
+            <div className="mb-4 shadow-sm animate-fade-in">
+               <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
+                  <span className="text-[14px] font-bold text-[#F4F7FB]">Skills & W.Foot</span>
+                  <span className="text-[10px] text-[#facc15] font-bold tracking-widest uppercase">Budget Priority</span>
+               </div>
+               <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0 p-4 flex justify-between items-center">
+                  <div className="flex flex-col gap-2">
+                     <span className="text-[12px] text-[#F4F7FB]">Skill Moves</span>
+                     <span className="text-[12px] text-[#F4F7FB]">Weak Foot</span>
+                  </div>
+                  <div className="flex flex-col gap-2 items-end">
+                     <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{smLevel} ★</button>
+                     <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{wfLevel} ★</button>
+                  </div>
+               </div>
             </div>
             
             <div className="space-y-4 pb-20">
               {Object.entries(STAT_GROUPS).map(([category, stats]) => {
-                const catTotal = stats.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0);
+                // Calculate category average based on the view mode selected
+                const catTotal = stats.reduce((sum, stat) => {
+                  const caps = getStatCaps(archetype, stat);
+                  const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
+                  const invested = addedPoints[stat] || 0;
+                  const rawVal = rawBase + invested;
+                  return sum + (viewMode === 'raw' ? rawVal : (currentStats[stat] || 70));
+                }, 0);
                 const catAvg = Math.round(catTotal / stats.length);
                 
                 return (
@@ -1457,18 +1500,20 @@ export default function ManualBuilder() {
                      </div>
                      <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0">
                         {stats.map(stat => {
-                          const val = currentStats[stat] || 70;
+                          const val = currentStats[stat] || 70; // Fully boosted stat
                           const displayName = CSV_STAT_MAP[stat] || stat;
                           const caps = getStatCaps(archetype, stat);
                           const physMod = physicalModifiers[stat] || 0;
                           const facMod = facilityModifiers[stat] || 0;
                           const mastMod = masteryModifiers[stat] || 0;
-                          const totalMods = physMod + facMod + mastMod;
-                          const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
                           
-                          // Determine actual manually added points applied vs base
+                          const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
                           const invested = addedPoints[stat] || 0;
-                          const trueBase = rawBase + totalMods; // Only used for the slider UI representation
+                          const rawVal = rawBase + invested;
+                          
+                          // Conditional display based on toggle
+                          const displayVal = viewMode === 'raw' ? rawVal : val;
+                          const showModifiers = viewMode === 'boosted';
                           
                           return (
                             <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
@@ -1476,19 +1521,19 @@ export default function ManualBuilder() {
                                   <div className="flex items-center gap-2">
                                     <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
                                     <div className="flex items-center gap-1">
-                                       {physMod !== 0 && (
+                                       {showModifiers && physMod !== 0 && (
                                          <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${physMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
                                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/></svg>
                                            <span className="text-[8.5px] font-black">{physMod > 0 ? '+' : ''}{physMod}</span>
                                          </div>
                                        )}
-                                       {facMod !== 0 && (
+                                       {showModifiers && facMod !== 0 && (
                                          <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${facMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
                                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 11V3H7v4H3v14h18V11h-4zm-8-6h4v14H9V5zm-4 6h2v10H5v-10zm14 10h-2v-8h2v8z"/></svg>
                                            <span className="text-[8.5px] font-black">{facMod > 0 ? '+' : ''}{facMod}</span>
                                          </div>
                                        )}
-                                       {mastMod !== 0 && (
+                                       {showModifiers && mastMod !== 0 && (
                                          <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
                                            <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                                            <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
@@ -1496,15 +1541,15 @@ export default function ManualBuilder() {
                                        )}
                                     </div>
                                   </div>
-                                  <span className="text-[13px] font-bold text-[#F4F7FB]">{val}</span>
+                                  <span className="text-[13px] font-bold text-[#F4F7FB]">{displayVal}</span>
                                </div>
                                <div className="flex items-center gap-3 w-full group">
-                                  <button onClick={() => handleSliderChange(stat, val - 1)} disabled={invested <= 0} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">-</button>
+                                  <button onClick={() => handleSliderChange(stat, displayVal - 1)} disabled={invested <= 0} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">-</button>
                                   <div className="flex-1 h-2 bg-[#192235] rounded-full relative overflow-hidden group-hover:ring-1 ring-[#4D8DFF]/30 transition-all cursor-pointer">
-                                     <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${val}%` }} />
-                                     <input type="range" min="0" max="99" value={val} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                                     <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${displayVal}%` }} />
+                                     <input type="range" min="0" max="99" value={displayVal} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                                   </div>
-                                  <button onClick={() => handleSliderChange(stat, val + 1)} disabled={val >= (caps.max || 99) || availableAp < getApCost(archetype, stat, rawBase + invested + 1)} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
+                                  <button onClick={() => handleSliderChange(stat, displayVal + 1)} disabled={displayVal >= (caps.max || 99) || availableAp < getApCost(archetype, stat, rawBase + invested + 1)} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
                                </div>
                             </div>
                           );
@@ -1513,22 +1558,6 @@ export default function ManualBuilder() {
                   </div>
                 );
               })}
-              
-              <div className="mb-4 shadow-sm">
-                 <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
-                    <span className="text-[14px] font-bold text-[#F4F7FB]">Skills & W.Foot</span>
-                 </div>
-                 <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0 p-4 flex justify-between items-center">
-                    <div className="flex flex-col gap-2">
-                       <span className="text-[12px] text-[#F4F7FB]">Skill Moves</span>
-                       <span className="text-[12px] text-[#F4F7FB]">Weak Foot</span>
-                    </div>
-                    <div className="flex flex-col gap-2 items-end">
-                       <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{smLevel} ★</button>
-                       <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{wfLevel} ★</button>
-                    </div>
-                 </div>
-              </div>
             </div>
           </section>
         )}
@@ -2087,17 +2116,23 @@ export default function ManualBuilder() {
                         <div className="text-[9px] text-[#8E9AAF] uppercase tracking-widest mb-3" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Attribute Dependencies</div>
                         <div className="space-y-3">
                           {ps.reqs.map(req => {
-                            const currentVal = currentStats?.[req.stat] || 70;
+                            const caps = getStatCaps(archetype, req.stat);
+                            const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[req.stat] || 70;
+                            const currentInvested = addedPoints[req.stat] || 0;
+                            
+                            // Visual tracking using Raw Base + User Added points ONLY
+                            const userStatWithoutMods = rawBase + currentInvested;
                             const targetVal = req.min;
-                            const isMet = currentVal >= targetVal;
-                            const capMax = getStatCaps(archetype, req.stat).max || 99;
+                            const isMet = userStatWithoutMods >= targetVal;
+                            const capMax = caps.max || 99;
                             const isImpossible = targetVal > capMax;
-                            const fillPct = Math.min(100, (currentVal / targetVal) * 100);
+                            const fillPct = Math.min(100, (userStatWithoutMods / targetVal) * 100);
+                            
                             return (
                               <div key={req.stat}>
                                 <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider mb-1.5">
                                   <span className={isMet ? 'text-[#F4F7FB]' : 'text-[#8E9AAF]'}>{req.stat}</span>
-                                  <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>{currentVal} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}</span>
+                                  <span className={isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#8E9AAF]'}>{userStatWithoutMods} <span className="text-[#59657A] mx-0.5">/</span> {targetVal}</span>
                                 </div>
                                 <div className="h-1.5 w-full bg-[#131A2A] rounded-full overflow-hidden">
                                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${fillPct}%`, backgroundColor: isMet ? '#21E6A4' : '#59657A' }} />
@@ -2158,15 +2193,21 @@ export default function ManualBuilder() {
                              <div className="w-[120px] shrink-0 bg-[#080B14] rounded-xl border border-[#26334A] p-3 shadow-inner">
                                <div className="space-y-2.5">
                                  {spec.reqs.map(req => {
-                                    const currentVal = currentStats?.[req.stat] || 70;
+                                    const caps = getStatCaps(archetype, req.stat);
+                                    const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[req.stat] || 70;
+                                    const currentInvested = addedPoints[req.stat] || 0;
+                                    
+                                    // Visual tracking using Raw Base + User Added points ONLY
+                                    const userStatWithoutMods = rawBase + currentInvested;
                                     const targetVal = req.min;
-                                    const isMet = currentVal >= targetVal;
-                                    const isImpossible = targetVal > (getStatCaps(archetype, req.stat).max || 99);
+                                    const isMet = userStatWithoutMods >= targetVal;
+                                    const isImpossible = targetVal > (caps.max || 99);
+                                    
                                     return (
                                        <div key={req.stat}>
                                           <div className="flex justify-between items-end mb-1">
                                              <span className="text-[9px] font-bold uppercase tracking-wide text-[#8E9AAF] leading-none" style={{ fontFamily: "'Inter', sans-serif" }}>{STAT_ABBR[req.stat]}</span>
-                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>{currentVal}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}</span>
+                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>{userStatWithoutMods}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}</span>
                                           </div>
                                        </div>
                                     )
