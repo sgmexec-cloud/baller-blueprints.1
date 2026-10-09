@@ -534,34 +534,67 @@ export default function ManualBuilder() {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     try {
+      // Step 1: Call LLM to create the player blueprint profile
       const blueprint = await generateReportMutation.mutateAsync({
         playerIdentity: aiPrompt,
         gameVersion: gameVersion
       });
 
+      // Step 2: Determine Target Archetype and Skill/WF requirements early
+      const targetArch = blueprint.archetype && serverArchetypes?.[blueprint.archetype] 
+        ? blueprint.archetype 
+        : archetype;
+      
+      const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
+      const targetSm = blueprint.skillMoves || starCaps.sm.min;
+      const targetWf = blueprint.weakFoot || starCaps.wf.min;
+
+      // Step 3: PRE-CALCULATE Skill & Weak Foot AP Cost so the Math Engine doesn't overspend!
+      const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
+      const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
+      const availableApForMath = Math.max(0, maxAp - smCost - wfCost);
+
+      // Step 4: Pass to math engine with the STRICTly reduced budget
       const mathResult = await calculateStatsMutation.mutateAsync({
         blueprint,
-        apBudget: maxAp,
+        apBudget: availableApForMath,
         gameVersion: gameVersion,
         unlockedMasteries: {} 
       });
 
-      if (blueprint.archetype && serverArchetypes?.[blueprint.archetype]) {
-        setArchetype(blueprint.archetype);
-      }
+      // Map Archetype
+      setArchetype(targetArch);
       
-      if (blueprint.heightRange) {
-        const parsedH = parseInt(blueprint.heightRange);
-        if (!isNaN(parsedH)) setHeight(parsedH);
-      }
-      if (blueprint.weightRange) {
-        const parsedW = parseInt(blueprint.weightRange);
-        if (!isNaN(parsedW)) setWeight(parsedW);
+      // Map Physicals
+      const newHeight = blueprint.heightRange ? parseInt(blueprint.heightRange) : height;
+      const newWeight = blueprint.weightRange ? parseInt(blueprint.weightRange) : weight;
+      if (!isNaN(newHeight)) setHeight(newHeight);
+      if (!isNaN(newWeight)) setWeight(newWeight);
+
+      // Map Skills & Weak Foot
+      setSmLevel(targetSm);
+      setWfLevel(targetWf);
+
+      // Step 5: Inline Physical Modifiers Calculation
+      const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
+      const hModRaw = getModifier(newHeight, activeBounds.baseH, 4);
+      const wModRaw = getModifier(newWeight, activeBounds.baseW, 8);
+      const inlinePhysMods: Record<string, number> = {};
+      
+      if (activeBounds.type === 'GK') {
+        inlinePhysMods["Sprint Speed"] = hModRaw - wModRaw;
+        inlinePhysMods["Strength"] = hModRaw + wModRaw;
+        inlinePhysMods["Acceleration"] = -hModRaw - wModRaw;
+      } else {
+        inlinePhysMods["Jumping"] = hModRaw + wModRaw;
+        inlinePhysMods["Sprint Speed"] = hModRaw - wModRaw;
+        inlinePhysMods["Strength"] = hModRaw + wModRaw;
+        inlinePhysMods["Acceleration"] = -hModRaw - wModRaw;
+        inlinePhysMods["Agility"] = -hModRaw - wModRaw;
+        inlinePhysMods["Balance"] = -hModRaw + wModRaw;
       }
 
-      if (blueprint.skillMoves) setSmLevel(blueprint.skillMoves);
-      if (blueprint.weakFoot) setWfLevel(blueprint.weakFoot);
-
+      // Map Attribute Points
       if (mathResult && mathResult.stats) {
         const newAddedPoints: Record<string, number> = {};
         
@@ -569,9 +602,13 @@ export default function ManualBuilder() {
           const statName = statObj.attribute;
           const finalVal = statObj.final;
           
-          const baseObj = serverArchetypes?.[blueprint.archetype]?.base || {};
+          const baseObj = serverArchetypes?.[targetArch]?.base || {};
           const baseVal = baseObj[statName] || 70;
-          const diff = finalVal - baseVal;
+          const physMod = inlinePhysMods[statName] || 0;
+          
+          // Calculate difference from the *Physically Modified Base*
+          const dynamicBase = baseVal + physMod;
+          const diff = finalVal - dynamicBase;
           
           if (diff > 0) {
             newAddedPoints[statName] = diff;
@@ -581,6 +618,7 @@ export default function ManualBuilder() {
         setAddedPoints(newAddedPoints);
       }
 
+      // Map PlayStyles
       if (mathResult && mathResult.playstyles) {
         const standardList = mathResult.playstyles.standard || [];
         const newEquipped = ['', '', ''];
@@ -589,8 +627,19 @@ export default function ManualBuilder() {
         });
         setEquippedPlaystyles(newEquipped);
 
+        // Map Specialization (CASE INSENSITIVE FIX)
         if (mathResult.playstyles.specialisation) {
-          setEquippedSpecialization(mathResult.playstyles.specialisation);
+          const specUpper = mathResult.playstyles.specialisation.toUpperCase();
+          const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
+          const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
+          
+          if (matchedSpec) {
+            setEquippedSpecialization(matchedSpec.name);
+          } else {
+            setEquippedSpecialization(null);
+          }
+        } else {
+          setEquippedSpecialization(null);
         }
       }
 
@@ -914,6 +963,7 @@ export default function ManualBuilder() {
     });
   };
 
+  // Safe syntax fix implemented below:
   let accelerate = 'Controlled';
   if (currentStats) {
     const acc = currentStats["Acceleration"] || 70;
