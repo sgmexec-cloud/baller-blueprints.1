@@ -480,6 +480,9 @@ export default function ManualBuilder() {
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  // NEW STATES FOR AI OVERRIDES:
+  const [aiArchetypeLock, setAiArchetypeLock] = useState<string>("AUTO");
+  const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -534,15 +537,22 @@ export default function ManualBuilder() {
   const handleRunAiBuild = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
+    
+    // Inject the archetype lock instruction into the prompt if manual is selected
+    const finalPrompt = aiArchetypeLock !== "AUTO" 
+      ? `[CRITICAL REQUIREMENT: YOU MUST SELECT THE '${aiArchetypeLock}' ARCHETYPE FOR THIS BUILD] ${aiPrompt}`
+      : aiPrompt;
+
     try {
       const blueprint = await generateReportMutation.mutateAsync({
-        playerIdentity: aiPrompt,
+        playerIdentity: finalPrompt,
         gameVersion: gameVersion
       });
 
-      const targetArch = blueprint.archetype && serverArchetypes?.[blueprint.archetype] 
-        ? blueprint.archetype 
-        : archetype;
+      // If user locked an archetype, enforce it, otherwise let AI decide
+      const targetArch = aiArchetypeLock !== "AUTO" && serverArchetypes?.[aiArchetypeLock]
+        ? aiArchetypeLock
+        : (blueprint.archetype && serverArchetypes?.[blueprint.archetype] ? blueprint.archetype : archetype);
       
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
       const targetSm = blueprint.skillMoves || starCaps.sm.min;
@@ -550,7 +560,10 @@ export default function ManualBuilder() {
 
       const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
       const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
-      const availableApForMath = Math.max(0, maxAp - smCost - wfCost);
+      
+      // Calculate max AP based on the Target Level selected in the modal
+      const maxApForAi = progressionData?.[aiTargetLevel]?.apAvailable ?? (Math.floor(aiTargetLevel * 1.5) + 10);
+      const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
 
       const mathResult = await calculateStatsMutation.mutateAsync({
         blueprint,
@@ -559,6 +572,8 @@ export default function ManualBuilder() {
         unlockedMasteries: {} 
       });
 
+      // Apply the target level globally so the UI matches the math
+      setLevel(aiTargetLevel);
       setArchetype(targetArch);
       
       const newHeight = blueprint.heightRange ? parseInt(blueprint.heightRange) : height;
@@ -1096,7 +1111,11 @@ export default function ManualBuilder() {
           <div className="flex items-center gap-4">
             
             <button 
-              onClick={() => setIsAiModalOpen(true)}
+              onClick={() => {
+                setAiTargetLevel(level); // Sync current level into modal
+                setAiArchetypeLock("AUTO"); // Reset to auto
+                setIsAiModalOpen(true);
+              }}
               className="bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(77,141,255,0.3)] hover:opacity-90 transition-all"
             >
               <span>✨ AI Auto-Build</span>
@@ -1637,6 +1656,37 @@ export default function ManualBuilder() {
             <p className="text-[11px] text-[#8E9AAF] mb-4 leading-relaxed">
               Type a player name, era, or description (e.g., <span className="text-[#F4F7FB] font-semibold">"Prime Gareth Bale 2013"</span> or <span className="text-[#F4F7FB] font-semibold">"A fast, physical box-to-box midfielder"</span>). Our AI scout and math engine will configure everything for you based on your current available AP.
             </p>
+
+            {/* NEW: Archetype & Level Overrides */}
+            <div className="flex gap-3 mb-4">
+              <div className="flex-1">
+                <label className="block text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">Archetype Preference</label>
+                <select 
+                  value={aiArchetypeLock}
+                  onChange={(e) => setAiArchetypeLock(e.target.value)}
+                  disabled={isGeneratingAi}
+                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg p-2.5 text-xs text-[#F4F7FB] font-bold outline-none focus:border-[#4D8DFF] transition-colors disabled:opacity-50 appearance-none"
+                >
+                  <option value="AUTO">✨ Let AI Decide</option>
+                  {serverArchetypes && Object.keys(serverArchetypes).map(arch => (
+                     <option key={arch} value={arch}>{arch}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-[110px] shrink-0">
+                <label className="block text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">Target Level</label>
+                <select
+                  value={aiTargetLevel}
+                  onChange={(e) => setAiTargetLevel(Number(e.target.value))}
+                  disabled={isGeneratingAi}
+                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg p-2.5 text-xs text-[#21E6A4] font-black outline-none focus:border-[#4D8DFF] transition-colors disabled:opacity-50 appearance-none"
+                >
+                  {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
+                     <option key={l} value={l}>Lvl {l}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
             <textarea
               value={aiPrompt}
