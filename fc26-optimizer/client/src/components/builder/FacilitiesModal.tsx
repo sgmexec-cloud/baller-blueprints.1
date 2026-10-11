@@ -1,6 +1,6 @@
 import React from 'react';
 import { FACILITIES } from '@/constants/playstylesData';
-import { CLUB_BUDGETS, CSV_STAT_MAP } from '@/constants/playstylesData'; // or builderData depending on your imports
+import { CLUB_BUDGETS, CSV_STAT_MAP } from '@/constants/builderData';
 import { getPlaystyleIconPath } from '@/utils/builderUtils';
 import type { FacilitiesModalProps } from '@/types/builder';
 
@@ -23,7 +23,6 @@ export const FacilitiesModal: React.FC<FacilitiesModalProps> = ({
 }) => {
   if (isOpen !== 'facilities') return null;
 
-  // Fallback guard if selectedFacView is invalid
   const facility = FACILITIES[selectedFacView] || Object.values(FACILITIES)[0];
   if (!facility) return null;
 
