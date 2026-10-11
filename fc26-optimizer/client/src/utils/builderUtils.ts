@@ -1,5 +1,5 @@
-import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../server/data27/archetypeCaps';
-import { UPGRADE_COSTS } from '../../server/data27/upgradeCosts';
+import { ARCHETYPE_ATTRIBUTE_CAPS } from '../../../server/data27/archetypeCaps';
+import { UPGRADE_COSTS } from '../../../server/data27/upgradeCosts';
 import { CSV_STAT_MAP, STAT_KEY_MAP } from '@/constants/builderData';
 import { STAR_UPGRADE_COSTS } from '@/constants/archetypeData';
 
