@@ -11,9 +11,9 @@ import ManualBuilder from "./ManualBuilder";
 function Router() {
   return (
     <Switch>
-      <Route path={"/"} component={Home} />
+      <Route path={"/"} component={ManualBuilder} />
       <Route path={"/card-preview"} component={CardPreview} />
-      <Route path={"/manual-builder"} component={ManualBuilder} />
+      <Route path={"/home"} component={Home} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
