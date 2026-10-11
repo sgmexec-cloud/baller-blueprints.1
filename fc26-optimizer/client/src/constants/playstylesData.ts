@@ -1,4 +1,4 @@
-export type StatReq = { stat: string; min: number };
+import type { StatReq } from '@/types/builder';
 
 export const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<string, number> }> = {
   'Shot Stopper': { l10: { 'GK Positioning': 1, 'GK Reflexes': 1 }, l30: { 'GK Reflexes': 1 } },
@@ -233,4 +233,3 @@ export const PLAYSTYLE_CATEGORIES = [
   { id: 'physical', label: 'Physical' },
   { id: 'goalkeeping', label: 'Goalkeeping' }
 ];
-
