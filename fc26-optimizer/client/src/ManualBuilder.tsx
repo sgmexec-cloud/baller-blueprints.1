@@ -141,10 +141,16 @@ export default function ManualBuilder() {
                  
                  <div className="absolute z-10" style={{ left: '26.9%', top: '13.4%', width: '49.8%', height: '49.8%' }}>
                     <img 
-                      src="/default-avatar.png" 
-                      alt="Pro" 
-                      className="w-full h-full object-cover object-bottom drop-shadow-md" 
-                      onError={(e) => { e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23080B14" opacity="0.4"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>'; }} 
+                      src={equippedSpecialization 
+                        ? `/icons/specializations/${equippedSpecialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png` 
+                        : "/default-avatar.png"
+                      }
+                      alt={equippedSpecialization || "Pro"} 
+                      className={`w-full h-full drop-shadow-md transition-all duration-300 ${equippedSpecialization ? 'object-contain object-center scale-110' : 'object-cover object-bottom'}`} 
+                      onError={(e) => { 
+                         e.currentTarget.onerror = null; 
+                         e.currentTarget.src = '/default-avatar.png'; 
+                      }} 
                     />
                  </div>
                  
