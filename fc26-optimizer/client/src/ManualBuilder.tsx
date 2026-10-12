@@ -140,8 +140,8 @@ export default function ManualBuilder() {
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>{faceStats.ovr}</span>
                  </div>
                  
-                 {/* Player Avatar OR Specialization Icon (Using exact Canva proportions) */}
-                 <div className="absolute z-10 flex justify-center" style={{ left: '24.5%', top: '6.5%', width: '51%', height: '36.5%' }}>
+                 {/* Player Avatar OR Specialization Icon (Using exact pixel proportions) */}
+                 <div className="absolute z-10 flex justify-center" style={{ left: '11.8px', top: '14.7px', width: '77.1px', height: '77.1px' }}>
                     <img 
                       src={equippedSpecialization 
                         ? `/icons/specializations/${equippedSpecialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png` 
