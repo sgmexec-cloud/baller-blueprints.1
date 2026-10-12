@@ -1,5 +1,6 @@
 import React from 'react';
 import { STAT_GROUPS, CSV_STAT_MAP } from '@/constants/builderData';
+import { getStatCaps } from '@/utils/builderUtils';
 import type { AttributesTabProps } from '@/types/builder';
 
 export const AttributesTab: React.FC<AttributesTabProps> = ({
@@ -64,8 +65,8 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
       <div className="space-y-4 pb-20">
         {Object.entries(STAT_GROUPS).map(([category, stats]) => {
           const catTotal = stats.reduce((sum, stat) => {
-            const caps = serverArchetypes?.[archetype]?.[stat] || { min: 70, max: 99 };
-            const rawBase = caps.min || 70;
+            const caps = getStatCaps(archetype, stat);
+            const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
             const invested = addedPoints[stat] || 0;
             const rawVal = rawBase + invested;
             return sum + (viewMode === 'raw' ? rawVal : (currentStats?.[stat] || 70));
@@ -82,12 +83,15 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
                   {stats.map(stat => {
                     const val = currentStats?.[stat] || 70;
                     const displayName = CSV_STAT_MAP[stat] || stat;
-                    const caps = serverArchetypes?.[archetype]?.[stat] || { min: 70, max: 99 };
+                    
+                    // FIX: Retrieve true stat caps for current archetype
+                    const caps = getStatCaps(archetype, stat);
+                    const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
+                    
                     const physMod = physicalModifiers[stat] || 0;
                     const facMod = facilityModifiers[stat] || 0;
                     const mastMod = masteryModifiers[stat] || 0;
                     
-                    const rawBase = caps.min || 70;
                     const invested = addedPoints[stat] || 0;
                     const rawVal = rawBase + invested;
                     
@@ -123,7 +127,7 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
                             <button onClick={() => handleSliderChange(stat, displayVal - 1)} disabled={invested <= 0} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">-</button>
                             <div className="flex-1 h-2 bg-[#192235] rounded-full relative overflow-hidden group-hover:ring-1 ring-[#4D8DFF]/30 transition-all cursor-pointer">
                                <div className="absolute top-0 left-0 h-full bg-[#4caf50] rounded-full transition-all" style={{ width: `${displayVal}%` }} />
-                               <input type="range" min="0" max="99" value={displayVal} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                               <input type="range" min={rawBase} max={caps.max || 99} value={displayVal} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
                             </div>
                             <button onClick={() => handleSliderChange(stat, displayVal + 1)} disabled={displayVal >= (caps.max || 99) || availableAp < 1} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
                          </div>
