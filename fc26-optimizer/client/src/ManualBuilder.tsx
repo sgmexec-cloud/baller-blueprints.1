@@ -135,18 +135,20 @@ export default function ManualBuilder() {
                  }`}
                  style={{ backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` }}
               >
+                 {/* OVR Rating */}
                  <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>{faceStats.ovr}</span>
                  </div>
                  
-                 <div className="absolute z-10" style={{ left: '26.9%', top: '13.4%', width: '49.8%', height: '49.8%' }}>
+                 {/* Player Avatar OR Specialization Icon (Using exact Canva proportions) */}
+                 <div className="absolute z-10 flex justify-center" style={{ left: '24.5%', top: '6.5%', width: '51%', height: '36.5%' }}>
                     <img 
                       src={equippedSpecialization 
                         ? `/icons/specializations/${equippedSpecialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png` 
                         : "/default-avatar.png"
                       }
                       alt={equippedSpecialization || "Pro"} 
-                      className={`w-full h-full drop-shadow-md transition-all duration-300 ${equippedSpecialization ? 'object-contain object-center scale-110' : 'object-cover object-bottom'}`} 
+                      className={`w-full h-full drop-shadow-md transition-all duration-300 ${equippedSpecialization ? 'object-contain' : 'object-cover object-bottom'}`} 
                       onError={(e) => { 
                          e.currentTarget.onerror = null; 
                          e.currentTarget.src = '/default-avatar.png'; 
@@ -154,6 +156,7 @@ export default function ManualBuilder() {
                     />
                  </div>
                  
+                 {/* Bottom Icon: Archetype */}
                  <div className="absolute z-20 flex justify-center" style={{ left: '38.9%', top: '65.8%', width: '22.1%', height: '22.1%' }}>
                     <img 
                        src={`/archetypes/${archetype.replace(/\s+/g, '-').toLowerCase()}.png`}
