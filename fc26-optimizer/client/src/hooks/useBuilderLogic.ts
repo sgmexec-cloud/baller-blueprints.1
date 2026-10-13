@@ -120,10 +120,14 @@ export function useBuilderLogic() {
       const maxApForAi = progressionData?.[aiTargetLevel]?.apAvailable ?? (Math.floor(aiTargetLevel * 1.5) + 10);
       const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
 
+      const unlockedSlotIndexes = [0, 1, 2].filter(i => aiTargetLevel >= [5, 15, 40][i]);
+      const standardSlotsCount = unlockedSlotIndexes.length;
+
       const mathResult = await calculateStatsMutation.mutateAsync({
         blueprint,
         apBudget: availableApForMath,
         gameVersion: gameVersion,
+        standardSlots: standardSlotsCount,
         unlockedMasteries: {} 
       });
 
@@ -138,50 +142,20 @@ export function useBuilderLogic() {
       setSmLevel(targetSm);
       setWfLevel(targetWf);
 
-      const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
-      const hModRaw = getModifier(newHeight, activeBounds.baseH, 4);
-      const wModRaw = getModifier(weight, activeBounds.baseW, 8);
-      const inlinePhysMods: Record<string, number> = {};
-      
-      if (activeBounds.type === 'GK') {
-        inlinePhysMods["Sprint Speed"] = hModRaw - wModRaw;
-        inlinePhysMods["Strength"] = hModRaw + wModRaw;
-        inlinePhysMods["Acceleration"] = -hModRaw - wModRaw;
+      if (mathResult && (mathResult as any).investedPoints) {
+        setAddedPoints((mathResult as any).investedPoints);
       } else {
-        inlinePhysMods["Jumping"] = hModRaw + wModRaw;
-        inlinePhysMods["Sprint Speed"] = hModRaw - wModRaw;
-        inlinePhysMods["Strength"] = hModRaw + wModRaw;
-        inlinePhysMods["Acceleration"] = -hModRaw - wModRaw;
-        inlinePhysMods["Agility"] = -hModRaw - wModRaw;
-        inlinePhysMods["Balance"] = -hModRaw + wModRaw;
-      }
-
-      if (mathResult && mathResult.stats) {
-        const newAddedPoints: Record<string, number> = {};
-        
-        mathResult.stats.forEach((statObj: any) => {
-          const statName = statObj.attribute;
-          const finalVal = statObj.final;
-          
-          const caps = getStatCaps(targetArch, statName);
-          const rawBase = caps.min || serverArchetypes?.[targetArch]?.base?.[statName] || 70;
-          const physMod = inlinePhysMods[statName] || 0;
-          
-          const targetInvested = finalVal - (rawBase + physMod);
-          
-          if (targetInvested > 0) {
-            newAddedPoints[statName] = targetInvested;
-          }
-        });
-        
-        setAddedPoints(newAddedPoints);
+        setAddedPoints({});
       }
 
       if (mathResult && mathResult.playstyles) {
         const standardList = mathResult.playstyles.standard || [];
         const newEquipped = ['', '', ''];
-        standardList.slice(0, 3).forEach((psName: string, idx: number) => {
-          newEquipped[idx] = psName;
+        
+        unlockedSlotIndexes.forEach((slotIdx, arrayIdx) => {
+          if (standardList[arrayIdx]) {
+            newEquipped[slotIdx] = standardList[arrayIdx];
+          }
         });
         setEquippedPlaystyles(newEquipped);
 
