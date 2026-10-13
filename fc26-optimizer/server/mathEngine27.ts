@@ -87,16 +87,32 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-// 👉 FIX: The Bulletproof Dictionary Lookup. This guarantees NO attribute defaults to 999,999 AP.
-function getCost(blueprintArch: string, attrName: string, currentVal: number): number {
+// 👉 THE FIX: Smart Node Traversal (Handles +2 or +3 EA node jumps natively)
+function getNextUpgrade(blueprintArch: string, attrName: string, currentVal: number): { targetLevel: number, cost: number } | null {
   const archDictKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(blueprintArch));
-  if (!archDictKey) return 999999;
+  if (!archDictKey) return null;
   
   const archDict = COST_DICT[archDictKey];
   const dictAttrKey = Object.keys(archDict).find(k => normAttr(k) === normAttr(attrName));
-  if (!dictAttrKey) return 999999;
+  if (!dictAttrKey) return null;
 
-  return archDict[dictAttrKey]?.[currentVal + 1] ?? 999999;
+  const levelData = archDict[dictAttrKey];
+  if (!levelData) return null;
+
+  // Find the lowest available level in the CSV that is strictly greater than currentVal
+  const availableLevels = Object.keys(levelData)
+     .map(Number)
+     .filter(l => !isNaN(l) && l > currentVal)
+     .sort((a, b) => a - b);
+
+  if (availableLevels.length === 0) return null;
+
+  const targetLevel = availableLevels[0];
+  const cost = levelData[targetLevel];
+  
+  if (cost === undefined || cost === null) return null;
+  
+  return { targetLevel, cost };
 }
 
 export function runMathEngine(
@@ -107,7 +123,6 @@ export function runMathEngine(
   foundationBoosts: Record<string, number> = {} 
 ): MathEngineResult {
   const archKey = blueprint.archetype;
-  
   const archetypeRows = ALL_ARCHETYPES.filter((r) => normAttr(r.Archetype) === normAttr(archKey));
 
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
@@ -142,12 +157,19 @@ export function runMathEngine(
     const matched = matchAttr(attr, attrNames);
     if (!matched) return false;
     const s = stats[matched];
+    
     if (s.current >= Math.min(s.max, hardCap)) return false;
     
-    const cost = getCost(archKey, matched, s.current);
-    if (cost > remainingAP) return false;
+    const upgrade = getNextUpgrade(archKey, matched, s.current);
+    if (!upgrade) return false; // End of the skill tree for this stat
     
-    s.current += 1; s.apSpent += cost; remainingAP -= cost;
+    if (upgrade.cost > remainingAP) return false; // Cannot afford the node
+    if (upgrade.targetLevel > s.max) return false; // Prevent exceeding archetype max
+    
+    // Jump the stat to the target node level and charge the AP
+    s.current = upgrade.targetLevel; 
+    s.apSpent += upgrade.cost; 
+    remainingAP -= upgrade.cost;
     return true;
   }
 
@@ -192,11 +214,13 @@ export function runMathEngine(
         .sort((a, b) => stats[a!].current - stats[b!].current);
         
       for (const matched of candidates) {
-        const cost = getCost(archKey, matched!, stats[matched!].current);
-        if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
+        const upgrade = getNextUpgrade(archKey, matched!, stats[matched!].current);
+        if (!upgrade) continue;
+
+        if (focusSpent + upgrade.cost <= focusBudget && remainingAP >= upgrade.cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
-            focusSpent += cost;
+            focusSpent += upgrade.cost;
             focusProgress = true;
             break;
           }
@@ -228,12 +252,14 @@ export function runMathEngine(
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const cost = getCost(archKey, matched!, stats[matched!].current);
+        const upgrade = getNextUpgrade(archKey, matched!, stats[matched!].current);
         
-        if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
+        if (!upgrade) continue;
+        
+        if (bucketSpent + upgrade.cost <= budgetLimit && remainingAP >= upgrade.cost) {
           const success = upgradeOne(matched!, effectiveCap);
           if (success) {
-            bucketSpent += cost;
+            bucketSpent += upgrade.cost;
             progress = true;
             break;
           }
@@ -251,8 +277,10 @@ export function runMathEngine(
   const spilloverPool: { attr: string; cap: number }[] = [];
   
   const sortedAttrs = [...attrNames].sort((a, b) => {
-    const costA = getCost(archKey, a, stats[a].current);
-    const costB = getCost(archKey, b, stats[b].current);
+    const upA = getNextUpgrade(archKey, a, stats[a].current);
+    const upB = getNextUpgrade(archKey, b, stats[b].current);
+    const costA = upA ? upA.cost : 999999;
+    const costB = upB ? upB.cost : 999999;
     return costA - costB;
   });
 
@@ -269,9 +297,9 @@ export function runMathEngine(
        if (!s) continue;
        
        const effectiveCap = getEffectiveCap(c.attr, c.cap);
-       const cost = getCost(archKey, c.attr, s.current);
+       const upgrade = getNextUpgrade(archKey, c.attr, s.current);
        
-       if (cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
+       if (upgrade && upgrade.cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
           const success = upgradeOne(c.attr, effectiveCap);
           if (success) progressRoundRobin = true;
        }
