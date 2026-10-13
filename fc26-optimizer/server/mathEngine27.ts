@@ -27,7 +27,6 @@ export const MASTERIES_MAP: Record<string, string[]> = {
   "Target": ["Balance", "Jumping"],
 };
 
-// 👉 FIX: The exact UI keys the client expects to render AP badges
 export const STANDARD_ATTRS = [
   "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
   "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
@@ -88,8 +87,16 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-function getUpgradeCost(archKeyLower: string, attrKeyNorm: string, fromLevel: number): number {
-  return COST_DICT[archKeyLower]?.[attrKeyNorm]?.[fromLevel + 1] ?? 999999;
+// 👉 FIX: The Bulletproof Dictionary Lookup. This guarantees NO attribute defaults to 999,999 AP.
+function getCost(blueprintArch: string, attrName: string, currentVal: number): number {
+  const archDictKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(blueprintArch));
+  if (!archDictKey) return 999999;
+  
+  const archDict = COST_DICT[archDictKey];
+  const dictAttrKey = Object.keys(archDict).find(k => normAttr(k) === normAttr(attrName));
+  if (!dictAttrKey) return 999999;
+
+  return archDict[dictAttrKey]?.[currentVal + 1] ?? 999999;
 }
 
 export function runMathEngine(
@@ -100,7 +107,6 @@ export function runMathEngine(
   foundationBoosts: Record<string, number> = {} 
 ): MathEngineResult {
   const archKey = blueprint.archetype;
-  const archKeyLower = archKey.toLowerCase();
   
   const archetypeRows = ALL_ARCHETYPES.filter((r) => normAttr(r.Archetype) === normAttr(archKey));
 
@@ -138,7 +144,7 @@ export function runMathEngine(
     const s = stats[matched];
     if (s.current >= Math.min(s.max, hardCap)) return false;
     
-    const cost = getUpgradeCost(archKeyLower, normAttr(matched), s.current);
+    const cost = getCost(archKey, matched, s.current);
     if (cost > remainingAP) return false;
     
     s.current += 1; s.apSpent += cost; remainingAP -= cost;
@@ -186,7 +192,7 @@ export function runMathEngine(
         .sort((a, b) => stats[a!].current - stats[b!].current);
         
       for (const matched of candidates) {
-        const cost = getUpgradeCost(archKeyLower, normAttr(matched!), stats[matched!].current);
+        const cost = getCost(archKey, matched!, stats[matched!].current);
         if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
@@ -222,7 +228,7 @@ export function runMathEngine(
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const cost = getUpgradeCost(archKeyLower, normAttr(matched!), stats[matched!].current);
+        const cost = getCost(archKey, matched!, stats[matched!].current);
         
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, effectiveCap);
@@ -245,8 +251,8 @@ export function runMathEngine(
   const spilloverPool: { attr: string; cap: number }[] = [];
   
   const sortedAttrs = [...attrNames].sort((a, b) => {
-    const costA = getUpgradeCost(archKeyLower, normAttr(a), stats[a].current);
-    const costB = getUpgradeCost(archKeyLower, normAttr(b), stats[b].current);
+    const costA = getCost(archKey, a, stats[a].current);
+    const costB = getCost(archKey, b, stats[b].current);
     return costA - costB;
   });
 
@@ -263,7 +269,7 @@ export function runMathEngine(
        if (!s) continue;
        
        const effectiveCap = getEffectiveCap(c.attr, c.cap);
-       const cost = getUpgradeCost(archKeyLower, normAttr(c.attr), s.current);
+       const cost = getCost(archKey, c.attr, s.current);
        
        if (cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
           const success = upgradeOne(c.attr, effectiveCap);
@@ -283,7 +289,6 @@ export function runMathEngine(
   attrNames.forEach(attr => {
     const s = stats[attr];
     if (s.current > s.base) {
-      // 👉 FIX: Map the internal engine key back to the UI's exact expected spacing!
       const uiFriendlyName = STANDARD_ATTRS.find(std => normAttr(std) === normAttr(attr)) || attr;
       investedPoints[uiFriendlyName] = s.current - s.base;
     }
