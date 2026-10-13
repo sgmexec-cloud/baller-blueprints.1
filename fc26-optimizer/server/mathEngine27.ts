@@ -93,7 +93,6 @@ export function runMathEngine(
 
   let remainingAP = apBudget;
 
-  // 👉 FIX: Normalize the client's foundation boosts strictly so they actually match engine attributes
   const normalizedBoosts: Record<string, number> = {};
   for (const [key, val] of Object.entries(foundationBoosts)) {
     normalizedBoosts[normAttr(key)] = val;
@@ -215,35 +214,33 @@ export function runMathEngine(
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. 👉 FIX: Enhanced Greedy Round-Robin Residual AP Spending
+  // 3. 👉 FULL AP UTILIZATION SPILLOVER: Unlocked greedy round-robin loop pushing to max/99
   let progressRoundRobin = true;
-  const poolSet = new Set<string>();
-  const orderedPool: { attr: string; cap: number }[] = [];
+  const spilloverPool: { attr: string; cap: number }[] = [];
   
-  const addAttrToPool = (attrName: string, cap: number) => {
-    const matched = matchAttr(attrName, attrNames);
-    if (matched && !poolSet.has(matched)) {
-       poolSet.add(matched);
-       orderedPool.push({ attr: matched, cap: getHardCap(matched, cap) });
-    }
-  };
+  // Sort attributes by cheapest upgrade cost or priority to distribute points smoothly
+  const sortedAttrs = [...attrNames].sort((a, b) => {
+    const costA = getUpgradeCost(archKey, normAttr(a), stats[a].current);
+    const costB = getUpgradeCost(archKey, normAttr(b), stats[b].current);
+    return costA - costB;
+  });
 
-  preferredAttributes.forEach(a => addAttrToPool(a, 99));
-  blueprint.coreAttributes.forEach(a => addAttrToPool(a, 99));
-  blueprint.secondaryAttributes.forEach(a => addAttrToPool(a, 95));
-  blueprint.tertiaryAttributes.forEach(a => addAttrToPool(a, 90));
-  // SAFETY FALLBACK: Append all remaining attributes so NO AP is left behind
-  attrNames.forEach(a => addAttrToPool(a, 90));
+  sortedAttrs.forEach(a => {
+    spilloverPool.push({ attr: a, cap: 99 });
+  });
 
   while (progressRoundRobin && remainingAP > 0) {
     progressRoundRobin = false;
-    for (const c of orderedPool) {
+    for (const c of spilloverPool) {
        if (remainingAP <= 0) break;
        
-       const effectiveCap = getEffectiveCap(c.attr, c.cap);
-       const cost = getUpgradeCost(archKey, normAttr(c.attr), stats[c.attr].current);
+       const s = stats[c.attr];
+       if (!s) continue;
        
-       if (cost <= remainingAP && stats[c.attr].current < Math.min(effectiveCap, stats[c.attr].max)) {
+       const effectiveCap = getEffectiveCap(c.attr, c.cap);
+       const cost = getUpgradeCost(archKey, normAttr(c.attr), s.current);
+       
+       if (cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
           const success = upgradeOne(c.attr, effectiveCap);
           if (success) progressRoundRobin = true;
        }
