@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, getArchetypeProfiles, getPlaystyles } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
