@@ -217,7 +217,10 @@ ${filterRules.join("\n")}
 - HEIGHT & WEIGHT: (Unless overridden above) You MUST provide an EXACT, definitive height (e.g., "178cm" or "5'10\"") and an EXACT weight (e.g., "72kg" or "158 lbs"). DO NOT provide ranges.
 - PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
 - 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
-- ATTRIBUTES: Select ONLY the attributes that genuinely define this player. 4-6 core, 5-7 secondary, and 4-6 tertiary attributes. 
+- ATTRIBUTES: Quality over quantity. Select ONLY the defining attributes for Level 40 builds:
+  - coreAttributes: EXACTLY 2-3 signature attributes (their absolute peak strengths).
+  - secondaryAttributes: 3-4 strong supporting attributes.
+  - tertiaryAttributes: 3-4 rounded attributes.
 - Output ONLY raw JSON.`;
 
       const stage2Response = await invokeLLM({
@@ -315,7 +318,6 @@ ${filterRules.join("\n")}
       let earnedSpecPlaystyle: string | undefined = undefined;
       let earnedSpecName: string | undefined = undefined;
 
-      // 👉 FIX: Normalize the lookup for input.foundationBoosts so verification doesn't fail
       if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
         const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
           const rawAttrKey = req.attr.replace(/\s+/g, '').toLowerCase();
@@ -357,7 +359,6 @@ ${filterRules.join("\n")}
              const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
              const finalStatValue = statObj ? statObj.final : 0;
              
-             // 👉 FIX: Normalize the lookup here too
              const matchingBoostKey = Object.keys(input.foundationBoosts).find(k => k.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
              const boost = matchingBoostKey ? input.foundationBoosts[matchingBoostKey] : 0;
              
