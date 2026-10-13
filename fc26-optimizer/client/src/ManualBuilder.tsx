@@ -31,7 +31,6 @@ export default function ManualBuilder() {
     weight, setWeight,
     addedPoints, setAddedPoints,
     smLevel, wfLevel,
-    gameVersion, setGameVersion,
     clubLevel, setClubLevel,
     equippedFacilities,
     unlockedMasteries,
@@ -77,33 +76,25 @@ export default function ManualBuilder() {
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
-        {/* MAIN APP LOGO (Non-sticky, scrolls up) */}
+        {/* MAIN APP LOGO (Full width, Non-sticky) */}
         <div className="flex justify-center items-center mb-4 pt-2">
-          <img src="/clubs-dna-logo.png" alt="ClubsDNA Logo" className="h-7 object-contain drop-shadow-md" />
+          <img src="/clubs-dna-logo.png" alt="ClubsDNA Logo" className="w-full object-contain drop-shadow-md" />
         </div>
 
         {/* STICKY HEADER CARD */}
         <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3">
            
-           {/* STICKY CONTROLS ROW (AI, AP, Level, App Icon) */}
+           {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
-              <button 
-                onClick={() => {
-                  setAiTargetLevel(level);
-                  setAiArchetypeLock("AUTO");
-                  setIsAiModalOpen(true);
-                }}
-                className="bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(77,141,255,0.3)] hover:opacity-90 transition-all"
-              >
-                <span>✨ AI Auto-Build</span>
-              </button>
+              {/* App Branding Icon (Moved to the left) */}
+              <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-4">
                 {/* AP Balance */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
-                    <span className="text-[#080B14] font-black text-[6px]">AP</span>
+                  <span className="text-[#F4F7FB] font-bold text-[14px]">{availableAp.toLocaleString()}</span>
+                  <div className="w-4 h-4 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
+                    <span className="text-[#080B14] font-black text-[7px]">AP</span>
                   </div>
                 </div>
                 
@@ -112,19 +103,16 @@ export default function ManualBuilder() {
                   <select 
                     value={level} 
                     onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-                    className="bg-transparent font-bold text-[#21E6A4] text-[13px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
+                    className="bg-transparent font-bold text-[#21E6A4] text-[14px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
                   >
                     {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
                       <option key={l} value={l} className="bg-[#131A2A] text-[#21E6A4]">{l}</option>
                     ))}
                   </select>
-                  <div className="w-3.5 h-3.5 rounded-full bg-[#21E6A4] flex items-center justify-center border border-[#10b981]">
-                     <svg className="w-2 h-2 text-[#080B14]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
+                  <div className="w-4 h-4 rounded-full bg-[#21E6A4] flex items-center justify-center border border-[#10b981]">
+                     <svg className="w-2.5 h-2.5 text-[#080B14]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
                   </div>
                 </div>
-
-                {/* App Branding Icon */}
-                <img src="/app-icon.png" alt="App Icon" className="w-6 h-6 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
               </div>
            </div>
 
@@ -143,7 +131,7 @@ export default function ManualBuilder() {
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>{faceStats.ovr}</span>
                  </div>
                  
-                 {/* Player Avatar OR Specialization Icon (Using exact pixel proportions) */}
+                 {/* Player Avatar OR Specialization Icon */}
                  <div className="absolute z-10 flex justify-center" style={{ left: '11.8px', top: '14.7px', width: '77.1px', height: '77.1px' }}>
                     <img 
                       src={equippedSpecialization 
@@ -221,17 +209,22 @@ export default function ManualBuilder() {
            </div>
         </div>
 
+        {/* BUILD MODE OPTIONS (Replaces FC26/FC27 Toggles) */}
         <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
           <button
-            onClick={() => { setGameVersion("FC26"); setAddedPoints({}); }}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${gameVersion === "FC26" ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" : "text-[#59657A] hover:text-[#8E9AAF]"}`}
+            className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]"
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >FC 26 DATA</button>
+          >MANUAL BUILD</button>
+          
           <button
-            onClick={() => { setGameVersion("FC27"); setAddedPoints({}); }}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${gameVersion === "FC27" ? "bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]" : "text-[#59657A] hover:text-[#8E9AAF]"}`}
+            onClick={() => {
+              setAiTargetLevel(level);
+              setAiArchetypeLock("AUTO");
+              setIsAiModalOpen(true);
+            }}
+            className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all text-[#59657A] hover:text-[#8E9AAF] hover:bg-[#131A2A]"
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >FC 27 DATA</button>
+          >✨ AI AUTO-BUILD</button>
         </div>
 
         {/* TAB RENDERING VIA EXTRACTED SUB-COMPONENTS */}
