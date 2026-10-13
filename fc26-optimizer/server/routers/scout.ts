@@ -2,7 +2,6 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, getArchetypeProfiles, getPlaystyles } from "../csvLoader";
-// FIX: Updated import path to point to mathEngine27
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
@@ -316,13 +315,16 @@ ${filterRules.join("\n")}
       let earnedSpecPlaystyle: string | undefined = undefined;
       let earnedSpecName: string | undefined = undefined;
 
+      // 👉 FIX: Normalize the lookup for input.foundationBoosts so verification doesn't fail
       if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
         const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
           const rawAttrKey = req.attr.replace(/\s+/g, '').toLowerCase();
           const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === rawAttrKey);
           const finalStatValue = attrKey ? result.stats.find(s => s.attribute === attrKey)?.final || 0 : 0;
           
-          const boost = input.foundationBoosts[rawAttrKey] || 0;
+          const matchingBoostKey = Object.keys(input.foundationBoosts).find(k => k.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
+          const boost = matchingBoostKey ? input.foundationBoosts[matchingBoostKey] : 0;
+          
           return (finalStatValue + boost) >= req.val;
         });
 
@@ -355,7 +357,10 @@ ${filterRules.join("\n")}
              const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
              const finalStatValue = statObj ? statObj.final : 0;
              
-             const boost = input.foundationBoosts[rawAttrKey] || 0;
+             // 👉 FIX: Normalize the lookup here too
+             const matchingBoostKey = Object.keys(input.foundationBoosts).find(k => k.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
+             const boost = matchingBoostKey ? input.foundationBoosts[matchingBoostKey] : 0;
+             
              return (finalStatValue + boost) >= target;
           };
 
