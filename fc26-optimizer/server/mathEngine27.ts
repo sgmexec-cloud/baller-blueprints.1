@@ -75,7 +75,7 @@ export function runMathEngine(
   apBudget: number, 
   customSlots: number = 0,
   preferredAttributes: string[] = [], 
-  unlockedMasteries: string[] = []
+  foundationBoosts: Record<string, number> = {} // 👉 NEW: Receives aggregated boosts from client
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
@@ -91,27 +91,17 @@ export function runMathEngine(
     attrNames.push(attr);
   }
 
-  for (const mastery of unlockedMasteries) {
-    const masteryKey = Object.keys(MASTERIES_MAP).find(k => k.toLowerCase() === mastery.toLowerCase());
-    if (masteryKey) {
-      const boosts = MASTERIES_MAP[masteryKey];
-      for (const boostAttr of boosts) {
-        const matched = matchAttr(boostAttr, attrNames);
-        if (matched && stats[matched]) {
-          if (stats[matched].base < stats[matched].max) {
-            stats[matched].base += 1;
-            stats[matched].current += 1;
-          }
-        }
-      }
-    }
-  }
-
   let remainingAP = apBudget;
 
   function getHardCap(attrName: string, defaultCap: number): number {
     const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
     return isPreferred ? 99 : defaultCap;
+  }
+  
+  // 👉 NEW: Calculates net target after deducting free foundation boosts
+  function getEffectiveCap(attrName: string, absoluteCap: number): number {
+    const boost = foundationBoosts[normAttr(attrName)] || 0;
+    return Math.max(0, absoluteCap - boost);
   }
 
   function upgradeOne(attr: string, hardCap: number = 99): boolean {
@@ -125,10 +115,11 @@ export function runMathEngine(
     return true;
   }
 
-  function upgradeToMin(attr: string, target: number): void {
+  function upgradeToMin(attr: string, absoluteTarget: number): void {
     const matched = matchAttr(attr, attrNames);
     if (!matched) return;
-    while (stats[matched].current < target && remainingAP > 0) {
+    const effectiveTarget = getEffectiveCap(matched, absoluteTarget);
+    while (stats[matched].current < effectiveTarget && remainingAP > 0) {
       if (!upgradeOne(matched, 99)) break;
     }
   }
@@ -162,13 +153,13 @@ export function runMathEngine(
       
       const candidates = preferredAttributes
         .map(a => matchAttr(a, attrNames))
-        .filter(m => m !== null && stats[m!].current < Math.min(99, stats[m!].max))
+        .filter(m => m !== null && stats[m!].current < Math.min(getEffectiveCap(m!, 99), stats[m!].max))
         .sort((a, b) => stats[a!].current - stats[b!].current);
         
       for (const matched of candidates) {
         const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
         if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
-          const success = upgradeOne(matched!, 99);
+          const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
             focusSpent += cost;
             focusProgress = true;
@@ -195,16 +186,18 @@ export function runMathEngine(
         .filter(m => {
           if (!m) return false;
           const dynamicCap = getHardCap(m, baseHardCap);
-          return stats[m].current < Math.min(dynamicCap, stats[m].max);
+          const effectiveCap = getEffectiveCap(m, dynamicCap);
+          return stats[m].current < Math.min(effectiveCap, stats[m].max);
         })
         .sort((a, b) => stats[a!].current - stats[b!].current);
       
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
+        const effectiveCap = getEffectiveCap(matched!, dynamicCap);
         const cost = getUpgradeCost(archKey, normAttr(matched!), stats[matched!].current);
         
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
-          const success = upgradeOne(matched!, dynamicCap);
+          const success = upgradeOne(matched!, effectiveCap);
           if (success) {
             bucketSpent += cost;
             progress = true;
@@ -219,57 +212,31 @@ export function runMathEngine(
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. Identity Bonus Pass
-  let progress = true;
-  while (progress && remainingAP > 0) {
-    progress = false;
+  // 3. 👉 NEW: Greedy Round-Robin Residual AP Spending
+  // Cycles through all attributes to consume 100% of remaining AP, focusing heavily on secondary traits
+  let progressRoundRobin = true;
+  while (progressRoundRobin && remainingAP > 0) {
+    progressRoundRobin = false;
     
-    const bonusCandidates = [
+    const roundRobinPool = [
       ...preferredAttributes.map(a => ({ attr: a, cap: 99 })), 
+      ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) })),
       ...blueprint.coreAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) })),
-      ...blueprint.secondaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 95) })),
-      ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 90) }))
+      ...blueprint.tertiaryAttributes.map(a => ({ attr: a, cap: getHardCap(a, 99) }))
     ];
 
-    const options = bonusCandidates
-      .map(c => {
-        const matched = matchAttr(c.attr, attrNames);
-        if (!matched) return null;
-        const s = stats[matched];
-        if (s.current >= c.cap || s.current >= s.max) return null;
-        return { matched, cost: getUpgradeCost(archKey, normAttr(matched), s.current), cap: c.cap };
-      })
-      .filter((o): o is { matched: string; cost: number; cap: number } => o !== null && o.cost <= remainingAP)
-      .sort((a, b) => a.cost - b.cost); 
-
-    if (options.length > 0) {
-      const success = upgradeOne(options[0].matched, options[0].cap);
-      if (success) {
-        progress = true;
-      }
-    }
-  }
-
-  // 4. Hero Spillover Pass
-  let spilloverProgress = true;
-  while (spilloverProgress && remainingAP > 0) {
-    spilloverProgress = false;
-    
-    const spilloverOptions = attrNames
-      .map(attr => {
-        const s = stats[attr];
-        const dynamicCap = getHardCap(attr, 83);
-        if (s.current >= dynamicCap || s.current >= s.max) return null; 
-        return { attr, cost: getUpgradeCost(archKey, normAttr(attr), s.current), cap: dynamicCap };
-      })
-      .filter((o): o is { attr: string; cost: number, cap: number } => o !== null && o.cost <= remainingAP)
-      .sort((a, b) => a.cost - b.cost); 
-      
-    if (spilloverOptions.length > 0) {
-      const success = upgradeOne(spilloverOptions[0].attr, spilloverOptions[0].cap);
-      if (success) {
-        spilloverProgress = true;
-      }
+    for (const c of roundRobinPool) {
+       if (remainingAP <= 0) break;
+       const matched = matchAttr(c.attr, attrNames);
+       if (!matched) continue;
+       
+       const effectiveCap = getEffectiveCap(matched, c.cap);
+       const cost = getUpgradeCost(archKey, normAttr(matched), stats[matched].current);
+       
+       if (cost <= remainingAP && stats[matched].current < Math.min(effectiveCap, stats[matched].max)) {
+          const success = upgradeOne(matched, effectiveCap);
+          if (success) progressRoundRobin = true;
+       }
     }
   }
 
