@@ -2,7 +2,8 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, getArchetypeProfiles, getPlaystyles } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
+// FIX: Updated import path to point to mathEngine27
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
@@ -266,7 +267,7 @@ ${filterRules.join("\n")}
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
-      foundationBoosts: z.record(z.string(), z.number()).optional().default({}) // 👉 NEW: Accept boosts
+      foundationBoosts: z.record(z.string(), z.number()).optional().default({}) 
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
@@ -321,7 +322,6 @@ ${filterRules.join("\n")}
           const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === rawAttrKey);
           const finalStatValue = attrKey ? result.stats.find(s => s.attribute === attrKey)?.final || 0 : 0;
           
-          // 👉 NEW: Include foundation boosts in final validation
           const boost = input.foundationBoosts[rawAttrKey] || 0;
           return (finalStatValue + boost) >= req.val;
         });
@@ -355,7 +355,6 @@ ${filterRules.join("\n")}
              const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
              const finalStatValue = statObj ? statObj.final : 0;
              
-             // 👉 NEW: Include foundation boosts in final validation
              const boost = input.foundationBoosts[rawAttrKey] || 0;
              return (finalStatValue + boost) >= target;
           };
