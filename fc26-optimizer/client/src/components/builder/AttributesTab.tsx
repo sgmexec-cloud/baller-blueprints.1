@@ -1,6 +1,6 @@
 import React from 'react';
 import { STAT_GROUPS, CSV_STAT_MAP } from '@/constants/builderData';
-import { getStatCaps } from '@/utils/builderUtils';
+import { getStatCaps, getCostForPoints } from '@/utils/builderUtils';
 import type { AttributesTabProps } from '@/types/builder';
 
 export const AttributesTab: React.FC<AttributesTabProps> = ({
@@ -84,7 +84,6 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
                     const val = currentStats?.[stat] || 70;
                     const displayName = CSV_STAT_MAP[stat] || stat;
                     
-                    // FIX: Retrieve true stat caps for current archetype
                     const caps = getStatCaps(archetype, stat);
                     const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
                     
@@ -94,6 +93,7 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
                     
                     const invested = addedPoints[stat] || 0;
                     const rawVal = rawBase + invested;
+                    const apSpent = getCostForPoints(archetype, stat, rawBase, invested);
                     
                     const displayVal = viewMode === 'raw' ? rawVal : val;
                     const showModifiers = viewMode === 'boosted';
@@ -117,6 +117,11 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
                                  {showModifiers && mastMod !== 0 && (
                                    <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
                                      <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
+                                   </div>
+                                 )}
+                                 {apSpent > 0 && (
+                                   <div className="flex items-center gap-0.5 px-1.5 py-[1px] rounded bg-[#facc15]/15 border border-[#facc15]/30 text-[#facc15]">
+                                     <span className="text-[8.5px] font-black">{apSpent} AP</span>
                                    </div>
                                  )}
                               </div>
