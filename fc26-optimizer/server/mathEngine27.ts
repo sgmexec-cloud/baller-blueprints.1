@@ -1,4 +1,5 @@
 import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT, PLAYSTYLES } from "./csvLoader";
+import { getCostForPoints, getApCost } from "../client/src/utils/builderUtils"; // Note: engine uses server-side cost calculation or csvLoader
 
 export const ATTR_CATEGORIES: Record<string, string[]> = {
   Pace: ["Acceleration", "SprintSpeed"],
@@ -87,30 +88,16 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-function getNextUpgrade(blueprintArch: string, attrName: string, currentVal: number): { targetLevel: number, cost: number } | null {
-  const archDictKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(blueprintArch));
-  if (!archDictKey) return null;
+function getUpgradeCost(archKey: string, attrKey: string, rawBase: number, currentPointsAdded: number): number {
+  const dictArchKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(archKey));
+  if (!dictArchKey) return 999999;
   
-  const archDict = COST_DICT[archDictKey];
-  const dictAttrKey = Object.keys(archDict).find(k => normAttr(k) === normAttr(attrName));
-  if (!dictAttrKey) return null;
+  const archDict = COST_DICT[dictArchKey];
+  const dictAttrKey = Object.keys(archDict).find(k => normAttr(k) === normAttr(attrKey));
+  if (!dictAttrKey) return 999999;
 
-  const levelData = archDict[dictAttrKey];
-  if (!levelData) return null;
-
-  const availableLevels = Object.keys(levelData)
-     .map(Number)
-     .filter(l => !isNaN(l) && l > currentVal)
-     .sort((a, b) => a - b);
-
-  if (availableLevels.length === 0) return null;
-
-  const targetLevel = availableLevels[0];
-  const cost = levelData[targetLevel];
-  
-  if (cost === undefined || cost === null) return null;
-  
-  return { targetLevel, cost };
+  const nextLevel = rawBase + currentPointsAdded + 1;
+  return archDict[dictAttrKey]?.[nextLevel] ?? 999999;
 }
 
 export function runMathEngine(
@@ -125,12 +112,13 @@ export function runMathEngine(
 
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
-  const stats: Record<string, { base: number; max: number; current: number; apSpent: number }> = {};
+  const stats: Record<string, { base: number; max: number; current: number; pointsAdded: number; apSpent: number }> = {};
   const attrNames: string[] = [];
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    stats[attr] = { base: parseInt(row["Base Value"], 10), max: parseInt(row["Max Value"], 10), current: parseInt(row["Base Value"], 10), apSpent: 0 };
+    const baseVal = parseInt(row["Base Value"], 10) || 70;
+    stats[attr] = { base: baseVal, max: parseInt(row["Max Value"], 10) || 99, current: baseVal, pointsAdded: 0, apSpent: 0 };
     attrNames.push(attr);
   }
 
@@ -158,14 +146,13 @@ export function runMathEngine(
     
     if (s.current >= Math.min(s.max, hardCap)) return false;
     
-    const upgrade = getNextUpgrade(archKey, matched, s.current);
-    if (!upgrade) return false; 
-    if (upgrade.cost > remainingAP) return false; 
-    if (upgrade.targetLevel > s.max) return false; 
+    const cost = getUpgradeCost(archKey, matched, s.base, s.pointsAdded);
+    if (cost > remainingAP) return false;
     
-    s.current = upgrade.targetLevel; 
-    s.apSpent += upgrade.cost; 
-    remainingAP -= upgrade.cost;
+    s.current += 1;
+    s.pointsAdded += 1;
+    s.apSpent += cost;
+    remainingAP -= cost;
     return true;
   }
 
@@ -210,13 +197,11 @@ export function runMathEngine(
         .sort((a, b) => stats[a!].current - stats[b!].current);
         
       for (const matched of candidates) {
-        const upgrade = getNextUpgrade(archKey, matched!, stats[matched!].current);
-        if (!upgrade) continue;
-
-        if (focusSpent + upgrade.cost <= focusBudget && remainingAP >= upgrade.cost) {
+        const cost = getUpgradeCost(archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
+        if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
-            focusSpent += upgrade.cost;
+            focusSpent += cost;
             focusProgress = true;
             break;
           }
@@ -248,14 +233,12 @@ export function runMathEngine(
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const upgrade = getNextUpgrade(archKey, matched!, stats[matched!].current);
+        const cost = getUpgradeCost(archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         
-        if (!upgrade) continue;
-        
-        if (bucketSpent + upgrade.cost <= budgetLimit && remainingAP >= upgrade.cost) {
+        if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, effectiveCap);
           if (success) {
-            bucketSpent += upgrade.cost;
+            bucketSpent += cost;
             progress = true;
             break;
           }
@@ -273,10 +256,8 @@ export function runMathEngine(
   const spilloverPool: { attr: string; cap: number }[] = [];
   
   const sortedAttrs = [...attrNames].sort((a, b) => {
-    const upA = getNextUpgrade(archKey, a, stats[a].current);
-    const upB = getNextUpgrade(archKey, b, stats[b].current);
-    const costA = upA ? upA.cost : 999999;
-    const costB = upB ? upB.cost : 999999;
+    const costA = getUpgradeCost(archKey, a, stats[a].base, stats[a].pointsAdded);
+    const costB = getUpgradeCost(archKey, b, stats[b].base, stats[b].pointsAdded);
     return costA - costB;
   });
 
@@ -293,21 +274,19 @@ export function runMathEngine(
        if (!s) continue;
        
        const effectiveCap = getEffectiveCap(c.attr, c.cap);
-       const upgrade = getNextUpgrade(archKey, c.attr, s.current);
+       const cost = getUpgradeCost(archKey, c.attr, s.base, s.pointsAdded);
        
-       if (upgrade && upgrade.cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
+       if (cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
           const success = upgradeOne(c.attr, effectiveCap);
           if (success) progressRoundRobin = true;
        }
     }
   }
 
-  // 👉 4. MICRO-SPEND SWEEP: Exhausts any final leftover dust AP by checking every stat regardless of bucket
+  // 4. MICRO-SPEND SWEEP: Exhausts any final leftover dust AP
   let microProgress = true;
   while (microProgress && remainingAP > 0) {
     microProgress = false;
-    
-    // Find any upgrade across all stats that costs LESS than or equal to the remaining AP
     let cheapestAttr: string | null = null;
     let lowestCost = Infinity;
 
@@ -315,9 +294,9 @@ export function runMathEngine(
       const s = stats[attr];
       if (s.current >= s.max) continue;
       
-      const upgrade = getNextUpgrade(archKey, attr, s.current);
-      if (upgrade && upgrade.cost <= remainingAP && upgrade.cost < lowestCost) {
-        lowestCost = upgrade.cost;
+      const cost = getUpgradeCost(archKey, attr, s.base, s.pointsAdded);
+      if (cost <= remainingAP && cost < lowestCost) {
+        lowestCost = cost;
         cheapestAttr = attr;
       }
     }
@@ -338,9 +317,9 @@ export function runMathEngine(
   
   attrNames.forEach(attr => {
     const s = stats[attr];
-    if (s.current > s.base) {
+    if (s.pointsAdded > 0) {
       const uiFriendlyName = STANDARD_ATTRS.find(std => normAttr(std) === normAttr(attr)) || attr;
-      investedPoints[uiFriendlyName] = s.current - s.base;
+      investedPoints[uiFriendlyName] = s.pointsAdded;
     }
   });
 
@@ -351,7 +330,8 @@ export function runMathEngine(
       acc[stat.category] = acc[stat.category] || [];
       acc[stat.category].push(stat);
       return acc;
-    }, {} as Record<string, StatResult[]>)
+    }, {} as Record<string, StatResult[]>),
+    investedPoints
   };
 }
 
