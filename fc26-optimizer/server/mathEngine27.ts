@@ -11,7 +11,6 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   "Weak Foot": ["WeakFoot"],
 };
 
-// 👉 NEW FC 27 FEATURE: Global Masteries Dictionary
 export const MASTERIES_MAP: Record<string, string[]> = {
   "Shot Stopper": ["GKPositioning", "GKReflexes"],
   "Sweeper Keeper": ["GKHandling", "GKDiving"],
@@ -41,6 +40,7 @@ export interface MathEngineResult {
   stats: StatResult[];
   totalApSpent: number;
   byCategory: Record<string, StatResult[]>;
+  investedPoints: Record<string, number>;
 }
 
 export interface ScoutingBlueprint {
@@ -75,7 +75,7 @@ export function runMathEngine(
   apBudget: number, 
   customSlots: number = 0,
   preferredAttributes: string[] = [], 
-  unlockedMasteries: string[] = [] // 👉 ADDED: FC27 Masteries Array
+  unlockedMasteries: string[] = []
 ): MathEngineResult {
   const archKey = blueprint.archetype.toLowerCase();
   const archetypeRows = ALL_ARCHETYPES.filter((r) => r.Archetype.trim().toLowerCase() === archKey);
@@ -91,7 +91,6 @@ export function runMathEngine(
     attrNames.push(attr);
   }
 
-  // 👉 NEW: Apply Masteries Boosts BEFORE spending any AP!
   for (const mastery of unlockedMasteries) {
     const masteryKey = Object.keys(MASTERIES_MAP).find(k => k.toLowerCase() === mastery.toLowerCase());
     if (masteryKey) {
@@ -99,7 +98,6 @@ export function runMathEngine(
       for (const boostAttr of boosts) {
         const matched = matchAttr(boostAttr, attrNames);
         if (matched && stats[matched]) {
-          // Permanently boost the base stat by +1 if it hasn't hit the absolute ceiling yet
           if (stats[matched].base < stats[matched].max) {
             stats[matched].base += 1;
             stats[matched].current += 1;
@@ -145,7 +143,11 @@ export function runMathEngine(
       if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10));
     }
   }
-  if (blueprint.specialisationMinAttrs) blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
+  
+  if (blueprint.specialisationMinAttrs) {
+    blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
+  }
+  
   upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
   upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
 
@@ -277,6 +279,14 @@ export function runMathEngine(
     return { attribute: attr, base: s.base, final: s.current, max: s.max, apSpent: s.apSpent, category: cat };
   });
 
+  const investedPoints: Record<string, number> = {};
+  attrNames.forEach(attr => {
+    const s = stats[attr];
+    if (s.current > s.base) {
+      investedPoints[attr] = s.current - s.base;
+    }
+  });
+
   return {
     stats: statResults,
     totalApSpent: statResults.reduce((sum, s) => sum + s.apSpent, 0),
@@ -284,7 +294,8 @@ export function runMathEngine(
       acc[stat.category] = acc[stat.category] || [];
       acc[stat.category].push(stat);
       return acc;
-    }, {} as Record<string, StatResult[]>)
+    }, {} as Record<string, StatResult[]>),
+    investedPoints
   };
 }
 
