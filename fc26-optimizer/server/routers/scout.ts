@@ -2,7 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getScoutingContext, getArchetypeProfiles, getPlaystyles } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine";
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
@@ -266,7 +266,7 @@ ${filterRules.join("\n")}
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
-      unlockedMasteries: z.record(z.string(), z.number()).optional().default({}) 
+      foundationBoosts: z.record(z.string(), z.number()).optional().default({}) // 👉 NEW: Accept boosts
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots || 0;
@@ -304,14 +304,12 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      const activeMasteries = Object.keys(input.unlockedMasteries).filter(k => input.unlockedMasteries[k] > 0);
-
       const result = runMathEngine(
         engineBlueprint, 
         input.apBudget, 
         customSlots, 
         input.preferredAttributes || [], 
-        activeMasteries 
+        input.foundationBoosts
       );
 
       let earnedSpecPlaystyle: string | undefined = undefined;
@@ -319,9 +317,13 @@ ${filterRules.join("\n")}
 
       if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
         const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
-          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === req.attr.replace(/\s+/g, '').toLowerCase());
+          const rawAttrKey = req.attr.replace(/\s+/g, '').toLowerCase();
+          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === rawAttrKey);
           const finalStatValue = attrKey ? result.stats.find(s => s.attribute === attrKey)?.final || 0 : 0;
-          return finalStatValue >= req.val;
+          
+          // 👉 NEW: Include foundation boosts in final validation
+          const boost = input.foundationBoosts[rawAttrKey] || 0;
+          return (finalStatValue + boost) >= req.val;
         });
 
         if (hasEarnedSpecialisation) {
@@ -349,8 +351,13 @@ ${filterRules.join("\n")}
           const checkReq = (attrName: string | undefined, reqVal: string | number | undefined) => {
              if (!attrName || !reqVal) return true;
              const target = Number(reqVal);
-             const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === attrName.replace(/\s+/g, '').toLowerCase());
-             return statObj ? statObj.final >= target : false;
+             const rawAttrKey = attrName.replace(/\s+/g, '').toLowerCase();
+             const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
+             const finalStatValue = statObj ? statObj.final : 0;
+             
+             // 👉 NEW: Include foundation boosts in final validation
+             const boost = input.foundationBoosts[rawAttrKey] || 0;
+             return (finalStatValue + boost) >= target;
           };
 
           const met1 = checkReq(realReqs.Req_Attr1 || realReqs.Attr1, realReqs.Req_Val1 || realReqs.Val1);
