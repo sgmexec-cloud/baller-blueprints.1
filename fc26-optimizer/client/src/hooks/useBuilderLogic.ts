@@ -39,12 +39,13 @@ export function useBuilderLogic() {
   const [facTouchStart, setFacTouchStart] = useState<number | null>(null);
   const [facTouchEnd, setFacTouchEnd] = useState<number | null>(null);
 
-  // AI Feature State
+  // AI Feature State (Updated for 2-Step Flow)
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiArchetypeLock, setAiArchetypeLock] = useState<string>("AUTO");
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
+  const [aiBlueprint, setAiBlueprint] = useState<any>(null); // 👉 NEW: Holds the blueprint for Step 2
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -92,7 +93,8 @@ export function useBuilderLogic() {
     setExpandedPerk(null);
   };
 
-  const handleRunAiBuild = async () => {
+  // 👉 NEW: Phase 1 of AI Build - Get the Blueprint & show Step 2 UI
+  const handleGenerateBlueprint = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     
@@ -105,14 +107,32 @@ export function useBuilderLogic() {
         playerIdentity: finalPrompt,
         gameVersion: gameVersion
       });
+      
+      if (aiArchetypeLock === "AUTO") {
+        const targetArch = blueprint.archetype && serverArchetypes?.[blueprint.archetype] ? blueprint.archetype : archetype;
+        setAiArchetypeLock(targetArch);
+      }
+      
+      setAiBlueprint(blueprint);
+    } catch (error) {
+      console.error("AI Generation failed:", error);
+      alert("Failed to generate blueprint. Check your inputs or API key.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
-      const targetArch = aiArchetypeLock !== "AUTO" && serverArchetypes?.[aiArchetypeLock]
-        ? aiArchetypeLock
-        : (blueprint.archetype && serverArchetypes?.[blueprint.archetype] ? blueprint.archetype : archetype);
+  // 👉 NEW: Phase 2 of AI Build - Run math engine with confirmed level & foundation boosts
+  const handleFinalizeBuild = async () => {
+    if (!aiBlueprint) return;
+    setIsGeneratingAi(true);
+
+    try {
+      const targetArch = aiBlueprint.archetype && serverArchetypes?.[aiBlueprint.archetype] ? aiBlueprint.archetype : archetype;
       
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
-      const targetSm = blueprint.skillMoves || starCaps.sm.min;
-      const targetWf = blueprint.weakFoot || starCaps.wf.min;
+      const targetSm = aiBlueprint.skillMoves || starCaps.sm.min;
+      const targetWf = aiBlueprint.weakFoot || starCaps.wf.min;
 
       const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
       const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
@@ -123,22 +143,64 @@ export function useBuilderLogic() {
       const unlockedSlotIndexes = [0, 1, 2].filter(i => aiTargetLevel >= [5, 15, 40][i]);
       const standardSlotsCount = unlockedSlotIndexes.length;
 
+      // Calculate Foundation Boosts for the math engine offset
+      const foundationBoosts: Record<string, number> = {};
+      const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
+      
+      const newHeight = aiBlueprint.heightRange ? parseInt(aiBlueprint.heightRange) : height;
+      const newWeight = aiBlueprint.weightRange ? parseInt(aiBlueprint.weightRange) : weight;
+      const safeHeight = isNaN(newHeight) ? height : newHeight;
+      const safeWeight = isNaN(newWeight) ? weight : newWeight;
+
+      const hModRaw = getModifier(safeHeight, activeBounds.baseH, 4);
+      const wModRaw = getModifier(safeWeight, activeBounds.baseW, 8);
+      
+      if (activeBounds.type === 'GK') {
+        foundationBoosts["Sprint Speed"] = hModRaw - wModRaw;
+        foundationBoosts["Strength"] = hModRaw + wModRaw;
+        foundationBoosts["Acceleration"] = -hModRaw - wModRaw;
+      } else {
+        foundationBoosts["Jumping"] = hModRaw + wModRaw;
+        foundationBoosts["Sprint Speed"] = hModRaw - wModRaw;
+        foundationBoosts["Strength"] = hModRaw + wModRaw;
+        foundationBoosts["Acceleration"] = -hModRaw - wModRaw;
+        foundationBoosts["Agility"] = -hModRaw - wModRaw;
+        foundationBoosts["Balance"] = -hModRaw + wModRaw;
+      }
+
+      Object.entries(equippedFacilities).forEach(([name, tier]) => {
+        const facility = FACILITIES[name];
+        if (facility) {
+          const boostAmount = facility.boosts[tier - 1];
+          facility.stats.forEach(stat => { 
+            foundationBoosts[stat] = (foundationBoosts[stat] || 0) + boostAmount; 
+          });
+        }
+      });
+
+      const archMastery = MASTERIES[targetArch];
+      const masteryStatus = unlockedMasteries[targetArch];
+      if (archMastery && masteryStatus) {
+        if (masteryStatus.l10 && archMastery.l10) { 
+          Object.entries(archMastery.l10).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        }
+        if (masteryStatus.l30 && archMastery.l30) { 
+          Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        }
+      }
+
       const mathResult = await calculateStatsMutation.mutateAsync({
-        blueprint,
+        blueprint: aiBlueprint,
         apBudget: availableApForMath,
         gameVersion: gameVersion,
         standardSlots: standardSlotsCount,
-        unlockedMasteries: {} 
+        foundationBoosts: foundationBoosts
       });
 
       setLevel(aiTargetLevel);
       setArchetype(targetArch);
-      
-      const newHeight = blueprint.heightRange ? parseInt(blueprint.heightRange) : height;
-      const newWeight = blueprint.weightRange ? parseInt(blueprint.weightRange) : weight;
-      if (!isNaN(newHeight)) setHeight(newHeight);
-      if (!isNaN(newWeight)) setWeight(newWeight);
-
+      setHeight(safeHeight);
+      setWeight(safeWeight);
       setSmLevel(targetSm);
       setWfLevel(targetWf);
 
@@ -163,12 +225,7 @@ export function useBuilderLogic() {
           const specUpper = mathResult.playstyles.specialisation.toUpperCase();
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
           const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
-          
-          if (matchedSpec) {
-            setEquippedSpecialization(matchedSpec.name);
-          } else {
-            setEquippedSpecialization(null);
-          }
+          setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
         } else {
           setEquippedSpecialization(null);
         }
@@ -176,9 +233,10 @@ export function useBuilderLogic() {
 
       setIsAiModalOpen(false);
       setAiPrompt("");
+      setAiBlueprint(null);
     } catch (error) {
       console.error("AI Generation failed:", error);
-      alert("Failed to generate build. Check your inputs or API key.");
+      alert("Failed to finalize build. Check your connection.");
     } finally {
       setIsGeneratingAi(false);
     }
@@ -556,7 +614,9 @@ export function useBuilderLogic() {
     isGeneratingAi,
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
+    aiBlueprint, setAiBlueprint,
     serverArchetypes,
+    progressionData,
     isArchLoading, isProgLoading,
     maxAp, activeBounds, activeStarCaps,
     physicalModifiers, facilityModifiers, masteryModifiers,
@@ -564,7 +624,7 @@ export function useBuilderLogic() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
     fac1, fac2, hasEmptySlot, remainingBudget,
-    handleRunAiBuild, openFacilitiesModal, handleSelectFacilityView,
+    handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization,
