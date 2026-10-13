@@ -87,7 +87,6 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-// 👉 THE FIX: Smart Node Traversal (Handles +2 or +3 EA node jumps natively)
 function getNextUpgrade(blueprintArch: string, attrName: string, currentVal: number): { targetLevel: number, cost: number } | null {
   const archDictKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(blueprintArch));
   if (!archDictKey) return null;
@@ -99,7 +98,6 @@ function getNextUpgrade(blueprintArch: string, attrName: string, currentVal: num
   const levelData = archDict[dictAttrKey];
   if (!levelData) return null;
 
-  // Find the lowest available level in the CSV that is strictly greater than currentVal
   const availableLevels = Object.keys(levelData)
      .map(Number)
      .filter(l => !isNaN(l) && l > currentVal)
@@ -161,12 +159,10 @@ export function runMathEngine(
     if (s.current >= Math.min(s.max, hardCap)) return false;
     
     const upgrade = getNextUpgrade(archKey, matched, s.current);
-    if (!upgrade) return false; // End of the skill tree for this stat
+    if (!upgrade) return false; 
+    if (upgrade.cost > remainingAP) return false; 
+    if (upgrade.targetLevel > s.max) return false; 
     
-    if (upgrade.cost > remainingAP) return false; // Cannot afford the node
-    if (upgrade.targetLevel > s.max) return false; // Prevent exceeding archetype max
-    
-    // Jump the stat to the target node level and charge the AP
     s.current = upgrade.targetLevel; 
     s.apSpent += upgrade.cost; 
     remainingAP -= upgrade.cost;
@@ -272,7 +268,7 @@ export function runMathEngine(
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. FULL AP UTILIZATION SPILLOVER (Aggressively loops until AP hits 0)
+  // 3. FULL AP UTILIZATION SPILLOVER
   let progressRoundRobin = true;
   const spilloverPool: { attr: string; cap: number }[] = [];
   
@@ -306,6 +302,32 @@ export function runMathEngine(
     }
   }
 
+  // 👉 4. MICRO-SPEND SWEEP: Exhausts any final leftover dust AP by checking every stat regardless of bucket
+  let microProgress = true;
+  while (microProgress && remainingAP > 0) {
+    microProgress = false;
+    
+    // Find any upgrade across all stats that costs LESS than or equal to the remaining AP
+    let cheapestAttr: string | null = null;
+    let lowestCost = Infinity;
+
+    for (const attr of attrNames) {
+      const s = stats[attr];
+      if (s.current >= s.max) continue;
+      
+      const upgrade = getNextUpgrade(archKey, attr, s.current);
+      if (upgrade && upgrade.cost <= remainingAP && upgrade.cost < lowestCost) {
+        lowestCost = upgrade.cost;
+        cheapestAttr = attr;
+      }
+    }
+
+    if (cheapestAttr) {
+      const success = upgradeOne(cheapestAttr, 99);
+      if (success) microProgress = true;
+    }
+  }
+
   const statResults: StatResult[] = attrNames.map((attr) => {
     const s = stats[attr];
     const cat = Object.entries(ATTR_CATEGORIES).find(([_, list]) => list.some(a => normAttr(a) === normAttr(attr)))?.[0] ?? "Other";
@@ -329,8 +351,7 @@ export function runMathEngine(
       acc[stat.category] = acc[stat.category] || [];
       acc[stat.category].push(stat);
       return acc;
-    }, {} as Record<string, StatResult[]>),
-    investedPoints
+    }, {} as Record<string, StatResult[]>)
   };
 }
 
