@@ -48,7 +48,9 @@ export default function ManualBuilder() {
     isGeneratingAi,
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
+    aiBlueprint, setAiBlueprint,
     serverArchetypes,
+    progressionData,
     isArchLoading, isProgLoading,
     activeBounds, activeStarCaps,
     physicalModifiers, facilityModifiers, masteryModifiers,
@@ -56,7 +58,7 @@ export default function ManualBuilder() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
     fac1, fac2, hasEmptySlot, remainingBudget,
-    handleRunAiBuild, handleSelectFacilityView,
+    handleGenerateBlueprint, handleFinalizeBuild, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization,
@@ -86,7 +88,7 @@ export default function ManualBuilder() {
            
            {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
-              {/* App Branding Icon (Moved to the left) */}
+              {/* App Branding Icon */}
               <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
 
               <div className="flex items-center gap-4">
@@ -209,7 +211,7 @@ export default function ManualBuilder() {
            </div>
         </div>
 
-        {/* BUILD MODE OPTIONS (Replaces FC26/FC27 Toggles) */}
+        {/* BUILD MODE OPTIONS */}
         <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
           <button
             className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]"
@@ -304,11 +306,15 @@ export default function ManualBuilder() {
         aiPrompt={aiPrompt}
         setAiPrompt={setAiPrompt}
         isGeneratingAi={isGeneratingAi}
-        handleRunAiBuild={handleRunAiBuild}
+        handleGenerateBlueprint={handleGenerateBlueprint}
+        handleFinalizeBuild={handleFinalizeBuild}
         aiArchetypeLock={aiArchetypeLock}
         setAiArchetypeLock={setAiArchetypeLock}
         aiTargetLevel={aiTargetLevel}
         setAiTargetLevel={setAiTargetLevel}
+        aiBlueprint={aiBlueprint}
+        setAiBlueprint={setAiBlueprint}
+        progressionData={progressionData}
         serverArchetypes={serverArchetypes}
       />
 
