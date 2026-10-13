@@ -8,7 +8,6 @@ import { getDb } from "../db";
 import fs from "fs/promises";
 import path from "path";
 import { eq, sql } from "drizzle-orm";
-import { users } from "../../drizzle/schema"; 
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
@@ -86,7 +85,6 @@ export const scoutRouter = router({
           const baseStats: Record<string, number> = {};
           const rowKeys = Object.keys(row);
           
-          // Match CSV column names (ignoring spaces/case) to pull exact 29 stats
           for (const attr of ALL_ATTRS) {
              const searchAttr = attr.toLowerCase().replace(/\s+/g, '');
              const matchedKey = rowKeys.find(k => k.toLowerCase().replace(/\s+/g, '') === searchAttr);
@@ -306,59 +304,50 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
-      // 1. Run the Math Engine first
+      const activeMasteries = Object.keys(input.unlockedMasteries).filter(k => input.unlockedMasteries[k] > 0);
+
       const result = runMathEngine(
         engineBlueprint, 
         input.apBudget, 
         customSlots, 
         input.preferredAttributes || [], 
-        input.gameVersion,
-        input.unlockedMasteries
+        activeMasteries 
       );
 
-      // 2. Strictly verify if the Math Engine ACTUALLY hit the required stats for the specialisation
       let earnedSpecPlaystyle: string | undefined = undefined;
       let earnedSpecName: string | undefined = undefined;
 
       if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
         const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
           const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === req.attr.replace(/\s+/g, '').toLowerCase());
-          const finalStatValue = attrKey ? result.stats[attrKey] : 0;
+          const finalStatValue = attrKey ? result.stats.find(s => s.attribute === attrKey)?.final || 0 : 0;
           return finalStatValue >= req.val;
         });
 
         if (hasEarnedSpecialisation) {
           earnedSpecPlaystyle = input.blueprint.specialisationPlaystylePlus;
           earnedSpecName = input.blueprint.specialisation;
-        } else {
-          console.log(`🚨 SPECIALISATION DENIED: Failed to reach stat requirements for ${input.blueprint.specialisationPlaystylePlus}`);
         }
       }
 
-      // 3. Resolve signatures using ONLY the earned specialisation (if any)
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
-        earnedSpecPlaystyle, 
-        input.gameVersion
+        earnedSpecPlaystyle
       );
 
-      // 4. Strictly verify ALL standard playstyles directly against the CSV data
       const PLAYSTYLES = getPlaystyles(input.gameVersion);
 
       const standardPlaystyles = input.blueprint.playstyles
         .filter(ps => {
-          // Rule A: Cannot equip a standard playstyle if it's already a signature
           const isSignature = resolvedSignatures.some((sig: string) => sig.replace('+', '').toLowerCase() === ps.name.toLowerCase());
           if (isSignature) return false;
 
-          // Rule B: Fetch the actual required minimum stats from the CSV
           const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle?.toLowerCase() === ps.name.toLowerCase());
           if (!realReqs) return false; 
 
-          // Rule C: Verify that the math engine reached ALL stat thresholds for this specific playstyle
           const checkReq = (attrName: string | undefined, reqVal: string | number | undefined) => {
-             if (!attrName || !reqVal) return true; // If no requirement exists, it automatically passes
+             if (!attrName || !reqVal) return true;
              const target = Number(reqVal);
              const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === attrName.replace(/\s+/g, '').toLowerCase());
              return statObj ? statObj.final >= target : false;
@@ -368,12 +357,7 @@ ${filterRules.join("\n")}
           const met2 = checkReq(realReqs.Req_Attr2 || realReqs.Attr2, realReqs.Req_Val2 || realReqs.Val2);
           const met3 = checkReq(realReqs.Req_Attr3 || realReqs.Attr3, realReqs.Req_Val3 || realReqs.Val3);
 
-          if (!(met1 && met2 && met3)) {
-            console.log(`🚨 PLAYSTYLE DENIED: Failed to reach stat requirements for ${ps.name}`);
-            return false;
-          }
-
-          return true; // The math engine successfully bought enough stats to afford this!
+          return met1 && met2 && met3;
         })
         .map(ps => ps.name)
         .slice(0, customSlots); 
