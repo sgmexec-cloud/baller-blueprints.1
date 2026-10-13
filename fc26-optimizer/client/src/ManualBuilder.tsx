@@ -74,58 +74,61 @@ export default function ManualBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-4 pb-16 px-4">
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
-        {/* COMPANION APP STYLE TOP BAR */}
-        <div className="flex justify-between items-center mb-4 px-1 pt-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[#8E9AAF] text-lg leading-none font-bold cursor-pointer">〈</span>
-            <span className="text-[#F4F7FB] font-black tracking-wide text-[15px]">Player Details</span>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => {
-                setAiTargetLevel(level);
-                setAiArchetypeLock("AUTO");
-                setIsAiModalOpen(true);
-              }}
-              className="bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(77,141,255,0.3)] hover:opacity-90 transition-all"
-            >
-              <span>✨ AI Auto-Build</span>
-            </button>
-
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
-              <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
-                <span className="text-[#080B14] font-black text-[6px]">AP</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-1.5 relative group">
-              <select 
-                value={level} 
-                onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
-                className="bg-transparent font-bold text-[#21E6A4] text-[13px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
-              >
-                {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
-                  <option key={l} value={l} className="bg-[#131A2A] text-[#21E6A4]">{l}</option>
-                ))}
-              </select>
-              <div className="w-3.5 h-3.5 rounded-full bg-[#21E6A4] flex items-center justify-center border border-[#10b981]">
-                 <svg className="w-2 h-2 text-[#080B14]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
-              </div>
-            </div>
-          </div>
+        {/* MAIN APP LOGO (Non-sticky, scrolls up) */}
+        <div className="flex justify-center items-center mb-4 pt-2">
+          <img src="/clubs-dna-logo.png" alt="ClubsDNA Logo" className="h-7 object-contain drop-shadow-md" />
         </div>
 
         {/* STICKY HEADER CARD */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-           <div className="text-center mb-3">
-              <span className="text-[#F4F7FB] font-bold text-[15px]">Player Bio</span>
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3">
+           
+           {/* STICKY CONTROLS ROW (AI, AP, Level, App Icon) */}
+           <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={() => {
+                  setAiTargetLevel(level);
+                  setAiArchetypeLock("AUTO");
+                  setIsAiModalOpen(true);
+                }}
+                className="bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_10px_rgba(77,141,255,0.3)] hover:opacity-90 transition-all"
+              >
+                <span>✨ AI Auto-Build</span>
+              </button>
+
+              <div className="flex items-center gap-3">
+                {/* AP Balance */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[#F4F7FB] font-bold text-[13px]">{availableAp.toLocaleString()}</span>
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
+                    <span className="text-[#080B14] font-black text-[6px]">AP</span>
+                  </div>
+                </div>
+                
+                {/* Level Selector */}
+                <div className="flex items-center gap-1.5 relative group">
+                  <select 
+                    value={level} 
+                    onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
+                    className="bg-transparent font-bold text-[#21E6A4] text-[13px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
+                  >
+                    {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
+                      <option key={l} value={l} className="bg-[#131A2A] text-[#21E6A4]">{l}</option>
+                    ))}
+                  </select>
+                  <div className="w-3.5 h-3.5 rounded-full bg-[#21E6A4] flex items-center justify-center border border-[#10b981]">
+                     <svg className="w-2 h-2 text-[#080B14]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
+                  </div>
+                </div>
+
+                {/* App Branding Icon */}
+                <img src="/app-icon.png" alt="App Icon" className="w-6 h-6 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
+              </div>
            </div>
 
+           {/* PLAYER CARD VIEW */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               <div 
                  className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
