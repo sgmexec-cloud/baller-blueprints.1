@@ -1,8 +1,7 @@
 export function calculateOVR(stats: Record<string, number>, position: string): number {
-  // Helper to safely grab stats, defaulting to 10 if missing (e.g. GK stats on outfielders)
   const v = (key: string) => stats[key] || 10; 
   
-  const pos = position.toUpperCase();
+  const pos = position?.toUpperCase() || "";
   let a = 0;
 
   if (["GK"].includes(pos)) {
@@ -30,6 +29,8 @@ export function calculateOVR(stats: Record<string, number>, position: string): n
   } else if (["ST", "RS", "LS"].includes(pos)) {
     a = v('Acceleration')*0.04 + v('Sprint Speed')*0.05 + v('Strength')*0.05 + v('Reactions')*0.08 + v('Attack Positioning')*0.15 + v('Ball Control')*0.10 + v('Dribbling')*0.07 + v('Finishing')*0.18 + v('Heading Accuracy')*0.10 + v('Short Passing')*0.05 + v('Shot Power')*0.08 + v('Long Shots')*0.03 + v('Volleys')*0.02;
   }
+  
+  if (a === 0) return 0;
   
   return Math.round(a);
 }
