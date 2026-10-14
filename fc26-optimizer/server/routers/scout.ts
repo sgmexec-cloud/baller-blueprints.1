@@ -29,9 +29,10 @@ const BlueprintSchema = z.object({
   weakFoot: z.number().int().min(1).max(5),
   playstylePlus: z.array(z.string()),
   playstyles: z.array(PlaystyleSchema),
-  specialisation: z.string().optional(),
-  specialisationPlaystylePlus: z.string().optional(),
+  specialisation: z.string().nullable().optional(),
+  specialisationPlaystylePlus: z.string().nullable().optional(),
   specialisationMinAttrs: z.array(PlaystyleReqSchema).optional(),
+  specialisationReason: z.string().nullable().optional(),
   coreAttributes: z.array(z.string()),
   secondaryAttributes: z.array(z.string()),
   tertiaryAttributes: z.array(z.string()),
@@ -39,6 +40,8 @@ const BlueprintSchema = z.object({
 });
 
 export type Blueprint = z.infer<typeof BlueprintSchema>;
+
+const normAttr = (s: string) => s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
 const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. 
 If a player changed positions during their career, you MUST evaluate them based solely on their most famous, highest-performing role. 
@@ -82,8 +85,8 @@ export const scoutRouter = router({
           const rowKeys = Object.keys(row);
           
           for (const attr of ALL_ATTRS) {
-             const searchAttr = attr.toLowerCase().replace(/\s+/g, '');
-             const matchedKey = rowKeys.find(k => k.toLowerCase().replace(/\s+/g, '') === searchAttr);
+             const searchAttr = normAttr(attr);
+             const matchedKey = rowKeys.find(k => normAttr(k) === searchAttr);
              baseStats[attr] = matchedKey ? Number(row[matchedKey] || 70) : 70;
           }
 
@@ -197,9 +200,10 @@ Your output MUST be a single raw JSON object that strictly matches this exact st
   "weakFoot": 4,
   "playstylePlus": ["Style1", "Style2", "Style3", "Style4"],
   "playstyles": [{"name": "StyleName", "requirements": [{"attr": "AttributeName", "val": 80}]}],
-  "specialisation": "",
-  "specialisationPlaystylePlus": "",
-  "specialisationMinAttrs": [{"attr": "AttributeName", "val": 85}],
+  "specialisation": null,
+  "specialisationPlaystylePlus": null,
+  "specialisationMinAttrs": [],
+  "specialisationReason": null,
   "coreAttributes": ["Attr1"],
   "secondaryAttributes": ["Attr2"],
   "tertiaryAttributes": ["Attr3"],
@@ -210,7 +214,11 @@ RULES:
 ${filterRules.join("\n")}
 - HEIGHT & WEIGHT: (Unless overridden above) You MUST provide an EXACT, definitive height (e.g., "178cm" or "5'10\"") and an EXACT weight (e.g., "72kg" or "158 lbs"). DO NOT provide ranges.
 - PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
-- 'specialisationMinAttrs' MUST be an array of objects. Example: [{"attr": "Finishing", "val": 85}]. NEVER output strings inside this array.
+- SPECIALISATION (OPTIONAL, default is NONE): Find the specialisation listed for your chosen archetype in the context. Select it ONLY if BOTH are true:
+  (a) its bonusPlaystylePlus appears in your 'playstylePlus' or your top 6 'playstyles', or matches the player's Signature Weapon; AND
+  (b) at least 2/3 of its minimumAttributes are in your coreAttributes or secondaryAttributes.
+  If either fails, output specialisation: null, specialisationPlaystylePlus: null, specialisationMinAttrs: [], specialisationReason: null. Leaving it empty is correct whenever the fit isn't clear.
+  If you do select it, copy the name, Playstyle+ and thresholds EXACTLY from the context as objects like {"attr": "Finishing", "val": 85}, and state which of (a)/(b) it satisfies in specialisationReason.
 - ATTRIBUTES: Quality over quantity. Select ONLY the defining attributes for Level 40 builds:
   - coreAttributes: EXACTLY 2-3 signature attributes (their absolute peak strengths).
   - secondaryAttributes: 3-4 strong supporting attributes.
@@ -229,7 +237,7 @@ ${filterRules.join("\n")}
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
 
       let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
-      cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/最新$/, "").replace(/```$/, "").trim();
+      cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
 
       const parsed = JSON.parse(cleanedJson);
 
@@ -243,6 +251,52 @@ ${filterRules.join("\n")}
         });
       } else {
         parsed.specialisationMinAttrs = [];
+      }
+
+      // Server-side Specialisation Sanitiser
+      const stripPlus = (s: string) => normAttr(s.replace(/\+/g, ""));
+      const clearSpec = () => {
+        parsed.specialisation = null;
+        parsed.specialisationPlaystylePlus = null;
+        parsed.specialisationMinAttrs = [];
+        parsed.specialisationReason = null;
+      };
+
+      if (!parsed.specialisation || !String(parsed.specialisation).trim()) {
+        clearSpec();
+      } else {
+        const real = getArchetypeProfiles("FC27").find((s: any) =>
+          normAttr(s.Archetype) === normAttr(parsed.archetype) && normAttr(s.Specialisation || "") === normAttr(parsed.specialisation)
+        );
+        
+        if (!real) {
+          clearSpec();
+        } else {
+          const reqs = [
+            [real.Attr1, real.Val1], 
+            [real.Attr2, real.Val2], 
+            [real.Attr3, real.Val3]
+          ].filter(([a, v]) => a && v).map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
+
+          if (reqs.length === 0) {
+            clearSpec();
+          } else {
+            const buildAttrs = new Set([...(parsed.coreAttributes ?? []), ...(parsed.secondaryAttributes ?? [])].map(normAttr));
+            const styles = new Set(
+              [...(parsed.playstylePlus ?? []), ...(parsed.playstyles ?? []).slice(0, 6).map((x: any) => x.name)]
+                .map((x: string) => stripPlus(String(x)))
+            );
+            const synergy = !!real["Playstyle+"] && styles.has(stripPlus(real["Playstyle+"]));
+            const aligned = reqs.filter(r => buildAttrs.has(normAttr(r.attr))).length >= Math.ceil(reqs.length * 0.66);
+            
+            if (!synergy && !aligned) {
+              clearSpec();
+            } else {
+              parsed.specialisationPlaystylePlus = real["Playstyle+"];
+              parsed.specialisationMinAttrs = reqs;
+            }
+          }
+        }
       }
 
       if (!input.isDevMode && currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
@@ -265,10 +319,10 @@ ${filterRules.join("\n")}
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}) 
     }))
     .mutation(async ({ input }) => {
-      let customSlots = input.standardSlots || 0;
-      let signatureUpgrades = input.signatureSlots || 0;
+      let customSlots = input.standardSlots;
+      let signatureUpgrades = input.signatureSlots;
 
-      if (!customSlots || !signatureUpgrades) {
+      if (customSlots == null || signatureUpgrades == null) {
         try {
           const progPath = path.join(process.cwd(), "server", "data27", "FC27_PROGRESSION.csv");
           const progContent = await fs.readFile(progPath, "utf-8");
@@ -276,20 +330,23 @@ ${filterRules.join("\n")}
           for (let i = 1; i < lines.length; i++) {
             const p = lines[i].split(",");
             if (input.apBudget >= Number(p[1])) {
-              signatureUpgrades = Number(p[2]);
-              customSlots = Number(p[3]);      
+              if (signatureUpgrades == null) signatureUpgrades = Number(p[2]);
+              if (customSlots == null) customSlots = Number(p[3]);      
             }
           }
         } catch (e) { console.error("Progression error:", e); }
       }
+      
+      customSlots ??= 0;
+      signatureUpgrades ??= 0;
 
       const engineBlueprint: ScoutingBlueprint = {
         archetype: input.blueprint.archetype,
         position: input.blueprint.position,
         playstylePlus: input.blueprint.playstylePlus,
         playstyles: input.blueprint.playstyles,
-        specialisation: input.blueprint.specialisation,
-        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus,
+        specialisation: input.blueprint.specialisation ?? undefined,
+        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus ?? undefined,
         specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
         coreAttributes: input.blueprint.coreAttributes,
         secondaryAttributes: input.blueprint.secondaryAttributes,
@@ -309,28 +366,26 @@ ${filterRules.join("\n")}
       let earnedSpecPlaystyle: string | undefined = undefined;
       let earnedSpecName: string | undefined = undefined;
 
-      if (input.blueprint.specialisationPlaystylePlus && input.blueprint.specialisationMinAttrs && input.blueprint.specialisationMinAttrs.length > 0) {
-        const hasEarnedSpecialisation = input.blueprint.specialisationMinAttrs.every(req => {
-          const rawAttrKey = req.attr.replace(/\s+/g, '').toLowerCase();
-          const attrKey = Object.keys(result.stats).find(k => k.toLowerCase() === rawAttrKey);
-          const finalStatValue = attrKey ? result.stats.find(s => s.attribute === attrKey)?.final || 0 : 0;
-          
-          const matchingBoostKey = Object.keys(input.foundationBoosts).find(k => k.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
-          const boost = matchingBoostKey ? input.foundationBoosts[matchingBoostKey] : 0;
-          
-          return (finalStatValue + boost) >= req.val;
+      const specReqs = input.blueprint.specialisationMinAttrs ?? [];
+      if (input.blueprint.specialisationPlaystylePlus && specReqs.length > 0) {
+        const earned = specReqs.every(req => {
+          const stat = result.stats.find(s => normAttr(s.attribute) === normAttr(req.attr));
+          const boost = Object.entries(input.foundationBoosts)
+            .find(([k]) => normAttr(k) === normAttr(req.attr))?.[1] ?? 0;
+          return (stat?.final ?? 0) + boost >= req.val;
         });
-
-        if (hasEarnedSpecialisation) {
+        
+        if (earned) {
           earnedSpecPlaystyle = input.blueprint.specialisationPlaystylePlus;
-          earnedSpecName = input.blueprint.specialisation;
+          earnedSpecName = input.blueprint.specialisation ?? undefined;
         }
       }
 
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
-        earnedSpecPlaystyle
+        earnedSpecPlaystyle,
+        "FC27"
       );
 
       const standardPlaystyles = result.equippedPlaystyles?.slice(0, customSlots) || [];
