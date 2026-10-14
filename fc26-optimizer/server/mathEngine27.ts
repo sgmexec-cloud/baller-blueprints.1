@@ -111,12 +111,11 @@ export function runMathEngine(
   apBudget: number, 
   customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
-  foundationBoosts: Record<string, number> = {},
-  version: "FC26" | "FC27" = "FC27"
+  foundationBoosts: Record<string, number> = {}
 ): MathEngineResult {
-  const ALL_ARCHETYPES = getAllArchetypes(version);
-  const COST_DICT = getCostDict(version);
-  const PLAYSTYLES = getPlaystyles(version);
+  const ALL_ARCHETYPES = getAllArchetypes("FC27");
+  const COST_DICT = getCostDict("FC27");
+  const PLAYSTYLES = getPlaystyles("FC27");
 
   const archKey = blueprint.archetype;
   const archetypeRows = ALL_ARCHETYPES.filter((r: any) => normAttr(r.Archetype) === normAttr(archKey));
@@ -128,7 +127,6 @@ export function runMathEngine(
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    // 👉 FIX: Proper base value handling for falsy zeroes
     const b = parseInt(row["Base Value"], 10);
     const baseVal = Number.isNaN(b) ? 70 : b;
     const m = parseInt(row["Max Value"], 10);
@@ -181,7 +179,6 @@ export function runMathEngine(
     }
   }
 
-  // 👉 FIX: Helper to test PlayStyle affordability before purchasing
   function costToReach(attr: string, target: number): number {
     const m = matchAttr(attr, attrNames);
     if (!m) return Infinity;
@@ -198,17 +195,14 @@ export function runMathEngine(
     return total;
   }
 
-  // 👉 FIX: Helper to match plus and non-plus versions correctly
   function findPlaystyle(name: string) {
     const n = name.trim().toLowerCase();
     return PLAYSTYLES.find((p: any) => p.Playstyle?.trim().toLowerCase() === n)
         ?? PLAYSTYLES.find((p: any) => normAttr(p.Playstyle || "") === normAttr(name));
   }
 
-  // 1. Initial Tax (Playstyles) - Now verifies affordability first!
   const equippedPlaystyles: string[] = [];
   const skippedPlaystyles: string[] = [];
-  
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
   
   for (const ps of activePlaystyles) {
@@ -234,7 +228,6 @@ export function runMathEngine(
     }
   }
 
-  // Specialisation
   if (blueprint.specialisationMinAttrs) {
     const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
     if (totalSpecCost <= remainingAP) {
@@ -242,11 +235,9 @@ export function runMathEngine(
     }
   }
   
-  // 👉 FIX: Only upgrade star skills if requested
   if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
   if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
 
-  // 1.5 Focus Attributes VIP Pass
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
     let focusSpent = 0;
@@ -273,7 +264,6 @@ export function runMathEngine(
     }
   }
 
-  // 2. The 55/30/15 Bucket Logic
   const postTaxAP = remainingAP;
   const primaryBudget = postTaxAP * 0.55;
   const secondaryBudget = postTaxAP * 0.30;
@@ -314,7 +304,6 @@ export function runMathEngine(
   fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
   fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
 
-  // 3. FULL AP UTILIZATION SPILLOVER
   let progressRoundRobin = true;
   const spilloverPool: { attr: string; cap: number }[] = [];
   
@@ -346,7 +335,6 @@ export function runMathEngine(
     }
   }
 
-  // 4. MICRO-SPEND SWEEP: Exhausts any final leftover dust AP
   let microProgress = true;
   while (microProgress && remainingAP > 0) {
     microProgress = false;
@@ -365,14 +353,12 @@ export function runMathEngine(
     }
 
     if (cheapestAttr) {
-      // Micro-sweep now respects foundation caps!
       const effectiveCap = getEffectiveCap(cheapestAttr, 99);
       const success = upgradeOne(cheapestAttr, effectiveCap);
       if (success) microProgress = true;
     }
   }
   
-  // 👉 FIX: Audit trailing AP blockages
   if (remainingAP > 0) {
      const blocked = attrNames
        .filter(a => stats[a].current < stats[a].max)
@@ -410,8 +396,8 @@ export function runMathEngine(
   };
 }
 
-export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string, version: "FC26" | "FC27" = "FC27"): string[] {
-  const ALL_PROFILES = getArchetypeProfiles(version);
+export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string): string[] {
+  const ALL_PROFILES = getArchetypeProfiles("FC27");
   const arch = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(archetypeName));
   if (!arch) return [];
   const baseSignatures = arch.Signature_PlayStyles.split(",").map((s: string) => s.trim());
