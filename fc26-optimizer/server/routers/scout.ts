@@ -390,11 +390,19 @@ ${filterRules.join("\n")}
 
       const standardPlaystyles = result.equippedPlaystyles?.slice(0, customSlots) || [];
       
+      // Grab Recommended Positions from CSV Profile
+      const ALL_PROFILES = getArchetypeProfiles("FC27");
+      const archProfile = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(input.blueprint.archetype));
+      const recommendedPositions = archProfile && archProfile.Recommended_Positions 
+        ? archProfile.Recommended_Positions.split(",").map((p: string) => p.trim())
+        : ["ST"];
+
       return {
         ...result,
         scoutSummary: input.blueprint.scoutSummary,
         suggestedSkillMoves: input.blueprint.skillMoves,
         suggestedWeakFoot: input.blueprint.weakFoot,
+        recommendedPositions,
         playstyles: {
           signatures: resolvedSignatures,
           standard: standardPlaystyles,
