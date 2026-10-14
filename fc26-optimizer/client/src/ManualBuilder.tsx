@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 
 // PHASE 2 HELPER UTILITIES
-import { getArchetypeDisplayPosition, getStatCaps } from '@/utils/builderUtils';
+import { getStatCaps } from '@/utils/builderUtils';
 import { calculateOVR } from '@/utils/ovrCalculator';
 
 // PHASE 3 SUB-COMPONENTS & MODALS
@@ -66,39 +66,30 @@ export default function ManualBuilder() {
     handleStarChange, handleSliderChange
   } = useBuilderLogic();
 
+  // --- POSITION BADGES & POSITION-BASED OVR ---
   const [activePosition, setActivePosition] = useState<string>('');
 
-  const recommendedPositions = useMemo(() => {
+  // Positions come from the server (mapped in-game positions for the archetype)
+  const recommendedPositions = useMemo<string[]>(() => {
     if (!archetype) return ['ST'];
     const archData = serverArchetypes?.[archetype];
-    if (archData && archData.recommended) {
+    if (archData && archData.recommended && archData.recommended.length > 0) {
       return archData.recommended;
     }
     return ['ST'];
   }, [archetype, serverArchetypes]);
 
+  // Auto-select the first recommended position when the archetype (or its positions) change
   useEffect(() => {
     if (recommendedPositions.length > 0 && !recommendedPositions.includes(activePosition)) {
       setActivePosition(recommendedPositions[0]);
     }
   }, [recommendedPositions, activePosition, archetype]);
 
-  const statsRecord = useMemo(() => {
-    const rec: Record<string, number> = {};
-    if (currentStats) {
-      Object.keys(currentStats).forEach(key => {
-        const base = currentStats[key] || 0;
-        const added = addedPoints?.[key] || 0;
-        const physMod = physicalModifiers?.[key] || 0;
-        const facMod = facilityModifiers?.[key] || 0;
-        const mastMod = masteryModifiers?.[key] || 0;
-        rec[key] = base + added + physMod + facMod + mastMod;
-      });
-    }
-    return rec;
-  }, [currentStats, addedPoints, physicalModifiers, facilityModifiers, masteryModifiers]);
-
-  const calcOvr = activePosition ? calculateOVR(statsRecord, activePosition) : 0;
+  // currentStats from useBuilderLogic ALREADY includes base + invested points +
+  // physical, facility and mastery modifiers (capped). Do NOT add them again here,
+  // otherwise every position rating is inflated.
+  const calcOvr = activePosition && currentStats ? calculateOVR(currentStats, activePosition) : 0;
   const finalOvr = calcOvr > 0 ? calcOvr : faceStats.ovr;
 
   if (isArchLoading || isProgLoading) {
@@ -161,7 +152,7 @@ export default function ManualBuilder() {
                  }`}
                  style={{ backgroundImage: `url('/cards/${finalOvr >= 75 ? 'gold' : 'silver'}-card.png')` }}
               >
-                 {/* OVR Rating */}
+                 {/* OVR Rating (changes with the selected position badge) */}
                  <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                       {finalOvr}
@@ -207,6 +198,7 @@ export default function ManualBuilder() {
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
+                 {/* Clickable position badges: tap one to see the rating for that position */}
                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {recommendedPositions.map((pos) => (
                       <button
