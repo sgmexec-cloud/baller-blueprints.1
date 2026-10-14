@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 // PHASE 1 CONSTANTS
 import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 
 // PHASE 2 HELPER UTILITIES
 import { getArchetypeDisplayPosition, getStatCaps } from '@/utils/builderUtils';
+import { calculateOVR } from '@/utils/ovrCalculator'; // 👉 NEW: Import the OVR Calculator
 
 // PHASE 3 SUB-COMPONENTS & MODALS
 import { PlaystyleSlotsRow } from '@/components/builder/PlaystyleSlots';
@@ -65,6 +66,46 @@ export default function ManualBuilder() {
     handleStarChange, handleSliderChange
   } = useBuilderLogic();
 
+  // 👉 NEW: State to track which position badge is currently selected
+  const [activePosition, setActivePosition] = useState<string>('');
+
+  // 👉 NEW: Extract Recommended Positions directly from the loaded Archetype CSV data
+  const recommendedPositions = useMemo(() => {
+    if (!archetype) return ['ST'];
+    const archData = serverArchetypes?.[archetype];
+    if (archData && archData.Recommended_Positions) {
+      return archData.Recommended_Positions.split(',').map((p: string) => p.trim());
+    }
+    // Fallback if the CSV hasn't loaded that column yet
+    return [getArchetypeDisplayPosition(archetype, activeBounds?.type) || 'ST'];
+  }, [archetype, serverArchetypes, activeBounds]);
+
+  // 👉 NEW: Auto-select the first recommended position when the archetype changes
+  useEffect(() => {
+    if (recommendedPositions.length > 0 && !recommendedPositions.includes(activePosition)) {
+      setActivePosition(recommendedPositions[0]);
+    }
+  }, [recommendedPositions, activePosition, archetype]);
+
+  // 👉 NEW: Calculate the live, combined stats mapping to feed into the OVR Calculator
+  const statsRecord = useMemo(() => {
+    const rec: Record<string, number> = {};
+    if (currentStats) {
+      Object.keys(currentStats).forEach(key => {
+        const base = currentStats[key] || 0;
+        const added = addedPoints?.[key] || 0;
+        const physMod = physicalModifiers?.[key] || 0;
+        const facMod = facilityModifiers?.[key] || 0;
+        const mastMod = masteryModifiers?.[key] || 0;
+        rec[key] = base + added + physMod + facMod + mastMod;
+      });
+    }
+    return rec;
+  }, [currentStats, addedPoints, physicalModifiers, facilityModifiers, masteryModifiers]);
+
+  // 👉 NEW: The final dynamic OVR!
+  const displayOvr = activePosition ? calculateOVR(statsRecord, activePosition) : faceStats.ovr;
+
   if (isArchLoading || isProgLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#080B14]">
@@ -78,7 +119,7 @@ export default function ManualBuilder() {
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
-        {/* MAIN APP LOGO (Full width, Non-sticky) */}
+        {/* MAIN APP LOGO */}
         <div className="flex justify-center items-center mb-4 pt-2">
           <img src="/clubs-dna-logo.png" alt="ClubsDNA Logo" className="w-full object-contain drop-shadow-md" />
         </div>
@@ -88,11 +129,9 @@ export default function ManualBuilder() {
            
            {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
-              {/* App Branding Icon */}
               <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
 
               <div className="flex items-center gap-4">
-                {/* AP Balance */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-[#F4F7FB] font-bold text-[14px]">{availableAp.toLocaleString()}</span>
                   <div className="w-4 h-4 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
@@ -100,7 +139,6 @@ export default function ManualBuilder() {
                   </div>
                 </div>
                 
-                {/* Level Selector */}
                 <div className="flex items-center gap-1.5 relative group">
                   <select 
                     value={level} 
@@ -122,15 +160,17 @@ export default function ManualBuilder() {
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               <div 
                  className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
-                   faceStats.ovr >= 75 
+                   displayOvr >= 75 // 👉 NEW: Card glow updates dynamically with new OVR
                      ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' 
                      : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]'
                  }`}
-                 style={{ backgroundImage: `url('/cards/${faceStats.ovr >= 75 ? 'gold' : 'silver'}-card.png')` }}
+                 style={{ backgroundImage: `url('/cards/${displayOvr >= 75 ? 'gold' : 'silver'}-card.png')` }}
               >
                  {/* OVR Rating */}
                  <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
-                    <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>{faceStats.ovr}</span>
+                    <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                      {displayOvr} {/* 👉 NEW: Live rendering OVR */}
+                    </span>
                  </div>
                  
                  {/* Player Avatar OR Specialization Icon */}
@@ -172,8 +212,21 @@ export default function ManualBuilder() {
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
-                 <div className="mt-3">
-                    <span className="bg-[#4caf50] text-white px-2 py-0.5 rounded-sm font-bold text-[9px] uppercase">{getArchetypeDisplayPosition(archetype, activeBounds.type)}</span>
+                 {/* 👉 NEW: Clickable Interactive Position Badges */}
+                 <div className="mt-3 flex flex-wrap gap-1.5">
+                    {recommendedPositions.map((pos) => (
+                      <button
+                        key={pos}
+                        onClick={() => setActivePosition(pos)}
+                        className={`px-2.5 py-0.5 rounded-sm font-bold text-[10px] uppercase transition-colors duration-200 ${
+                          activePosition === pos 
+                            ? 'bg-[#4caf50] text-white shadow-[0_0_8px_rgba(76,175,80,0.5)] border border-[#4caf50]' 
+                            : 'bg-[#131A2A] text-[#8E9AAF] border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB]'
+                        }`}
+                      >
+                        {pos}
+                      </button>
+                    ))}
                  </div>
               </div>
            </div>
