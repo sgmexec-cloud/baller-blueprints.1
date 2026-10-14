@@ -48,12 +48,10 @@ Explicitly identify the player's 'Signature Weapon'—their most iconic, tradema
 
 export const scoutRouter = router({
   getArchetypes: publicProcedure
-    .input(z.object({ gameVersion: z.enum(["FC26", "FC27"]).default("FC26") }).optional())
-    .query(async ({ input }) => {
+    .query(async () => {
       try {
-        const version = input?.gameVersion || "FC26";
-        const profiles = getArchetypeProfiles(version);
-        const uniqueArchetypes = Array.from(new Set(profiles.map(row => row.Archetype.trim()))).filter(Boolean);
+        const profiles = getArchetypeProfiles("FC27");
+        const uniqueArchetypes = Array.from(new Set(profiles.map((row: any) => row.Archetype.trim()))).filter(Boolean);
         return uniqueArchetypes.sort();
       } catch (e) {
         console.error("Failed to load archetypes:", e);
@@ -62,11 +60,9 @@ export const scoutRouter = router({
     }),
 
   getArchetypeBaseStats: publicProcedure
-    .input(z.object({ gameVersion: z.enum(["FC26", "FC27"]).default("FC26") }).optional())
-    .query(async ({ input }) => {
+    .query(async () => {
       try {
-        const version = input?.gameVersion || "FC26";
-        const profiles = getArchetypeProfiles(version);
+        const profiles = getArchetypeProfiles("FC27");
         
         const ALL_ATTRS = [
           "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
@@ -112,8 +108,7 @@ export const scoutRouter = router({
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
       customPlaystyles: z.array(z.string()).optional(), 
-      isDevMode: z.boolean().optional(),
-      gameVersion: z.enum(["FC26", "FC27"]).default("FC26")
+      isDevMode: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
@@ -174,7 +169,7 @@ export const scoutRouter = router({
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
-      const context = getScoutingContext(input.gameVersion);
+      const context = getScoutingContext("FC27");
       
       const filterRules: string[] = [];
       if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
@@ -188,8 +183,7 @@ export const scoutRouter = router({
         filterRules.push(`- PLAYSTYLES: The 'playstylePlus' array MUST include: ${input.customPlaystyles.join(", ")}.`);
       }
 
-      const currentVersion = input.gameVersion === "FC27" ? "FC 27" : "FC 26";
-      const stage2SystemPrompt = `You are the ultimate ${currentVersion} Data Analyst. Translate the scout report into strict ${currentVersion} JSON using ONLY this context:
+      const stage2SystemPrompt = `You are the ultimate FC 27 Data Analyst. Translate the scout report into strict FC 27 JSON using ONLY this context:
 ${context}
 
 Your output MUST be a single raw JSON object that strictly matches this exact structure:
@@ -265,7 +259,6 @@ ${filterRules.join("\n")}
     .input(z.object({ 
       blueprint: BlueprintSchema, 
       apBudget: z.number().int().min(1).max(999999),
-      gameVersion: z.enum(["FC26", "FC27"]).default("FC26"),
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
@@ -277,9 +270,7 @@ ${filterRules.join("\n")}
 
       if (!customSlots || !signatureUpgrades) {
         try {
-          const progFileName = input.gameVersion === "FC27" ? "FC27_PROGRESSION.csv" : "progression.csv";
-          const progDir = input.gameVersion === "FC27" ? "data27" : "data";
-          const progPath = path.join(process.cwd(), "server", progDir, progFileName);
+          const progPath = path.join(process.cwd(), "server", "data27", "FC27_PROGRESSION.csv");
           const progContent = await fs.readFile(progPath, "utf-8");
           const lines = progContent.trim().split("\n");
           for (let i = 1; i < lines.length; i++) {
@@ -342,37 +333,7 @@ ${filterRules.join("\n")}
         earnedSpecPlaystyle
       );
 
-      const PLAYSTYLES = getPlaystyles(input.gameVersion);
-
-      const standardPlaystyles = input.blueprint.playstyles
-        .filter(ps => {
-          const isSignature = resolvedSignatures.some((sig: string) => sig.replace('+', '').toLowerCase() === ps.name.toLowerCase());
-          if (isSignature) return false;
-
-          const realReqs = PLAYSTYLES.find((p: any) => p.Playstyle?.toLowerCase() === ps.name.toLowerCase());
-          if (!realReqs) return false; 
-
-          const checkReq = (attrName: string | undefined, reqVal: string | number | undefined) => {
-             if (!attrName || !reqVal) return true;
-             const target = Number(reqVal);
-             const rawAttrKey = attrName.replace(/\s+/g, '').toLowerCase();
-             const statObj = result.stats.find(s => s.attribute.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
-             const finalStatValue = statObj ? statObj.final : 0;
-             
-             const matchingBoostKey = Object.keys(input.foundationBoosts).find(k => k.replace(/\s+/g, '').toLowerCase() === rawAttrKey);
-             const boost = matchingBoostKey ? input.foundationBoosts[matchingBoostKey] : 0;
-             
-             return (finalStatValue + boost) >= target;
-          };
-
-          const met1 = checkReq(realReqs.Req_Attr1 || realReqs.Attr1, realReqs.Req_Val1 || realReqs.Val1);
-          const met2 = checkReq(realReqs.Req_Attr2 || realReqs.Attr2, realReqs.Req_Val2 || realReqs.Val2);
-          const met3 = checkReq(realReqs.Req_Attr3 || realReqs.Attr3, realReqs.Req_Val3 || realReqs.Val3);
-
-          return met1 && met2 && met3;
-        })
-        .map(ps => ps.name)
-        .slice(0, customSlots); 
+      const standardPlaystyles = result.equippedPlaystyles?.slice(0, customSlots) || [];
       
       return {
         ...result,
