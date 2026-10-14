@@ -5,7 +5,7 @@ import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 
 // PHASE 2 HELPER UTILITIES
 import { getArchetypeDisplayPosition, getStatCaps } from '@/utils/builderUtils';
-import { calculateOVR } from '@/utils/ovrCalculator'; // 👉 NEW: Import the OVR Calculator
+import { calculateOVR } from '@/utils/ovrCalculator';
 
 // PHASE 3 SUB-COMPONENTS & MODALS
 import { PlaystyleSlotsRow } from '@/components/builder/PlaystyleSlots';
@@ -66,28 +66,23 @@ export default function ManualBuilder() {
     handleStarChange, handleSliderChange
   } = useBuilderLogic();
 
-  // 👉 NEW: State to track which position badge is currently selected
   const [activePosition, setActivePosition] = useState<string>('');
 
-  // 👉 NEW: Extract Recommended Positions directly from the loaded Archetype CSV data
   const recommendedPositions = useMemo(() => {
     if (!archetype) return ['ST'];
     const archData = serverArchetypes?.[archetype];
-    if (archData && archData.Recommended_Positions) {
-      return archData.Recommended_Positions.split(',').map((p: string) => p.trim());
+    if (archData && archData.recommended) {
+      return archData.recommended;
     }
-    // Fallback if the CSV hasn't loaded that column yet
-    return [getArchetypeDisplayPosition(archetype, activeBounds?.type) || 'ST'];
-  }, [archetype, serverArchetypes, activeBounds]);
+    return ['ST'];
+  }, [archetype, serverArchetypes]);
 
-  // 👉 NEW: Auto-select the first recommended position when the archetype changes
   useEffect(() => {
     if (recommendedPositions.length > 0 && !recommendedPositions.includes(activePosition)) {
       setActivePosition(recommendedPositions[0]);
     }
   }, [recommendedPositions, activePosition, archetype]);
 
-  // 👉 NEW: Calculate the live, combined stats mapping to feed into the OVR Calculator
   const statsRecord = useMemo(() => {
     const rec: Record<string, number> = {};
     if (currentStats) {
@@ -103,8 +98,8 @@ export default function ManualBuilder() {
     return rec;
   }, [currentStats, addedPoints, physicalModifiers, facilityModifiers, masteryModifiers]);
 
-  // 👉 NEW: The final dynamic OVR!
-  const displayOvr = activePosition ? calculateOVR(statsRecord, activePosition) : faceStats.ovr;
+  const calcOvr = activePosition ? calculateOVR(statsRecord, activePosition) : 0;
+  const finalOvr = calcOvr > 0 ? calcOvr : faceStats.ovr;
 
   if (isArchLoading || isProgLoading) {
     return (
@@ -160,16 +155,16 @@ export default function ManualBuilder() {
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               <div 
                  className={`w-[96px] h-[135px] rounded-lg relative overflow-hidden shrink-0 bg-cover bg-center transition-all duration-300 ${
-                   displayOvr >= 75 // 👉 NEW: Card glow updates dynamically with new OVR
+                   finalOvr >= 75 
                      ? 'shadow-[0_0_15px_rgba(250,204,21,0.2)]' 
                      : 'shadow-[0_0_15px_rgba(192,192,192,0.25)]'
                  }`}
-                 style={{ backgroundImage: `url('/cards/${displayOvr >= 75 ? 'gold' : 'silver'}-card.png')` }}
+                 style={{ backgroundImage: `url('/cards/${finalOvr >= 75 ? 'gold' : 'silver'}-card.png')` }}
               >
                  {/* OVR Rating */}
                  <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>
-                      {displayOvr} {/* 👉 NEW: Live rendering OVR */}
+                      {finalOvr}
                     </span>
                  </div>
                  
@@ -212,7 +207,6 @@ export default function ManualBuilder() {
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
-                 {/* 👉 NEW: Clickable Interactive Position Badges */}
                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {recommendedPositions.map((pos) => (
                       <button
