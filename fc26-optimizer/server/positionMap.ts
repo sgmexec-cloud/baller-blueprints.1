@@ -24,7 +24,7 @@ const RAW_ROLE_MAP: Record<string, string[]> = {
 
   // Attack
   "Winger":                ["LW"],
-  "Inside Forward":        ["LW", "LF"],
+  "Inside Forward":        ["LW"],
   "Shadow Striker":        ["CAM", "ST"],
   "False 9":               ["ST", "CAM"],
   "Advanced Forward":      ["ST"],
