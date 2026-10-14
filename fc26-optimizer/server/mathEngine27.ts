@@ -1,5 +1,9 @@
-import { ALL_ARCHETYPES, ARCHETYPE_PROFILES, COST_DICT, PLAYSTYLES } from "./csvLoader";
-import { getCostForPoints, getApCost } from "../client/src/utils/builderUtils"; // Note: engine uses server-side cost calculation or csvLoader
+import { 
+  getAllArchetypes, 
+  getCostDict, 
+  getPlaystyles, 
+  getArchetypeProfiles 
+} from "./csvLoader";
 
 export const ATTR_CATEGORIES: Record<string, string[]> = {
   Pace: ["Acceleration", "SprintSpeed"],
@@ -51,6 +55,8 @@ export interface MathEngineResult {
   totalApSpent: number;
   byCategory: Record<string, StatResult[]>;
   investedPoints: Record<string, number>;
+  equippedPlaystyles?: string[];
+  skippedPlaystyles?: string[];
 }
 
 export interface ScoutingBlueprint {
@@ -88,11 +94,11 @@ function matchAttr(attrName: string, availableAttrs: string[]): string | null {
   return null;
 }
 
-function getUpgradeCost(archKey: string, attrKey: string, rawBase: number, currentPointsAdded: number): number {
-  const dictArchKey = Object.keys(COST_DICT).find(k => normAttr(k) === normAttr(archKey));
+function getUpgradeCost(costDict: any, archKey: string, attrKey: string, rawBase: number, currentPointsAdded: number): number {
+  const dictArchKey = Object.keys(costDict).find(k => normAttr(k) === normAttr(archKey));
   if (!dictArchKey) return 999999;
   
-  const archDict = COST_DICT[dictArchKey];
+  const archDict = costDict[dictArchKey];
   const dictAttrKey = Object.keys(archDict).find(k => normAttr(k) === normAttr(attrKey));
   if (!dictAttrKey) return 999999;
 
@@ -103,12 +109,17 @@ function getUpgradeCost(archKey: string, attrKey: string, rawBase: number, curre
 export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
-  customSlots: number = 0,
+  customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
-  foundationBoosts: Record<string, number> = {} 
+  foundationBoosts: Record<string, number> = {},
+  version: "FC26" | "FC27" = "FC27"
 ): MathEngineResult {
+  const ALL_ARCHETYPES = getAllArchetypes(version);
+  const COST_DICT = getCostDict(version);
+  const PLAYSTYLES = getPlaystyles(version);
+
   const archKey = blueprint.archetype;
-  const archetypeRows = ALL_ARCHETYPES.filter((r) => normAttr(r.Archetype) === normAttr(archKey));
+  const archetypeRows = ALL_ARCHETYPES.filter((r: any) => normAttr(r.Archetype) === normAttr(archKey));
 
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
@@ -117,8 +128,13 @@ export function runMathEngine(
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    const baseVal = parseInt(row["Base Value"], 10) || 70;
-    stats[attr] = { base: baseVal, max: parseInt(row["Max Value"], 10) || 99, current: baseVal, pointsAdded: 0, apSpent: 0 };
+    // 👉 FIX: Proper base value handling for falsy zeroes
+    const b = parseInt(row["Base Value"], 10);
+    const baseVal = Number.isNaN(b) ? 70 : b;
+    const m = parseInt(row["Max Value"], 10);
+    const maxVal = Number.isNaN(m) ? 99 : m;
+    
+    stats[attr] = { base: baseVal, max: maxVal, current: baseVal, pointsAdded: 0, apSpent: 0 };
     attrNames.push(attr);
   }
 
@@ -146,7 +162,7 @@ export function runMathEngine(
     
     if (s.current >= Math.min(s.max, hardCap)) return false;
     
-    const cost = getUpgradeCost(archKey, matched, s.base, s.pointsAdded);
+    const cost = getUpgradeCost(COST_DICT, archKey, matched, s.base, s.pointsAdded);
     if (cost > remainingAP) return false;
     
     s.current += 1;
@@ -165,23 +181,70 @@ export function runMathEngine(
     }
   }
 
-  // 1. Initial Tax (Playstyles & Skill Moves)
+  // 👉 FIX: Helper to test PlayStyle affordability before purchasing
+  function costToReach(attr: string, target: number): number {
+    const m = matchAttr(attr, attrNames);
+    if (!m) return Infinity;
+    const s = stats[m];
+    const t = getEffectiveCap(m, target);
+    if (t > s.max) return Infinity;
+    
+    let total = 0;
+    for (let lvl = s.current; lvl < t; lvl++) {
+      const c = getUpgradeCost(COST_DICT, archKey, m, s.base, lvl - s.base);
+      if (c >= 999999) return Infinity;
+      total += c;
+    }
+    return total;
+  }
+
+  // 👉 FIX: Helper to match plus and non-plus versions correctly
+  function findPlaystyle(name: string) {
+    const n = name.trim().toLowerCase();
+    return PLAYSTYLES.find((p: any) => p.Playstyle?.trim().toLowerCase() === n)
+        ?? PLAYSTYLES.find((p: any) => normAttr(p.Playstyle || "") === normAttr(name));
+  }
+
+  // 1. Initial Tax (Playstyles) - Now verifies affordability first!
+  const equippedPlaystyles: string[] = [];
+  const skippedPlaystyles: string[] = [];
+  
   const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
+  
   for (const ps of activePlaystyles) {
-    const realReqs = PLAYSTYLES.find((p) => normAttr(p.Playstyle) === normAttr(ps.name));
-    if (realReqs) {
-      if (realReqs.Attr1 && realReqs.Val1) upgradeToMin(realReqs.Attr1, parseInt(realReqs.Val1, 10));
-      if (realReqs.Attr2 && realReqs.Val2) upgradeToMin(realReqs.Attr2, parseInt(realReqs.Val2, 10));
-      if (realReqs.Attr3 && realReqs.Val3) upgradeToMin(realReqs.Attr3, parseInt(realReqs.Val3, 10));
+    const def = findPlaystyle(ps.name);
+    if (!def) { 
+      skippedPlaystyles.push(ps.name); 
+      continue; 
+    }
+    
+    const reqs = [[def.Req_Attr1 || def.Attr1, def.Req_Val1 || def.Val1], 
+                  [def.Req_Attr2 || def.Attr2, def.Req_Val2 || def.Val2], 
+                  [def.Req_Attr3 || def.Attr3, def.Req_Val3 || def.Val3]]
+      .filter(([a, v]) => a && v)
+      .map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
+      
+    const totalCost = reqs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    
+    if (totalCost <= remainingAP) {
+      reqs.forEach(r => upgradeToMin(r.attr, r.val));
+      equippedPlaystyles.push(ps.name);
+    } else {
+      skippedPlaystyles.push(ps.name);
+    }
+  }
+
+  // Specialisation
+  if (blueprint.specialisationMinAttrs) {
+    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    if (totalSpecCost <= remainingAP) {
+       blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
     }
   }
   
-  if (blueprint.specialisationMinAttrs) {
-    blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
-  }
-  
-  upgradeToMin("SkillMoves", blueprint.skillMoves ?? 5);
-  upgradeToMin("WeakFoot", blueprint.weakFoot ?? 5);
+  // 👉 FIX: Only upgrade star skills if requested
+  if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
+  if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
 
   // 1.5 Focus Attributes VIP Pass
   if (preferredAttributes.length > 0) {
@@ -197,7 +260,7 @@ export function runMathEngine(
         .sort((a, b) => stats[a!].current - stats[b!].current);
         
       for (const matched of candidates) {
-        const cost = getUpgradeCost(archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
+        const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
@@ -233,7 +296,7 @@ export function runMathEngine(
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const cost = getUpgradeCost(archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
+        const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, effectiveCap);
@@ -256,8 +319,8 @@ export function runMathEngine(
   const spilloverPool: { attr: string; cap: number }[] = [];
   
   const sortedAttrs = [...attrNames].sort((a, b) => {
-    const costA = getUpgradeCost(archKey, a, stats[a].base, stats[a].pointsAdded);
-    const costB = getUpgradeCost(archKey, b, stats[b].base, stats[b].pointsAdded);
+    const costA = getUpgradeCost(COST_DICT, archKey, a, stats[a].base, stats[a].pointsAdded);
+    const costB = getUpgradeCost(COST_DICT, archKey, b, stats[b].base, stats[b].pointsAdded);
     return costA - costB;
   });
 
@@ -274,7 +337,7 @@ export function runMathEngine(
        if (!s) continue;
        
        const effectiveCap = getEffectiveCap(c.attr, c.cap);
-       const cost = getUpgradeCost(archKey, c.attr, s.base, s.pointsAdded);
+       const cost = getUpgradeCost(COST_DICT, archKey, c.attr, s.base, s.pointsAdded);
        
        if (cost <= remainingAP && s.current < Math.min(effectiveCap, s.max)) {
           const success = upgradeOne(c.attr, effectiveCap);
@@ -294,7 +357,7 @@ export function runMathEngine(
       const s = stats[attr];
       if (s.current >= s.max) continue;
       
-      const cost = getUpgradeCost(archKey, attr, s.base, s.pointsAdded);
+      const cost = getUpgradeCost(COST_DICT, archKey, attr, s.base, s.pointsAdded);
       if (cost <= remainingAP && cost < lowestCost) {
         lowestCost = cost;
         cheapestAttr = attr;
@@ -302,9 +365,19 @@ export function runMathEngine(
     }
 
     if (cheapestAttr) {
-      const success = upgradeOne(cheapestAttr, 99);
+      // Micro-sweep now respects foundation caps!
+      const effectiveCap = getEffectiveCap(cheapestAttr, 99);
+      const success = upgradeOne(cheapestAttr, effectiveCap);
       if (success) microProgress = true;
     }
+  }
+  
+  // 👉 FIX: Audit trailing AP blockages
+  if (remainingAP > 0) {
+     const blocked = attrNames
+       .filter(a => stats[a].current < stats[a].max)
+       .map(a => `${a}@${stats[a].current}: ${getUpgradeCost(COST_DICT, archKey, a, stats[a].base, stats[a].pointsAdded)}`);
+     console.warn(`Unspent AP: ${remainingAP}`, blocked);
   }
 
   const statResults: StatResult[] = attrNames.map((attr) => {
@@ -331,15 +404,18 @@ export function runMathEngine(
       acc[stat.category].push(stat);
       return acc;
     }, {} as Record<string, StatResult[]>),
-    investedPoints
+    investedPoints,
+    equippedPlaystyles,
+    skippedPlaystyles
   };
 }
 
-export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string): string[] {
-  const arch = ARCHETYPE_PROFILES.find((a) => normAttr(a.Archetype) === normAttr(archetypeName));
+export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string, version: "FC26" | "FC27" = "FC27"): string[] {
+  const ALL_PROFILES = getArchetypeProfiles(version);
+  const arch = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(archetypeName));
   if (!arch) return [];
-  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s) => s.trim());
-  const upgradedSignatures = baseSignatures.map((ps, index) => index < signatureUpgrades ? `${ps}+` : ps);
+  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s: string) => s.trim());
+  const upgradedSignatures = baseSignatures.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
   if (specialisationBonusPlus) upgradedSignatures[3] = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
   return upgradedSignatures.slice(0, 4);
 }
