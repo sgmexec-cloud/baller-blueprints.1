@@ -60,6 +60,7 @@ export default function ManualBuilder() {
     currentStats, availableAp, faceStats, accelerate,
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
+    psPlusChoice, setPsPlusMode, handleUnlockPlaystyle,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
@@ -119,7 +120,7 @@ export default function ManualBuilder() {
         positionRatings,
         faceStats,
         stats: currentStats,
-        playstylePlus: [basePsPlus, specPlaystyle].filter((p) => p && p !== 'None').map(String),
+        playstylePlus: [activePsPlus].filter((p) => p && p !== 'None').map(String),
         playstyles: equippedPlaystyles.filter(Boolean),
         facilityPlaystyles: [fac1, fac2].filter(Boolean).map(String),
         specialization: equippedSpecialization,
@@ -276,6 +277,7 @@ export default function ManualBuilder() {
            <div className="mt-4 px-2">
               <PlaystyleSlotsRow 
                 interactive={true}
+                activePsPlus={activePsPlus}
                 basePsPlus={basePsPlus}
                 specPlaystyle={specPlaystyle}
                 equippedSpecialization={equippedSpecialization}
@@ -382,6 +384,7 @@ export default function ManualBuilder() {
         {activeTab === 'playstyles' && (
           <PlaystylesTab 
             level={level}
+            activePsPlus={activePsPlus}
             basePsPlus={basePsPlus}
             specPlaystyle={specPlaystyle}
             equippedSpecialization={equippedSpecialization}
@@ -468,6 +471,11 @@ export default function ManualBuilder() {
         level={level}
         availableAp={availableAp}
         activePsPlus={activePsPlus}
+        basePsPlus={basePsPlus}
+        specPlaystyle={specPlaystyle}
+        psPlusChoice={psPlusChoice}
+        setPsPlusMode={setPsPlusMode}
+        handleUnlockPlaystyle={handleUnlockPlaystyle}
         isPsPlusUnlocked={isPsPlusUnlocked}
         equippedSpecialization={equippedSpecialization}
         equippedPlaystyles={equippedPlaystyles}
