@@ -4,18 +4,18 @@ import type { PlaystyleSlotsRowProps, GridSlotProps } from '@/types/builder';
 
 export const PlaystyleSlotsRow: React.FC<PlaystyleSlotsRowProps> = ({
   interactive = false,
-  basePsPlus,
-  specPlaystyle,
-  equippedSpecialization,
+  activePsPlus,
   equippedPlaystyles,
   level,
   fac1,
   fac2,
   setActiveModal
 }) => {
+  const hasPsPlus = !!activePsPlus && activePsPlus !== 'None';
+
+  // Only ONE Playstyle+ slot: it shows whichever of Signature / Specialisation is currently equipped
   const slotsData = [
-     { id: 'base', type: 'gold', name: basePsPlus, unlocked: true, unlockText: '' },
-     { id: 'spec', type: 'gold', name: specPlaystyle, unlocked: !!equippedSpecialization, unlockText: 'SPEC' },
+     { id: 'psplus', type: 'gold', name: hasPsPlus ? activePsPlus : '', unlocked: true, unlockText: '' },
      { id: 'lvl5', type: 'silver', name: equippedPlaystyles[0], unlocked: level >= 5, unlockText: 'LVL 5' },
      { id: 'lvl15', type: 'silver', name: equippedPlaystyles[1], unlocked: level >= 15, unlockText: 'LVL 15' },
      { id: 'lvl40', type: 'silver', name: equippedPlaystyles[2], unlocked: level >= 40, unlockText: 'LVL 40' },
@@ -23,22 +23,22 @@ export const PlaystyleSlotsRow: React.FC<PlaystyleSlotsRowProps> = ({
      { id: 'facil2', type: 'silver', name: fac2, unlocked: !!fac2, unlockText: 'FAC 2' }
   ];
 
+  const isActionable = (id: string) => id === 'psplus' || id.startsWith('lvl');
+
   return (
      <div className="flex justify-center gap-[4px] sm:gap-1.5 w-full">
         {slotsData.map(slot => {
            const handleSlotClick = () => {
-              if (interactive && slot.unlocked) {
-                 if (slot.id === 'spec') setActiveModal('specializations');
-                 else if (slot.id.startsWith('lvl')) setActiveModal('playstyles');
-              }
+              // Playstyle+ and level slots both open the PlayStyle Hub
+              if (interactive && slot.unlocked && isActionable(slot.id)) setActiveModal('playstyles');
            };
 
            return (
              <button 
                key={slot.id} 
                onClick={handleSlotClick}
-               disabled={!interactive || !slot.unlocked || (!slot.id.startsWith('lvl') && slot.id !== 'spec')}
-               className={`w-[2.3rem] h-[2.3rem] md:w-10 md:h-10 rounded bg-[#131A2A] border ${slot.name && slot.type === 'gold' ? 'border-[#facc15]/50 shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'border-[#26334A]'} flex items-center justify-center relative overflow-hidden transition-all ${interactive && slot.unlocked && (slot.id.startsWith('lvl') || slot.id === 'spec') ? 'hover:bg-[#192235] cursor-pointer' : 'cursor-default'}`}
+               disabled={!interactive || !slot.unlocked || !isActionable(slot.id)}
+               className={`w-[2.3rem] h-[2.3rem] md:w-10 md:h-10 rounded bg-[#131A2A] border ${slot.name && slot.type === 'gold' ? 'border-[#facc15]/50 shadow-[0_0_8px_rgba(250,204,21,0.2)]' : 'border-[#26334A]'} flex items-center justify-center relative overflow-hidden transition-all ${interactive && slot.unlocked && isActionable(slot.id) ? 'hover:bg-[#192235] cursor-pointer' : 'cursor-default'}`}
              >
                 {!slot.unlocked ? (
                    <div className="flex flex-col items-center justify-center opacity-40">
