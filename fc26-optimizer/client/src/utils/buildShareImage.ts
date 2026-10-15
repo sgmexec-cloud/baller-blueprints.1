@@ -115,32 +115,6 @@ function drawContain(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { w
   ctx.drawImage(img, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
 }
 
-// Same as CSS object-cover + object-bottom
-function drawCoverBottom(ctx: CanvasRenderingContext2D, img: HTMLImageElement, x: number, y: number, w: number, h: number) {
-  const s = Math.max(w / img.width, h / img.height);
-  const dw = img.width * s;
-  const dh = img.height * s;
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  ctx.clip();
-  ctx.drawImage(img, x + (w - dw) / 2, y + h - dh, dw, dh);
-  ctx.restore();
-}
-
-// Recolor an icon (used for the black archetype glyph on the card)
-function tint(img: HTMLImageElement, color: string, size = 256): HTMLCanvasElement {
-  const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
-  const g = c.getContext('2d')!;
-  drawContain(g, img, 0, 0, size, size);
-  g.globalCompositeOperation = 'source-in';
-  g.fillStyle = color;
-  g.fillRect(0, 0, size, size);
-  return c;
-}
-
 function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, filled: boolean) {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
@@ -245,6 +219,50 @@ function drawChips(
 
 type PillKind = 'plus' | 'spec' | 'style' | 'facility';
 
+const PILL_STYLES: Record<PillKind, { fill: string; stroke: string; text: string }> = {
+  plus: { fill: 'rgba(250,204,21,0.12)', stroke: C.gold, text: C.gold },
+  spec: { fill: 'rgba(33,230,164,0.12)', stroke: C.green, text: C.green },
+  style: { fill: 'rgba(77,141,255,0.14)', stroke: C.blue, text: '#cfe0ff' },
+  facility: { fill: 'rgba(142,154,175,0.12)', stroke: C.muted, text: '#d5dcea' },
+};
+
+// Vertical stack of compact pills (used under the OVR). Stops before maxBottom.
+function drawPillStack(
+  ctx: CanvasRenderingContext2D,
+  pills: { text: string; kind: PillKind }[],
+  x: number,
+  y: number,
+  maxW: number,
+  maxBottom: number
+) {
+  const h = 30;
+  const gap = 8;
+  let cy = y;
+  for (const p of pills) {
+    if (cy + h > maxBottom) break;
+    ctx.font = `600 16px ${BODY}`;
+    let label = p.text;
+    while (label.length > 1 && ctx.measureText(label).width > maxW - 24) {
+      label = label.slice(0, -1);
+    }
+    if (label !== p.text) label = `${label.trimEnd()}…`;
+    const w = Math.min(maxW, ctx.measureText(label).width + 24);
+    const s = PILL_STYLES[p.kind];
+    rrect(ctx, x, cy, w, h, 15);
+    ctx.fillStyle = s.fill;
+    ctx.fill();
+    ctx.strokeStyle = s.stroke;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = s.text;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + 12, cy + h / 2 + 1);
+    cy += h + gap;
+  }
+  return cy;
+}
+
 function drawPills(
   ctx: CanvasRenderingContext2D,
   pills: { text: string; kind: PillKind }[],
@@ -257,12 +275,7 @@ function drawPills(
   let cx = x;
   let cy = y;
   let rows = 1;
-  const styles: Record<PillKind, { fill: string; stroke: string; text: string }> = {
-    plus: { fill: 'rgba(250,204,21,0.12)', stroke: C.gold, text: C.gold },
-    spec: { fill: 'rgba(33,230,164,0.12)', stroke: C.green, text: C.green },
-    style: { fill: 'rgba(77,141,255,0.14)', stroke: C.blue, text: '#cfe0ff' },
-    facility: { fill: 'rgba(142,154,175,0.12)', stroke: C.muted, text: '#d5dcea' },
-  };
+  const styles = PILL_STYLES;
   for (const p of pills) {
     ctx.font = `600 18px ${BODY}`;
     const w = ctx.measureText(p.text).width + 32;
@@ -355,18 +368,7 @@ function drawStatPanels(ctx: CanvasRenderingContext2D, d: ShareBuildData, top: n
 export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
   await ensureFonts();
 
-  const specIcon = d.specialization
-    ? `/icons/specializations/${d.specialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png`
-    : null;
-  const archIcon = `/archetypes/${d.archetype.replace(/\s+/g, '-').toLowerCase()}.png`;
-
-  const [cardImg, logoImg, defaultAvatar, specImg, archImg] = await Promise.all([
-    loadImage(`/cards/${d.ovr >= 75 ? 'gold' : 'silver'}-card.png`),
-    loadImage('/clubs-dna-logo.png'),
-    loadImage('/default-avatar.png'),
-    specIcon ? loadImage(specIcon) : Promise.resolve(null),
-    loadImage(archIcon),
-  ]);
+  const logoImg = await loadImage('/clubs-dna-logo.png');
 
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -401,50 +403,36 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
     ctx.fillText('CLUBSDNA', W / 2, 76);
   }
 
-  // ----- Player card -----
+  // ----- Blank card area -----
+  // The card artwork is intentionally NOT drawn: this area (cardX, cardY, cardW x cardH)
+  // is left empty so a real player image can be dropped in afterwards.
   const isGold = d.ovr >= 75;
-  ctx.save();
-  ctx.shadowColor = isGold ? 'rgba(250,204,21,0.30)' : 'rgba(192,192,192,0.30)';
-  ctx.shadowBlur = 40;
-  if (cardImg) {
-    ctx.drawImage(cardImg, cardX, cardY, cardW, cardH);
-  } else {
-    rrect(ctx, cardX, cardY, cardW, cardH, 24);
-    ctx.fillStyle = isGold ? '#c9a227' : '#9aa3ad';
-    ctx.fill();
-  }
-  ctx.restore();
+  const k = cardW / 96; // keeps every offset identical to the old in-app card layout
 
-  const k = cardW / 96; // the in-app card is 96px wide; scale every overlay by k
+  // Playstyles shown in the right column AND stacked under the OVR
+  const pills: { text: string; kind: PillKind }[] = [
+    ...d.playstylePlus.map((t) => ({ text: `${t}+`.replace('++', '+'), kind: 'plus' as PillKind })),
+    ...(d.specialization ? [{ text: d.specialization, kind: 'spec' as PillKind }] : []),
+    ...d.playstyles.map((t) => ({ text: t, kind: 'style' as PillKind })),
+    ...d.facilityPlaystyles.map((t) => ({ text: t, kind: 'facility' as PillKind })),
+  ];
 
-  // Avatar or specialization icon
-  const ax = cardX + 11.8 * k;
-  const ay = cardY + 14.7 * k;
-  const asz = 77.1 * k;
-  if (specImg) {
-    drawContain(ctx, specImg, ax, ay, asz, asz);
-  } else if (defaultAvatar) {
-    drawCoverBottom(ctx, defaultAvatar, ax, ay, asz, asz);
-  }
-
-  // OVR + selected position
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = C.bg;
-  ctx.font = `800 ${15 * k}px ${NUM}`;
+  // OVR + selected position (same spot as on the old card)
   const ovrX = cardX + (0.12 + 0.075) * cardW;
   const ovrY = cardY + 0.15 * cardH;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.font = `800 ${15 * k}px ${NUM}`;
+  ctx.fillStyle = isGold ? C.gold : '#C0C0C0';
   ctx.fillText(String(d.ovr), ovrX, ovrY);
   ctx.font = `700 ${8 * k}px ${BODY}`;
+  ctx.fillStyle = C.text;
   ctx.fillText(d.position, ovrX, ovrY + 15 * k * 1.05);
 
-  // Archetype glyph on the card
-  if (archImg) {
-    ctx.save();
-    ctx.globalAlpha = 0.9;
-    drawContain(ctx, tint(archImg, '#000000'), cardX + 0.389 * cardW, cardY + 0.658 * cardH, 0.221 * cardW, 0.221 * cardH);
-    ctx.restore();
-  }
+  // Playstyles stacked underneath the OVR / position
+  const stackX = cardX + 0.085 * cardW;
+  const stackY = ovrY + 15 * k * 1.05 + 8 * k * 1.2 + 14;
+  drawPillStack(ctx, pills, stackX, stackY, cardW * 0.62, cardY + cardH);
 
   // ----- Right column -----
   const rx = cardX + cardW + 44;
@@ -471,12 +459,6 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
 
   cy = drawChips(ctx, d.positionRatings, d.position, rx, cy, rw) + 22;
 
-  const pills: { text: string; kind: PillKind }[] = [
-    ...d.playstylePlus.map((t) => ({ text: `${t}+`.replace('++', '+'), kind: 'plus' as PillKind })),
-    ...(d.specialization ? [{ text: d.specialization, kind: 'spec' as PillKind }] : []),
-    ...d.playstyles.map((t) => ({ text: t, kind: 'style' as PillKind })),
-    ...d.facilityPlaystyles.map((t) => ({ text: t, kind: 'facility' as PillKind })),
-  ];
   if (pills.length > 0) drawPills(ctx, pills, rx, cy, rw);
 
   // ----- Stat panels -----
