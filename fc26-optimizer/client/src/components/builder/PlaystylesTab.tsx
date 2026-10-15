@@ -4,14 +4,15 @@ import type { PlaystylesTabProps } from '@/types/builder';
 
 export const PlaystylesTab: React.FC<PlaystylesTabProps> = ({
   level,
-  basePsPlus,
-  specPlaystyle,
+  activePsPlus,
   equippedSpecialization,
   equippedPlaystyles,
   fac1,
   fac2,
   setActiveModal,
 }) => {
+  const hasPsPlus = !!activePsPlus && activePsPlus !== 'None';
+
   return (
     <section className="animate-fade-up">
       <div className="flex items-center gap-2 mb-3 pl-1">
@@ -25,11 +26,19 @@ export const PlaystylesTab: React.FC<PlaystylesTabProps> = ({
          <div>
             <div className="text-[10px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-2 flex justify-between">
                <span>PlayStyle+</span>
-               <span className="text-[8px] text-[#59657A]">SIGNATURE & SPEC</span>
+               <span className="text-[8px] text-[#59657A]">ONE AT A TIME</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-               <GridSlot slot={{ id: 'base', type: 'gold', name: basePsPlus, unlocked: true, unlockText: 'SIG' }} interactive={false} />
-               <GridSlot slot={{ id: 'spec', type: 'gold', name: specPlaystyle, unlocked: !!equippedSpecialization, unlockText: 'SPEC' }} interactive={true} onClick={() => setActiveModal('specializations')} />
+               <GridSlot slot={{ id: 'psplus', type: 'gold', name: hasPsPlus ? activePsPlus : '', unlocked: true, unlockText: '' }} interactive={true} onClick={() => setActiveModal('playstyles')} />
+               <button
+                  onClick={() => setActiveModal('specializations')}
+                  className="h-[70px] rounded-xl bg-[#0D1220] border border-[#26334A] hover:bg-[#192235] hover:border-[#4D8DFF]/50 transition-all flex flex-col items-center justify-center gap-1 px-2"
+               >
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-[#59657A]">Specialisation</span>
+                  <span className={`text-[11px] font-black uppercase tracking-wider text-center leading-tight ${equippedSpecialization ? 'text-[#21E6A4]' : 'text-[#8E9AAF]'}`}>
+                     {equippedSpecialization || 'Browse'}
+                  </span>
+               </button>
             </div>
          </div>
 
