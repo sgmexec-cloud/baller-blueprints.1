@@ -6,6 +6,7 @@ import { ARCH_PHYSICALS, ARCHETYPE_STAR_CAPS, STAR_UPGRADE_COSTS } from '@/const
 import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES, FIXED_PLAYSTYLE_PLUS } from '@/constants/playstylesData';
 import type { StatReq } from '@/types/builder';
 import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
+import { pickBestPlaystylePlus } from '@/utils/psPlusSynergy';
 
 export function useBuilderLogic() {
   const [level, setLevel] = useState<number>(25);
@@ -25,6 +26,8 @@ export function useBuilderLogic() {
   // Equip States
   const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
+  // 'auto' = pick the best-synergy Playstyle+ live; 'signature' / 'spec' = the player's (or AI's) explicit choice
+  const [psPlusMode, setPsPlusMode] = useState<'auto' | 'signature' | 'spec'>('auto');
   const [expandedPerk, setExpandedPerk] = useState<string | null>(null);
   
   // Navigation & UI State
@@ -45,7 +48,7 @@ export function useBuilderLogic() {
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiArchetypeLock, setAiArchetypeLock] = useState<string>("AUTO");
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
-  const [aiBlueprint, setAiBlueprint] = useState<any>(null); // 👉 NEW: Holds the blueprint for Step 2
+  const [aiBlueprint, setAiBlueprint] = useState<any>(null); // Holds the blueprint for Step 2
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -74,6 +77,7 @@ export function useBuilderLogic() {
       setEquippedPlaystyles(['', '', '']);
       setSelectedPsView(null);
       setEquippedSpecialization(null);
+      setPsPlusMode('auto');
       setExpandedPerk(null);
     }
   }, [serverArchetypes, gameVersion]);
@@ -90,10 +94,11 @@ export function useBuilderLogic() {
     setEquippedPlaystyles(['', '', '']);
     setSelectedPsView(null);
     setEquippedSpecialization(null);
+    setPsPlusMode('auto');
     setExpandedPerk(null);
   };
 
-  // 👉 NEW: Phase 1 of AI Build - Get the Blueprint & show Step 2 UI
+  // Phase 1 of AI Build - Get the Blueprint & show Step 2 UI
   const handleGenerateBlueprint = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
@@ -122,7 +127,7 @@ export function useBuilderLogic() {
     }
   };
 
-  // 👉 NEW: Phase 2 of AI Build - Run math engine with confirmed level & foundation boosts
+  // Phase 2 of AI Build - Run math engine with confirmed level & foundation boosts
   const handleFinalizeBuild = async () => {
     if (!aiBlueprint) return;
     setIsGeneratingAi(true);
@@ -226,8 +231,26 @@ export function useBuilderLogic() {
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
           const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
           setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
+
+          // Only ONE Playstyle+ can be equipped: keep whichever fits this build best
+          if (matchedSpec) {
+            const statsArr = ((mathResult as any).stats ?? []) as { attribute: string; final: number }[];
+            const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+            setPsPlusMode(
+              pickBestPlaystylePlus({
+                signature: FIXED_PLAYSTYLE_PLUS[targetArch] || 'None',
+                spec: matchedSpec.perk,
+                getStat: (stat) => statsArr.find(s => norm(s.attribute) === norm(stat))?.final ?? 70,
+                rankedPreferences: aiBlueprint.playstylePlus,
+                focusAttributes: [...(aiBlueprint.coreAttributes ?? []), ...(aiBlueprint.secondaryAttributes ?? [])],
+              })
+            );
+          } else {
+            setPsPlusMode('auto');
+          }
         } else {
           setEquippedSpecialization(null);
+          setPsPlusMode('auto');
         }
       }
 
@@ -487,6 +510,18 @@ export function useBuilderLogic() {
       }
       setEquippedSpecialization(specName);
     }
+    // Re-evaluate which single Playstyle+ fits best (the player can still override it in the Hub)
+    setPsPlusMode('auto');
+  };
+
+  // Auto-buy for locked playstyles: the caller has already checked affordability with getUpgradeData
+  const handleUnlockPlaystyle = (upgrades: Record<string, number>) => {
+    if (!upgrades || Object.keys(upgrades).length === 0) return;
+    setAddedPoints(prev => {
+      const next = { ...prev };
+      for (const stat in upgrades) next[stat] = Math.max(next[stat] || 0, upgrades[stat]);
+      return next;
+    });
   };
 
   const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
@@ -571,10 +606,19 @@ export function useBuilderLogic() {
   
   const isPsPlusUnlocked = level >= 20;
   const basePsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
-  
-  const activePsPlus = equippedSpecialization 
-     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk || basePsPlus
-     : basePsPlus;
+
+  const specPerk = equippedSpecialization
+    ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk ?? null
+    : null;
+
+  // Only ONE Playstyle+ at a time: signature XOR specialisation
+  const psPlusChoice: 'signature' | 'spec' = !specPerk
+    ? 'signature'
+    : psPlusMode === 'auto'
+      ? pickBestPlaystylePlus({ signature: basePsPlus, spec: specPerk, getStat: (stat) => currentStats?.[stat] ?? 70 })
+      : psPlusMode;
+
+  const activePsPlus = psPlusChoice === 'spec' && specPerk ? specPerk : basePsPlus;
   
   const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
@@ -623,11 +667,12 @@ export function useBuilderLogic() {
     currentStats, availableAp, faceStats, accelerate,
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
+    psPlusChoice, setPsPlusMode,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
-    getUpgradeData, handleActionPlaystyle, handleActionSpecialization,
+    getUpgradeData, handleActionPlaystyle, handleActionSpecialization, handleUnlockPlaystyle,
     handleStarChange, handleSliderChange
   };
 }
