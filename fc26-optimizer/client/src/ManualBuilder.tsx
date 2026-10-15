@@ -6,6 +6,7 @@ import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 // PHASE 2 HELPER UTILITIES
 import { getStatCaps } from '@/utils/builderUtils';
 import { calculateOVR } from '@/utils/ovrCalculator';
+import { shareBuildImage } from '@/utils/buildShareImage';
 
 // PHASE 3 SUB-COMPONENTS & MODALS
 import { PlaystyleSlotsRow } from '@/components/builder/PlaystyleSlots';
@@ -53,6 +54,7 @@ export default function ManualBuilder() {
     serverArchetypes,
     progressionData,
     isArchLoading, isProgLoading,
+    maxAp,
     activeBounds, activeStarCaps,
     physicalModifiers, facilityModifiers, masteryModifiers,
     currentStats, availableAp, faceStats, accelerate,
@@ -92,6 +94,46 @@ export default function ManualBuilder() {
   const calcOvr = activePosition && currentStats ? calculateOVR(currentStats, activePosition) : 0;
   const finalOvr = calcOvr > 0 ? calcOvr : faceStats.ovr;
 
+  // Rating for every recommended position (shown as chips on the shared image)
+  const positionRatings = useMemo(
+    () => recommendedPositions.map((pos) => ({ pos, ovr: currentStats ? calculateOVR(currentStats, pos) : 0 })),
+    [recommendedPositions, currentStats]
+  );
+
+  // --- SHARE BUILD AS IMAGE ---
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShareBuild = async () => {
+    if (!currentStats || isSharing) return;
+    setIsSharing(true);
+    try {
+      await shareBuildImage({
+        archetype,
+        level,
+        height,
+        weight,
+        smLevel,
+        wfLevel,
+        position: activePosition,
+        ovr: finalOvr,
+        positionRatings,
+        faceStats,
+        stats: currentStats,
+        playstylePlus: [basePsPlus, specPlaystyle].filter((p) => p && p !== 'None').map(String),
+        playstyles: equippedPlaystyles.filter(Boolean),
+        facilityPlaystyles: [fac1, fac2].filter(Boolean).map(String),
+        specialization: equippedSpecialization,
+        apSpent: Math.max(0, maxAp - availableAp),
+        apTotal: maxAp,
+      });
+    } catch (err) {
+      console.error('Share image failed:', err);
+      alert("Couldn't create the image. Please try again.");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   if (isArchLoading || isProgLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#080B14]">
@@ -118,6 +160,20 @@ export default function ManualBuilder() {
               <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
 
               <div className="flex items-center gap-4">
+                <button
+                  onClick={handleShareBuild}
+                  disabled={isSharing || !currentStats}
+                  aria-label="Share build as image"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#4D8DFF]/40 bg-[#192235] text-[#4D8DFF] text-[11px] font-bold transition-colors hover:bg-[#4D8DFF] hover:text-[#080B14] disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                  </svg>
+                  {isSharing ? 'Creating…' : 'Share'}
+                </button>
+
                 <div className="flex items-center gap-1.5">
                   <span className="text-[#F4F7FB] font-bold text-[14px]">{availableAp.toLocaleString()}</span>
                   <div className="w-4 h-4 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
