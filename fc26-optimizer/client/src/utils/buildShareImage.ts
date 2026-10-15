@@ -175,7 +175,6 @@ function drawFaceStats(ctx: CanvasRenderingContext2D, f: ShareBuildData['faceSta
 function drawChips(
   ctx: CanvasRenderingContext2D,
   chips: { pos: string; ovr: number }[],
-  selected: string,
   x: number,
   y: number,
   maxW: number
@@ -197,17 +196,16 @@ function drawChips(
       cx = x;
       cy += h + gap;
     }
-    const isSel = chip.pos === selected;
     rrect(ctx, cx, cy, w, h, 8);
-    ctx.fillStyle = isSel ? 'rgba(76,175,80,0.22)' : C.panel;
+    ctx.fillStyle = C.panel;
     ctx.fill();
-    ctx.strokeStyle = isSel ? '#4caf50' : C.border;
+    ctx.strokeStyle = C.border;
     ctx.lineWidth = 1.5;
     ctx.stroke();
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     ctx.font = `700 19px ${BODY}`;
-    ctx.fillStyle = isSel ? C.text : C.muted;
+    ctx.fillStyle = C.muted;
     ctx.fillText(chip.pos, cx + 16, cy + h / 2 + 1);
     ctx.font = `800 19px ${NUM}`;
     ctx.fillStyle = tierColor(chip.ovr);
@@ -225,43 +223,6 @@ const PILL_STYLES: Record<PillKind, { fill: string; stroke: string; text: string
   style: { fill: 'rgba(77,141,255,0.14)', stroke: C.blue, text: '#cfe0ff' },
   facility: { fill: 'rgba(142,154,175,0.12)', stroke: C.muted, text: '#d5dcea' },
 };
-
-// Vertical stack of compact pills (used under the OVR). Stops before maxBottom.
-function drawPillStack(
-  ctx: CanvasRenderingContext2D,
-  pills: { text: string; kind: PillKind }[],
-  x: number,
-  y: number,
-  maxW: number,
-  maxBottom: number
-) {
-  const h = 30;
-  const gap = 8;
-  let cy = y;
-  for (const p of pills) {
-    if (cy + h > maxBottom) break;
-    ctx.font = `600 16px ${BODY}`;
-    let label = p.text;
-    while (label.length > 1 && ctx.measureText(label).width > maxW - 24) {
-      label = label.slice(0, -1);
-    }
-    if (label !== p.text) label = `${label.trimEnd()}…`;
-    const w = Math.min(maxW, ctx.measureText(label).width + 24);
-    const s = PILL_STYLES[p.kind];
-    rrect(ctx, x, cy, w, h, 15);
-    ctx.fillStyle = s.fill;
-    ctx.fill();
-    ctx.strokeStyle = s.stroke;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-    ctx.fillStyle = s.text;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(label, x + 12, cy + h / 2 + 1);
-    cy += h + gap;
-  }
-  return cy;
-}
 
 function drawPills(
   ctx: CanvasRenderingContext2D,
@@ -406,33 +367,14 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
   // ----- Blank card area -----
   // The card artwork is intentionally NOT drawn: this area (cardX, cardY, cardW x cardH)
   // is left empty so a real player image can be dropped in afterwards.
-  const isGold = d.ovr >= 75;
-  const k = cardW / 96; // keeps every offset identical to the old in-app card layout
 
-  // Playstyles shown in the right column AND stacked under the OVR
+  // Playstyles shown in the right column
   const pills: { text: string; kind: PillKind }[] = [
     ...d.playstylePlus.map((t) => ({ text: `${t}+`.replace('++', '+'), kind: 'plus' as PillKind })),
     ...(d.specialization ? [{ text: d.specialization, kind: 'spec' as PillKind }] : []),
     ...d.playstyles.map((t) => ({ text: t, kind: 'style' as PillKind })),
     ...d.facilityPlaystyles.map((t) => ({ text: t, kind: 'facility' as PillKind })),
   ];
-
-  // OVR + selected position (same spot as on the old card)
-  const ovrX = cardX + (0.12 + 0.075) * cardW;
-  const ovrY = cardY + 0.15 * cardH;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.font = `800 ${15 * k}px ${NUM}`;
-  ctx.fillStyle = isGold ? C.gold : '#C0C0C0';
-  ctx.fillText(String(d.ovr), ovrX, ovrY);
-  ctx.font = `700 ${8 * k}px ${BODY}`;
-  ctx.fillStyle = C.text;
-  ctx.fillText(d.position, ovrX, ovrY + 15 * k * 1.05);
-
-  // Playstyles stacked underneath the OVR / position
-  const stackX = cardX + 0.085 * cardW;
-  const stackY = ovrY + 15 * k * 1.05 + 8 * k * 1.2 + 14;
-  drawPillStack(ctx, pills, stackX, stackY, cardW * 0.62, cardY + cardH);
 
   // ----- Right column -----
   const rx = cardX + cardW + 44;
@@ -457,7 +399,7 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
 
   cy = drawFaceStats(ctx, d.faceStats, rx, cy, rw) + 22;
 
-  cy = drawChips(ctx, d.positionRatings, d.position, rx, cy, rw) + 22;
+  cy = drawChips(ctx, d.positionRatings, rx, cy, rw) + 22;
 
   if (pills.length > 0) drawPills(ctx, pills, rx, cy, rw);
 
