@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PLAYSTYLES_DATA, PLAYSTYLE_CATEGORIES } from '@/constants/playstylesData';
-import { getPlaystyleIconPath, getStatCaps } from '@/utils/builderUtils';
+import { getPlaystyleIconPath, getStatCaps, isPlaystyleConflict } from '@/utils/builderUtils';
 import type { PlaystyleHubModalProps, StatReq } from '@/types/builder';
 
 type Notice = { type: 'success' | 'error'; text: string };
@@ -29,7 +29,6 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
   setPsPlusMode,
   handleUnlockPlaystyle,
 }) => {
-  // Hooks must run before the early return below
   const [notice, setNotice] = useState<Notice | null>(null);
 
   useEffect(() => {
@@ -42,7 +41,6 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
 
   const hasSpec = !!equippedSpecialization && !!specPlaystyle;
 
-  // AUTO-BUY: if the player can afford the exact missing prerequisite stats, buy them and unlock
   const tryUnlock = (name: string, reqs: StatReq[]) => {
     const data = getUpgradeData(reqs);
     if (data.canEquip && data.cost > 0) {
@@ -60,8 +58,11 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
     }
   };
 
-  // Tapping any tile: locked tiles try to auto-buy first, then the details sheet opens
-  const handleTileClick = (name: string, reqs: StatReq[]) => {
+  const handleTileClick = (name: string, reqs: StatReq[], isBlocked: boolean) => {
+    if (isBlocked) {
+      setNotice({ type: 'error', text: `${name} is blocked because you already have the Plus variant equipped.` });
+      return;
+    }
     const isEquipped = equippedPlaystyles.includes(name);
     const { canEquip, cost } = getUpgradeData(reqs);
     const unlocked = canEquip && cost === 0;
@@ -70,7 +71,6 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
     setSelectedPsView(name);
   };
 
-  // The single Playstyle+ choices (signature, plus specialisation when one is equipped)
   const goldOptions: { key: 'signature' | 'spec'; label: string; name: string; active: boolean }[] = [];
   if (basePsPlus && basePsPlus !== 'None') {
     goldOptions.push({ key: 'signature', label: 'Signature', name: basePsPlus, active: !hasSpec || psPlusChoice === 'signature' });
@@ -78,6 +78,12 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
   if (hasSpec) {
     goldOptions.push({ key: 'spec', label: 'Specialisation', name: specPlaystyle as string, active: psPlusChoice === 'spec' });
   }
+
+  // 👉 NEW: Collect all currently equipped Playstyle+ names to check for conflicts
+  const allEquippedPlus = [
+    ...(basePsPlus && basePsPlus !== 'None' ? [basePsPlus] : []),
+    ...(hasSpec && specPlaystyle ? [specPlaystyle] : [])
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -92,7 +98,6 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
           </div>
         </div>
 
-        {/* Feedback for auto-buy */}
         {notice && (
           <div
             role="status"
@@ -156,25 +161,33 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
                       const isSelected = selectedPsView === ps.name;
                       const { canEquip, cost, reason } = getUpgradeData(ps.reqs);
                       const isUnlocked = canEquip && cost === 0;
-                      const isLocked = !isEquipped && !isUnlocked;
+                      
+                      // 👉 NEW: Check if this standard style conflicts with an equipped PS+
+                      const isBlockedByPlus = isPlaystyleConflict(ps.name, allEquippedPlus);
+                      
+                      // A blocked style is technically "locked" but we style it specifically below
+                      const isLocked = !isEquipped && !isUnlocked && !isBlockedByPlus; 
                       const isCapped = isLocked && !canEquip && reason !== 'INSUFFICIENT AP';
 
                       return (
                         <button 
                           key={ps.name} 
-                          onClick={() => handleTileClick(ps.name, ps.reqs)} 
+                          onClick={() => handleTileClick(ps.name, ps.reqs, isBlockedByPlus)} 
                           className={`rounded-xl p-3 flex flex-row items-center gap-2.5 relative overflow-hidden text-left transition-all duration-200 border ${
-                            isLocked
-                              ? (isSelected ? 'opacity-70 bg-[#192235] border-[#4D8DFF]' : 'opacity-45 bg-[#0D1220] border-[#26334A] hover:opacity-70')
-                              : isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)]'
-                              : isEquipped ? 'bg-[#131A2A] border-[#21E6A4]/60'
-                              : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'
+                            isBlockedByPlus
+                              ? 'opacity-30 bg-[#0D1220] border-[#ff4d4d]/30 cursor-not-allowed'
+                              : isLocked
+                                ? (isSelected ? 'opacity-70 bg-[#192235] border-[#4D8DFF]' : 'opacity-45 bg-[#0D1220] border-[#26334A] hover:opacity-70')
+                                : isSelected ? 'bg-[#192235] border-[#4D8DFF] shadow-[0_0_12px_rgba(77,141,255,0.2)]'
+                                : isEquipped ? 'bg-[#131A2A] border-[#21E6A4]/60'
+                                : 'bg-[#131A2A] border-[#26334A] hover:bg-[#192235]'
                           }`}
                         >
                           <div className="w-1/2 flex items-center justify-center">
-                             <img src={getPlaystyleIconPath(ps.name, false)} alt={ps.name} className="w-12 h-12 object-contain drop-shadow-sm" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                             <img src={getPlaystyleIconPath(ps.name, false)} alt={ps.name} className={`w-12 h-12 object-contain drop-shadow-sm ${isBlockedByPlus ? 'grayscale' : ''}`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                           </div>
                           <div className="w-1/2 flex flex-col justify-center">
+                            {isBlockedByPlus && <span className="text-[7px] bg-[#ff4d4d]/20 text-[#ff4d4d] px-1 py-0.5 rounded font-black uppercase mb-0.5 w-fit">Blocked By PS+</span>}
                             {isEquipped && <span className="text-[7px] bg-[#21E6A4]/20 text-[#21E6A4] px-1 py-0.5 rounded font-black uppercase mb-0.5 w-fit">Equipped</span>}
                             {isLocked && (
                               <span className="flex items-center gap-1 text-[7px] bg-[#26334A] text-[#F4F7FB] px-1 py-0.5 rounded font-black uppercase mb-0.5 w-fit">
@@ -182,7 +195,7 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
                                 {isCapped ? 'Cap' : `${cost} AP`}
                               </span>
                             )}
-                            <div className={`text-[10px] font-black uppercase tracking-wider leading-tight ${isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
+                            <div className={`text-[10px] font-black uppercase tracking-wider leading-tight ${isBlockedByPlus ? 'text-[#8E9AAF]' : isEquipped ? 'text-[#21E6A4]' : 'text-[#F4F7FB]'}`}>{ps.name}</div>
                           </div>
                         </button>
                       )
@@ -201,16 +214,17 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
               const { canEquip, cost, reason } = getUpgradeData(ps.reqs);
               const isEquipped = equippedPlaystyles.includes(ps.name);
               const isUnlocked = canEquip && cost === 0;
+              const isBlockedByPlus = isPlaystyleConflict(ps.name, allEquippedPlus);
 
-              const label = isEquipped
-                ? 'Deselect Element'
-                : isUnlocked
-                  ? (hasEmptySlot ? 'Equip PlayStyle' : 'No Free Slot')
-                  : canEquip
-                    ? `Unlock [ ${cost} AP ]`
-                    : reason;
+              let label = '';
+              if (isBlockedByPlus) label = 'Blocked by Equipped PS+';
+              else if (isEquipped) label = 'Deselect Element';
+              else if (isUnlocked) label = hasEmptySlot ? 'Equip PlayStyle' : 'No Free Slot';
+              else if (canEquip) label = `Unlock [ ${cost} AP ]`;
+              else label = reason;
 
               const handleAction = () => {
+                if (isBlockedByPlus) return;
                 if (isEquipped) handleActionPlaystyle(ps.name, {}, true);
                 else if (isUnlocked) handleActionPlaystyle(ps.name, {}, false);
                 else tryUnlock(ps.name, ps.reqs);
@@ -220,13 +234,13 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
                 <div className="p-5 flex flex-col gap-4">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className={`w-14 h-14 flex items-center justify-center ${!isEquipped && !isUnlocked ? 'opacity-50' : ''}`}>
+                      <div className={`w-14 h-14 flex items-center justify-center ${(!isEquipped && !isUnlocked) || isBlockedByPlus ? 'opacity-50' : ''}`}>
                         <img src={getPlaystyleIconPath(ps.name, false)} alt={ps.name} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                       </div>
                       <div className="ml-1">
                          <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{ps.name}</h3>
-                         <div className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isEquipped || isUnlocked ? 'text-[#21E6A4]' : 'text-[#59657A]'}`}>
-                           {isEquipped ? 'Equipped' : isUnlocked ? 'Unlocked' : 'Locked'}
+                         <div className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${isBlockedByPlus ? 'text-[#ff4d4d]' : isEquipped || isUnlocked ? 'text-[#21E6A4]' : 'text-[#59657A]'}`}>
+                           {isBlockedByPlus ? 'Blocked by PS+' : isEquipped ? 'Equipped' : isUnlocked ? 'Unlocked' : 'Locked'}
                          </div>
                       </div>
                     </div>
@@ -258,11 +272,13 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
 
                   <button
                     onClick={handleAction}
-                    disabled={!isEquipped && isUnlocked && !hasEmptySlot}
+                    disabled={isBlockedByPlus || (!isEquipped && isUnlocked && !hasEmptySlot)}
                     className={`w-full py-3.5 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                      !isEquipped && !isUnlocked
-                        ? 'bg-[#192235] border border-[#facc15]/50 text-[#facc15]'
-                        : 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white'
+                      isBlockedByPlus
+                        ? 'bg-[#131A2A] border border-[#ff4d4d]/30 text-[#ff4d4d]'
+                        : !isEquipped && !isUnlocked
+                          ? 'bg-[#192235] border border-[#facc15]/50 text-[#facc15]'
+                          : 'bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white'
                     }`}
                   >
                     {label}
