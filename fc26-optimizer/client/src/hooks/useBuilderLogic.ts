@@ -136,8 +136,9 @@ export function useBuilderLogic() {
       const targetArch = aiBlueprint.archetype && serverArchetypes?.[aiBlueprint.archetype] ? aiBlueprint.archetype : archetype;
       
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
-      const targetSm = aiBlueprint.skillMoves || starCaps.sm.min;
-      const targetWf = aiBlueprint.weakFoot || starCaps.wf.min;
+      // Clamp to this archetype's star range: costs don't exist outside it
+      const targetSm = Math.max(starCaps.sm.min, Math.min(starCaps.sm.max, aiBlueprint.skillMoves || starCaps.sm.min));
+      const targetWf = Math.max(starCaps.wf.min, Math.min(starCaps.wf.max, aiBlueprint.weakFoot || starCaps.wf.min));
 
       const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
       const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
@@ -199,7 +200,8 @@ export function useBuilderLogic() {
         apBudget: availableApForMath,
         gameVersion: gameVersion,
         standardSlots: standardSlotsCount,
-        foundationBoosts: foundationBoosts
+        foundationBoosts: foundationBoosts,
+        starsPrepaid: true // stars were costed above and removed from apBudget BEFORE any attribute allocation
       });
 
       setLevel(aiTargetLevel);
