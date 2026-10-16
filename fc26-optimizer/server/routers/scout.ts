@@ -9,7 +9,7 @@ import {
   getAllArchetypes 
 } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
-import { rolesToPositions } from "../positionMap"; // 👉 NEW: Imported the role mapping logic
+import { rolesToPositions } from "../positionMap"; 
 import { TRPCError } from "@trpc/server";
 import { getDb } from "../db";
 import fs from "fs/promises";
@@ -118,7 +118,6 @@ export const scoutRouter = router({
             baseStats[matchedUIAttr] = isNaN(bVal) ? 70 : bVal;
           }
 
-          // 👉 FIX: Use the new mapping logic instead of the simple split
           const recPositions = rolesToPositions(row.Recommended_Positions);
 
           builderData[archName] = {
@@ -330,7 +329,6 @@ ${filterRules.join("\n")}
         }
       }
 
-      // 👉 FIX: Parse schema FIRST before charging the user
       const blueprint = BlueprintSchema.parse(parsed);
 
       if (!input.isDevMode && currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
@@ -350,7 +348,8 @@ ${filterRules.join("\n")}
       signatureSlots: z.number().int().optional(),
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
-      foundationBoosts: z.record(z.string(), z.number()).optional().default({}) 
+      foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
+      starsPrepaid: z.boolean().optional() // 👉 ADDED: Optional boolean for starsPrepaid
     }))
     .mutation(async ({ input }) => {
       let customSlots = input.standardSlots;
@@ -389,12 +388,14 @@ ${filterRules.join("\n")}
         weakFoot: input.blueprint.weakFoot,
       };
 
+      // 👉 CHANGED: Passed the starsPrepaid option as the 6th argument to runMathEngine
       const result = runMathEngine(
         engineBlueprint, 
         input.apBudget, 
         customSlots, 
         input.preferredAttributes || [], 
-        input.foundationBoosts
+        input.foundationBoosts,
+        { starsPrepaid: input.starsPrepaid }
       );
 
       let earnedSpecPlaystyle: string | undefined = undefined;
@@ -427,7 +428,6 @@ ${filterRules.join("\n")}
       const ALL_PROFILES = getArchetypeProfiles("FC27");
       const archProfile = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(input.blueprint.archetype));
       
-      // 👉 FIX: Use the new mapping logic here as well
       const recommendedPositions = rolesToPositions(archProfile?.Recommended_Positions);
 
       return {
