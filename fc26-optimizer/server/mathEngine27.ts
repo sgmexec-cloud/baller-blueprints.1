@@ -41,6 +41,9 @@ export const STANDARD_ATTRS = [
   "Strength", "Aggression"
 ];
 
+// Skill Moves / Weak Foot are paid for separately (stars-first) and are never part of the attribute pool
+const STAR_KEYS = new Set(['skillmoves', 'weakfoot']);
+
 export interface StatResult {
   attribute: string;
   base: number;
@@ -57,6 +60,11 @@ export interface MathEngineResult {
   investedPoints: Record<string, number>;
   equippedPlaystyles?: string[];
   skippedPlaystyles?: string[];
+  /** Star levels after the engine's own purchase (equal to the archetype minimum when starsPrepaid is true) */
+  skillMovesLevel?: number;
+  weakFootLevel?: number;
+  /** AP the engine itself spent on Skill Moves / Weak Foot (0 when starsPrepaid is true) */
+  starApSpent?: number;
 }
 
 export interface ScoutingBlueprint {
@@ -111,7 +119,8 @@ export function runMathEngine(
   apBudget: number, 
   customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
-  foundationBoosts: Record<string, number> = {}
+  foundationBoosts: Record<string, number> = {},
+  options: { starsPrepaid?: boolean } = {}
 ): MathEngineResult {
   const ALL_ARCHETYPES = getAllArchetypes("FC27");
   const COST_DICT = getCostDict("FC27");
@@ -123,7 +132,8 @@ export function runMathEngine(
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
   const stats: Record<string, { base: number; max: number; current: number; pointsAdded: number; apSpent: number }> = {};
-  const attrNames: string[] = [];
+  const attrNames: string[] = [];   // real attributes only (the pool used for allocation)
+  const starNames: string[] = [];   // Skill Moves / Weak Foot
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
@@ -133,8 +143,10 @@ export function runMathEngine(
     const maxVal = Number.isNaN(m) ? 99 : m;
     
     stats[attr] = { base: baseVal, max: maxVal, current: baseVal, pointsAdded: 0, apSpent: 0 };
-    attrNames.push(attr);
+    if (STAR_KEYS.has(normAttr(attr))) starNames.push(attr);
+    else attrNames.push(attr);
   }
+  const allNames = [...attrNames, ...starNames];
 
   let remainingAP = apBudget;
 
@@ -154,7 +166,7 @@ export function runMathEngine(
   }
 
   function upgradeOne(attr: string, hardCap: number = 99): boolean {
-    const matched = matchAttr(attr, attrNames);
+    const matched = matchAttr(attr, allNames);
     if (!matched) return false;
     const s = stats[matched];
     
@@ -171,7 +183,7 @@ export function runMathEngine(
   }
 
   function upgradeToMin(attr: string, absoluteTarget: number): void {
-    const matched = matchAttr(attr, attrNames);
+    const matched = matchAttr(attr, allNames);
     if (!matched) return;
     const effectiveTarget = getEffectiveCap(matched, absoluteTarget);
     while (stats[matched].current < effectiveTarget && remainingAP > 0) {
@@ -180,7 +192,7 @@ export function runMathEngine(
   }
 
   function costToReach(attr: string, target: number): number {
-    const m = matchAttr(attr, attrNames);
+    const m = matchAttr(attr, allNames);
     if (!m) return Infinity;
     const s = stats[m];
     const t = getEffectiveCap(m, target);
@@ -200,6 +212,17 @@ export function runMathEngine(
     return PLAYSTYLES.find((p: any) => p.Playstyle?.trim().toLowerCase() === n)
         ?? PLAYSTYLES.find((p: any) => normAttr(p.Playstyle || "") === normAttr(name));
   }
+
+  // ---- STARS FIRST ----
+  // Skill Moves / Weak Foot are paid for BEFORE any attribute allocation (playstyle requirements,
+  // specialisation, focus attributes and the 55/30/15 buckets), so attributes can never use up the AP
+  // the stars need. If the caller already deducted the star cost from apBudget (starsPrepaid), skip it here.
+  const apBeforeStars = remainingAP;
+  if (!options.starsPrepaid) {
+    if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
+    if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
+  }
+  const starApSpent = apBeforeStars - remainingAP;
 
   const equippedPlaystyles: string[] = [];
   const skippedPlaystyles: string[] = [];
@@ -235,8 +258,6 @@ export function runMathEngine(
     }
   }
   
-  if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
-  if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
 
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
@@ -372,6 +393,11 @@ export function runMathEngine(
     return { attribute: attr, base: s.base, final: s.current, max: s.max, apSpent: s.apSpent, category: cat };
   });
 
+  const starLevel = (key: string): number | undefined => {
+    const n = starNames.find(a => normAttr(a) === key);
+    return n ? stats[n].current : undefined;
+  };
+
   const investedPoints: Record<string, number> = {};
   
   attrNames.forEach(attr => {
@@ -384,7 +410,7 @@ export function runMathEngine(
 
   return {
     stats: statResults,
-    totalApSpent: statResults.reduce((sum, s) => sum + s.apSpent, 0),
+    totalApSpent: statResults.reduce((sum, s) => sum + s.apSpent, 0) + starApSpent,
     byCategory: statResults.reduce((acc, stat) => {
       acc[stat.category] = acc[stat.category] || [];
       acc[stat.category].push(stat);
@@ -392,7 +418,10 @@ export function runMathEngine(
     }, {} as Record<string, StatResult[]>),
     investedPoints,
     equippedPlaystyles,
-    skippedPlaystyles
+    skippedPlaystyles,
+    skillMovesLevel: starLevel('skillmoves'),
+    weakFootLevel: starLevel('weakfoot'),
+    starApSpent
   };
 }
 
