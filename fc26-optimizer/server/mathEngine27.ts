@@ -114,6 +114,13 @@ function getUpgradeCost(costDict: any, archKey: string, attrKey: string, rawBase
   return archDict[dictAttrKey]?.[nextLevel] ?? 999999;
 }
 
+// 👉 NEW: Playstyle conflict utility directly in the engine to filter AI hallucinations
+function isPlaystyleConflict(targetStyle: string, equippedPlusStyles: string[]): boolean {
+  const normalize = (s: string) => s.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const targetBase = normalize(targetStyle);
+  return equippedPlusStyles.some(plusStyle => normalize(plusStyle) === targetBase);
+}
+
 export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
@@ -132,8 +139,8 @@ export function runMathEngine(
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
   const stats: Record<string, { base: number; max: number; current: number; pointsAdded: number; apSpent: number }> = {};
-  const attrNames: string[] = [];   // real attributes only (the pool used for allocation)
-  const starNames: string[] = [];   // Skill Moves / Weak Foot
+  const attrNames: string[] = [];   
+  const starNames: string[] = [];   
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
@@ -213,10 +220,6 @@ export function runMathEngine(
         ?? PLAYSTYLES.find((p: any) => normAttr(p.Playstyle || "") === normAttr(name));
   }
 
-  // ---- STARS FIRST ----
-  // Skill Moves / Weak Foot are paid for BEFORE any attribute allocation (playstyle requirements,
-  // specialisation, focus attributes and the 55/30/15 buckets), so attributes can never use up the AP
-  // the stars need. If the caller already deducted the star cost from apBudget (starsPrepaid), skip it here.
   const apBeforeStars = remainingAP;
   if (!options.starsPrepaid) {
     if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
@@ -224,9 +227,20 @@ export function runMathEngine(
   }
   const starApSpent = apBeforeStars - remainingAP;
 
+  // 👉 NEW: We resolve signatures *before* processing standard styles to check for conflicts
+  // We don't have signatureUpgrades here yet, but we have blueprint.playstylePlus from the AI
+  const allEquippedPlus = [...blueprint.playstylePlus]; 
+  if (blueprint.specialisationPlaystylePlus) {
+    allEquippedPlus.push(blueprint.specialisationPlaystylePlus);
+  }
+
   const equippedPlaystyles: string[] = [];
   const skippedPlaystyles: string[] = [];
-  const activePlaystyles = blueprint.playstyles.slice(0, customSlots);
+  
+  // 👉 NEW: Filter active playstyles to remove any standard styles that are already in the PS+ list
+  const activePlaystyles = blueprint.playstyles
+    .filter(ps => !isPlaystyleConflict(ps.name, allEquippedPlus))
+    .slice(0, customSlots);
   
   for (const ps of activePlaystyles) {
     const def = findPlaystyle(ps.name);
@@ -258,7 +272,6 @@ export function runMathEngine(
     }
   }
   
-
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
     let focusSpent = 0;
