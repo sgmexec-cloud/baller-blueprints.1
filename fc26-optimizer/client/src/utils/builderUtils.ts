@@ -17,7 +17,20 @@ export const getArchetypeDisplayPosition = (archetype: string, fallbackType: str
 
 export const getPlaystyleIconPath = (name: string, isPlus: boolean = false) => {
   if (!name) return '';
-  const formatted = name.toLowerCase().replace(/\s+/g, '-');
+  
+  // Clean the string and replace spaces with hyphens
+  let formatted = name.trim().toLowerCase().replace(/\s+/g, '-');
+
+  // 👉 NEW: Map the strict CSV names directly to your specific file names
+  const overrides: Record<string, string> = {
+    'dead-ball': 'deadball',
+    'aerial': 'aerial-fortress',
+  };
+
+  if (overrides[formatted]) {
+    formatted = overrides[formatted];
+  }
+
   const suffix = isPlus ? '-plus' : '';
   return `/icons/playstyles/${formatted}${suffix}.png`;
 };
