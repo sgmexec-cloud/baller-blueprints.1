@@ -75,3 +75,9 @@ export const getStatCaps = (archName: string, statName: string) => {
   return capData[camelStat];
 };
 
+export const isPlaystyleConflict = (targetStyle: string, equippedPlusStyles: string[]): boolean => {
+  const normalize = (s: string) => s.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const targetBase = normalize(targetStyle);
+  
+  return equippedPlusStyles.some(plusStyle => normalize(plusStyle) === targetBase);
+};
