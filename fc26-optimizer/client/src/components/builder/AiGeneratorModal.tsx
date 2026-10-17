@@ -16,6 +16,11 @@ export interface AiGeneratorModalProps {
   aiBlueprint: any;
   setAiBlueprint: (val: any) => void;
   progressionData: any;
+  /** AI builds left this month (null/undefined while loading) */
+  quota?: { tier: string; used: number; limit: number | null; remaining: number | null } | null;
+  /** Last error from generating a blueprint */
+  aiError?: string | null;
+  onUpgrade?: () => void;
 }
 
 export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
@@ -34,8 +39,13 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
   aiBlueprint,
   setAiBlueprint,
   progressionData,
+  quota,
+  aiError,
+  onUpgrade,
 }) => {
   if (!isOpen) return null;
+
+  const outOfBuilds = !!quota && quota.remaining !== null && quota.remaining <= 0;
 
   const handleClose = () => {
     if (isGeneratingAi) return;
@@ -77,6 +87,15 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
               </select>
             </div>
 
+            {quota && (
+              <div className="flex items-center justify-between mb-4 bg-[#0D1220] border border-[#26334A]/60 rounded-lg px-3 py-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF]">AI builds this month</span>
+                <span className={`text-xs font-black ${outOfBuilds ? 'text-[#ff4d4d]' : 'text-[#21E6A4]'}`}>
+                  {quota.limit === null ? 'Unlimited' : `${quota.remaining} of ${quota.limit} left`}
+                </span>
+              </div>
+            )}
+
             <textarea
               value={aiPrompt}
               onChange={(e) => setAiPrompt(e.target.value)}
@@ -87,7 +106,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
 
             <button
               onClick={handleGenerateBlueprint}
-              disabled={isGeneratingAi || !aiPrompt.trim()}
+              disabled={isGeneratingAi || !aiPrompt.trim() || outOfBuilds}
               className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(77,141,255,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
             >
               {isGeneratingAi ? (
@@ -99,6 +118,26 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                 <span>Analyze & Select Archetype ✨</span>
               )}
             </button>
+
+            {outOfBuilds && (
+              <div className="mt-3 rounded-lg border border-[#facc15]/40 bg-[#facc15]/10 p-3 text-center">
+                <p className="text-[10px] text-[#facc15] font-bold leading-relaxed mb-2">
+                  You've used all {quota?.limit} AI builds this month. The Manual Builder is still unlimited.
+                </p>
+                {onUpgrade && (
+                  <button
+                    onClick={onUpgrade}
+                    className="px-4 py-2 rounded-lg bg-[#facc15] text-[#080B14] text-[10px] font-black uppercase tracking-widest"
+                  >
+                    See plans
+                  </button>
+                )}
+              </div>
+            )}
+
+            {aiError && !outOfBuilds && (
+              <p className="mt-3 text-[10px] text-[#ff8a8a] font-bold text-center leading-relaxed">{aiError}</p>
+            )}
           </div>
         ) : (
           /* STEP 2: CONFIRMATION & AP OPTIMIZATION */
