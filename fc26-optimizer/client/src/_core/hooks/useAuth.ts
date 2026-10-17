@@ -1,4 +1,4 @@
-import { getLoginUrl } from "@/const";
+import { getSafeLoginUrl } from "@/utils/loginUrl";
 import { trpc } from "@/lib/trpc";
 import { TRPCClientError } from "@trpc/client";
 import { useCallback, useEffect, useMemo } from "react";
@@ -9,8 +9,9 @@ type UseAuthOptions = {
 };
 
 export function useAuth(options?: UseAuthOptions) {
-  const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
-    options ?? {};
+  // redirectPath is resolved lazily (below). Resolving it here ran getLoginUrl() on EVERY render of
+  // every component using this hook, which crashed the page when the OAuth URL isn't configured.
+  const { redirectOnUnauthenticated = false, redirectPath } = options ?? {};
   const utils = trpc.useUtils();
 
   const meQuery = trpc.auth.me.useQuery(undefined, {
@@ -65,9 +66,11 @@ export function useAuth(options?: UseAuthOptions) {
     if (meQuery.isLoading || logoutMutation.isPending) return;
     if (state.user) return;
     if (typeof window === "undefined") return;
-    if (window.location.pathname === redirectPath) return;
 
-    window.location.href = redirectPath
+    const target = redirectPath ?? getSafeLoginUrl();
+    if (window.location.pathname === target) return;
+
+    window.location.href = target;
   }, [
     redirectOnUnauthenticated,
     redirectPath,
