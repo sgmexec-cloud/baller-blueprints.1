@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
+import { getSafeLoginUrl } from '@/utils/loginUrl';
 import { trpc } from '@/lib/trpc';
-import { getLoginUrl } from '@/const';
 
 const PLAN_LABEL: Record<string, string> = {
   free: 'Free',
@@ -11,6 +11,11 @@ const PLAN_LABEL: Record<string, string> = {
   owner: 'Owner',
 };
 
+/**
+ * Header control.
+ *  - Logged out: a "Log in" button.
+ *  - Logged in:  a small "AI 3/5" chip that opens a popover (plan, builds left, log out).
+ */
 export const AccountMenu: React.FC = () => {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -25,7 +30,7 @@ export const AccountMenu: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <a
-        href={getLoginUrl()}
+        href={getSafeLoginUrl()}
         className="flex items-center px-3 py-1 rounded-full border border-[#26334A] bg-[#131A2A] text-[#F4F7FB] text-[11px] font-bold transition-colors hover:bg-[#192235] hover:border-[#4D8DFF]/50"
       >
         Log in
