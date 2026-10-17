@@ -1,20 +1,18 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { 
   getScoutingContext, 
   getArchetypeProfiles, 
-  getPlaystyles, 
   getSpecialisations, 
   getAllArchetypes 
 } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
-import { rolesToPositions } from "../positionMap"; 
+import { rolesToPositions } from "../positionMap";
+import { reserveBuild, refundBuild, getQuota } from "../buildQuota";
 import { TRPCError } from "@trpc/server";
-import { getDb } from "../db";
 import fs from "fs/promises";
 import path from "path";
-import { eq, sql } from "drizzle-orm";
 
 const PlaystyleReqSchema = z.object({
   attr: z.string(),
@@ -63,28 +61,23 @@ function normAttr(s: string): string {
   return n;
 }
 
+// Logs the real token usage of every AI call so you can measure the true cost per build:
+// cost = in_tokens x input_price + out_tokens x output_price (add stage1 + stage2 for one build).
+function logUsage(stage: string, tier: string, model: string, resp: any) {
+  const u = resp?.usage;
+  console.log(
+    `[AI usage] ${stage} tier=${tier} model=${model} in=${u?.prompt_tokens ?? u?.input_tokens ?? "?"} out=${u?.completion_tokens ?? u?.output_tokens ?? "?"}`
+  );
+}
+
 const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. 
 If a player changed positions during their career, you MUST evaluate them based solely on their most famous, highest-performing role. 
 CRITICAL: You must explicitly define their 'Tactical Role' (e.g. Inverted Winger, Ball-Winning Midfielder, Target Man) to anchor the evaluation. 
 Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations and weaknesses—what are they notoriously bad at? 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
-const ARCHETYPE_SELECTION_POLICY = `
-ARCHETYPE SELECTION — MANDATORY DECISION PROCESS
-Use ONLY archetype data provided in the FC27 context and the Stage 1 scouting report.
-
-1. COMPARE ALL CANDIDATE ARCHETYPES: Do not choose the first plausible archetype. Compare all available archetypes in the context before selecting.
-2. SCORE WEIGHTING:
-   - 35%: Signature weapon and tactical-role alignment.
-   - 30%: Alignment with the archetype's Key_Attributes.
-   - 25%: Alignment with Signature_PlayStyles.
-   - 10%: Recommended_Positions compatibility.
-3. PRIORITISE PRIMARY IDENTITY: Distinguish primary playing identity from secondary abilities (e.g., a striker who drops deep to pass is still primarily a goalscorer/Finisher, unless their defining signature weapon is chance creation).
-4. BREAK TIES CONSISTENTLY: Prioritise Signature Weapon > Tactical Role > Key Attributes > Signature PlayStyles > Position.
-5. FINAL OUTPUT: Return exactly one valid archetype name from the supplied context.
-`;
-
 export const scoutRouter = router({
+  // ---------- PUBLIC: everything the Manual Builder needs (no account required) ----------
   getArchetypes: publicProcedure
     .query(async () => {
       try {
@@ -148,7 +141,17 @@ export const scoutRouter = router({
       }
     }),
 
-  generateReport: publicProcedure
+  // ---------- ACCOUNT REQUIRED: AI Auto-Build ----------
+
+  /** How many AI builds the logged-in user has left this month (for the UI). */
+  getQuota: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = Number((ctx.user as any).id);
+      if (!Number.isFinite(userId)) throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in." });
+      return getQuota(userId);
+    }),
+
+  generateReport: protectedProcedure
     .input(z.object({ 
       playerIdentity: z.string().min(1).max(1000), 
       forcedArchetype: z.string().optional(),
@@ -156,90 +159,54 @@ export const scoutRouter = router({
       customWeight: z.string().optional(),
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
-      customPlaystyles: z.array(z.string()).optional(), 
-      isDevMode: z.boolean().optional()
+      customPlaystyles: z.array(z.string()).optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database connection failed" });
-      
-      const rawUserId = (ctx as any).user?.id || (ctx as any).userId || (ctx as any).user?.openId;
-      const userId = rawUserId ? String(rawUserId) : null;
-      
-      let buildLimit = input.isDevMode ? Infinity : 2; 
-      let currentUser = null;
+      const userId = Number((ctx.user as any).id);
+      if (!Number.isFinite(userId)) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in to use AI builds." });
+      }
 
-      if (userId) {
-        const userQuery = await db.execute(
-          sql`SELECT id, tier, "monthlyBuilds" FROM users WHERE id::text = ${userId} OR "openId"::text = ${userId} LIMIT 1`
-        );
-        const dbUser = (userQuery as any)?.rows?.[0] || (Array.isArray(userQuery) ? userQuery[0] : null);
+      // Reserve ONE build atomically BEFORE spending any AI money.
+      // (Free: 5 per calendar month. Paid tiers: see buildQuota.ts. The limit can never be passed,
+      //  even by parallel requests, and nothing here comes from the client.)
+      const quota = await reserveBuild(userId);
+      if (!quota.allowed) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED" });
+      }
 
-        if (dbUser) {
-          currentUser = {
-            id: dbUser.id,
-            tier: dbUser.tier || "free",
-            monthlyBuilds: dbUser.monthlyBuilds ?? dbUser.monthly_builds ?? 0
-          };
+      try {
+        const isProTier = quota.tier !== "free";
+        const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
+
+        const stage1Response = await invokeLLM({
+          model: aiModel,
+          messages: [
+            { role: "system", content: CHIEF_SCOUT_PROMPT },
+            { role: "user", content: `Player Identity: ${input.playerIdentity}` }
+          ]
+        } as any);
+
+        logUsage("stage1", quota.tier, aiModel, stage1Response);
+        const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
+        if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
+
+        const context = getScoutingContext("FC27");
+        
+        const filterRules: string[] = [];
+        if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
+        else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
+        
+        if (input.customHeight) filterRules.push(`- HEIGHT: You MUST use the exact height "${input.customHeight}".`);
+        if (input.customWeight) filterRules.push(`- WEIGHT: You MUST use the exact weight "${input.customWeight}".`);
+        if (input.customSkillMoves) filterRules.push(`- SKILL MOVES: You MUST set "skillMoves" exactly to ${input.customSkillMoves}.`);
+        if (input.customWeakFoot) filterRules.push(`- WEAK FOOT: You MUST set "weakFoot" exactly to ${input.customWeakFoot}.`);
+        if (input.customPlaystyles && input.customPlaystyles.length > 0) {
+          filterRules.push(`- PLAYSTYLES: The 'playstylePlus' array MUST include: ${input.customPlaystyles.join(", ")}.`);
         }
 
-        if (currentUser) {
-          if (input.isDevMode || currentUser.tier === "owner") buildLimit = Infinity; 
-          else if (currentUser.tier === "vip") buildLimit = 500;   
-          else if (currentUser.tier === "premium_plus") buildLimit = 250;
-          else if (currentUser.tier === "premium") buildLimit = 100;
-          else buildLimit = 5; 
-        } else {
-          currentUser = { id: userId, tier: "free", monthlyBuilds: 0 };
-          buildLimit = input.isDevMode ? Infinity : 5;
-        }
-      }
-
-      const currentBuilds = currentUser?.monthlyBuilds || 0;
-
-      if (!input.isDevMode && currentUser && currentBuilds >= buildLimit) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "LIMIT_REACHED",
-        });
-      }
-
-      const isProTier = input.isDevMode || currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus" || currentUser?.tier === "premium";
-      const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
-
-      // 👉 STAGE 1 LLM CALL
-      const stage1Response = await invokeLLM({
-        model: aiModel,
-        messages: [
-          { role: "system", content: CHIEF_SCOUT_PROMPT },
-          { role: "user", content: `Player Identity: ${input.playerIdentity}` }
-        ]
-      } as any);
-
-      // Extract usage for Stage 1
-      const stage1Usage = (stage1Response as any).usage || { prompt_tokens: 0, completion_tokens: 0 };
-
-      const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
-      if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
-
-      const context = getScoutingContext("FC27");
-      
-      const filterRules: string[] = [];
-      if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
-      else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
-      
-      if (input.customHeight) filterRules.push(`- HEIGHT: You MUST use the exact height "${input.customHeight}".`);
-      if (input.customWeight) filterRules.push(`- WEIGHT: You MUST use the exact weight "${input.customWeight}".`);
-      if (input.customSkillMoves) filterRules.push(`- SKILL MOVES: You MUST set "skillMoves" exactly to ${input.customSkillMoves}.`);
-      if (input.customWeakFoot) filterRules.push(`- WEAK FOOT: You MUST set "weakFoot" exactly to ${input.customWeakFoot}.`);
-      if (input.customPlaystyles && input.customPlaystyles.length > 0) {
-        filterRules.push(`- PLAYSTYLES: The 'playstylePlus' array MUST include: ${input.customPlaystyles.join(", ")}.`);
-      }
-
-      const stage2SystemPrompt = `You are the ultimate FC 27 Data Analyst. Translate the scout report into strict FC 27 JSON using ONLY this context:
+        const stage2SystemPrompt = `You are the ultimate FC 27 Data Analyst. Translate the scout report into strict FC 27 JSON using ONLY this context:
 ${context}
-
-${ARCHETYPE_SELECTION_POLICY}
 
 Your output MUST be a single raw JSON object that strictly matches this exact structure:
 {
@@ -277,136 +244,89 @@ ${filterRules.join("\n")}
   - tertiaryAttributes: 3-4 rounded attributes.
 - Output ONLY raw JSON.`;
 
-      // 👉 STAGE 2 LLM CALL
-      const stage2Response = await invokeLLM({
-        model: aiModel,
-        messages: [
-          { role: "system", content: stage2SystemPrompt }, 
-          { role: "user", content: `Translate this report into JSON:\n\n${hiddenScoutReport}` }
-        ]
-      } as any);
+        const stage2Response = await invokeLLM({
+          model: aiModel,
+          messages: [
+            { role: "system", content: stage2SystemPrompt }, 
+            { role: "user", content: `Translate this report into JSON:\n\n${hiddenScoutReport}` }
+          ]
+        } as any);
 
-      // Extract usage for Stage 2
-      const stage2Usage = (stage2Response as any).usage || { prompt_tokens: 0, completion_tokens: 0 };
+        logUsage("stage2", quota.tier, aiModel, stage2Response);
+        const rawContent = stage2Response.choices[0]?.message?.content;
+        if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
 
-      // 👉 LOG THE TOKENS AND COST TO RENDER
-      const totalInputTokens = (stage1Usage.prompt_tokens || 0) + (stage2Usage.prompt_tokens || 0);
-      const totalOutputTokens = (stage1Usage.completion_tokens || 0) + (stage2Usage.completion_tokens || 0);
-      
-      // Gemini 3.8 Flash Pricing: $0.75 / 1M input, $3.75 / 1M output
-      const inputCostUSD = (totalInputTokens / 1_000_000) * 0.75;
-      const outputCostUSD = (totalOutputTokens / 1_000_000) * 3.75;
-      const totalCostUSD = inputCostUSD + outputCostUSD;
+        let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
+        cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
 
-      console.log(`
-==================================================
-📊 BUILD TOKEN USAGE REPORT [${input.playerIdentity}]
-==================================================
-Stage 1 In: ${stage1Usage.prompt_tokens} | Out: ${stage1Usage.completion_tokens}
-Stage 2 In: ${stage2Usage.prompt_tokens} | Out: ${stage2Usage.completion_tokens}
---------------------------------------------------
-TOTAL INPUT TOKENS  : ${totalInputTokens}
-TOTAL OUTPUT TOKENS : ${totalOutputTokens}
-ESTIMATED BUILD COST: $${totalCostUSD.toFixed(6)} USD
-==================================================
-      `);
+        const parsed = JSON.parse(cleanedJson);
 
-      const rawContent = stage2Response.choices[0]?.message?.content;
-      if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
-
-      let cleanedJson = typeof rawContent === "string" ? rawContent.trim() : JSON.stringify(rawContent);
-      cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
-
-      const parsed = JSON.parse(cleanedJson);
-
-      const validArchetypes = new Set(
-        getArchetypeProfiles("FC27")
-          .map((row: any) => row.Archetype?.trim())
-          .filter(Boolean)
-      );
-
-      if (parsed.archetype && !validArchetypes.has(parsed.archetype.trim())) {
-        const matched = Array.from(validArchetypes).find(a => normAttr(a as string) === normAttr(parsed.archetype));
-        if (matched) {
-          parsed.archetype = matched;
-        } else {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Invalid archetype "${parsed.archetype}" generated by AI.`
+        if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
+          parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
+            if (typeof item === 'string') {
+               const parts = item.split(/[:\s]+/);
+               return { attr: parts[0], val: parseInt(parts[1] || "0", 10) };
+            }
+            return item;
           });
+        } else {
+          parsed.specialisationMinAttrs = [];
         }
-      }
 
-      if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
-        parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
-          if (typeof item === 'string') {
-             const parts = item.split(/[:\s]+/);
-             return { attr: parts[0], val: parseInt(parts[1] || "0", 10) };
-          }
-          return item;
-        });
-      } else {
-        parsed.specialisationMinAttrs = [];
-      }
+        const stripPlus = (s: string) => normAttr(s.replace(/\+/g, ""));
+        const clearSpec = () => {
+          parsed.specialisation = null;
+          parsed.specialisationPlaystylePlus = null;
+          parsed.specialisationMinAttrs = [];
+          parsed.specialisationReason = null;
+        };
 
-      const stripPlus = (s: string) => normAttr(s.replace(/\+/g, ""));
-      const clearSpec = () => {
-        parsed.specialisation = null;
-        parsed.specialisationPlaystylePlus = null;
-        parsed.specialisationMinAttrs = [];
-        parsed.specialisationReason = null;
-      };
-
-      if (!parsed.specialisation || !String(parsed.specialisation).trim()) {
-        clearSpec();
-      } else {
-        const real = getSpecialisations("FC27").find((s: any) =>
-          normAttr(s.Archetype) === normAttr(parsed.archetype) && normAttr(s.Specialisation || "") === normAttr(parsed.specialisation)
-        );
-        
-        if (!real) {
+        if (!parsed.specialisation || !String(parsed.specialisation).trim()) {
           clearSpec();
         } else {
-          const reqs = [
-            [real.Attr1, real.Val1], 
-            [real.Attr2, real.Val2], 
-            [real.Attr3, real.Val3]
-          ].filter(([a, v]) => a && v).map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
-
-          if (reqs.length === 0) {
+          const real = getSpecialisations("FC27").find((s: any) =>
+            normAttr(s.Archetype) === normAttr(parsed.archetype) && normAttr(s.Specialisation || "") === normAttr(parsed.specialisation)
+          );
+          
+          if (!real) {
             clearSpec();
           } else {
-            const buildAttrs = new Set([...(parsed.coreAttributes ?? []), ...(parsed.secondaryAttributes ?? [])].map(normAttr));
-            const styles = new Set(
-              [...(parsed.playstylePlus ?? []), ...(parsed.playstyles ?? []).slice(0, 6).map((x: any) => x.name)]
-                .map((x: string) => stripPlus(String(x)))
-            );
-            const synergy = !!real["Playstyle+"] && styles.has(stripPlus(real["Playstyle+"]));
-            const aligned = reqs.filter(r => buildAttrs.has(normAttr(r.attr))).length >= Math.ceil(reqs.length * 0.66);
-            
-            if (!synergy && !aligned) {
+            const reqs = [
+              [real.Attr1, real.Val1], 
+              [real.Attr2, real.Val2], 
+              [real.Attr3, real.Val3]
+            ].filter(([a, v]) => a && v).map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
+
+            if (reqs.length === 0) {
               clearSpec();
             } else {
-              parsed.specialisationPlaystylePlus = real["Playstyle+"];
-              parsed.specialisationMinAttrs = reqs;
+              const buildAttrs = new Set([...(parsed.coreAttributes ?? []), ...(parsed.secondaryAttributes ?? [])].map(normAttr));
+              const styles = new Set(
+                [...(parsed.playstylePlus ?? []), ...(parsed.playstyles ?? []).slice(0, 6).map((x: any) => x.name)]
+                  .map((x: string) => stripPlus(String(x)))
+              );
+              const synergy = !!real["Playstyle+"] && styles.has(stripPlus(real["Playstyle+"]));
+              const aligned = reqs.filter(r => buildAttrs.has(normAttr(r.attr))).length >= Math.ceil(reqs.length * 0.66);
+              
+              if (!synergy && !aligned) {
+                clearSpec();
+              } else {
+                parsed.specialisationPlaystylePlus = real["Playstyle+"];
+                parsed.specialisationMinAttrs = reqs;
+              }
             }
           }
         }
+
+        // The build was already reserved up front; if anything above throws, it is refunded below.
+        return BlueprintSchema.parse(parsed);
+      } catch (err) {
+        if (quota.metered) await refundBuild(userId);
+        throw err;
       }
-
-      const blueprint = BlueprintSchema.parse(parsed);
-
-      if (!input.isDevMode && currentUser && currentUser.tier !== "owner" && currentUser.tier !== "vip") {
-        const nextBuilds = currentBuilds + 1;
-        await db.execute(
-          sql`UPDATE users SET "monthlyBuilds" = ${nextBuilds} WHERE id::text = ${userId} OR "openId"::text = ${userId}`
-        );
-      }
-
-      return blueprint;
     }),
 
-  calculateStats: publicProcedure
+  calculateStats: protectedProcedure
     .input(z.object({ 
       blueprint: BlueprintSchema, 
       apBudget: z.number().int().min(1).max(999999),
@@ -414,6 +334,7 @@ ESTIMATED BUILD COST: $${totalCostUSD.toFixed(6)} USD
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
+      // true when the caller has already deducted the Skill Moves / Weak Foot cost from apBudget
       starsPrepaid: z.boolean().optional()
     }))
     .mutation(async ({ input }) => {
@@ -483,8 +404,7 @@ ESTIMATED BUILD COST: $${totalCostUSD.toFixed(6)} USD
       const resolvedSignatures = resolveSignaturePlaystyles(
         input.blueprint.archetype,
         signatureUpgrades,
-        earnedSpecPlaystyle,
-        "FC27"
+        earnedSpecPlaystyle
       );
 
       const standardPlaystyles = result.equippedPlaystyles?.slice(0, customSlots) || [];
