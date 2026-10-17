@@ -49,11 +49,14 @@ export function useBuilderLogic() {
   const [aiArchetypeLock, setAiArchetypeLock] = useState<string>("AUTO");
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
   const [aiBlueprint, setAiBlueprint] = useState<any>(null); // Holds the blueprint for Step 2
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
   
+  const utils = trpc.useUtils();
+
   // AI Mutations
   const generateReportMutation = trpc.scout.generateReport.useMutation();
   const calculateStatsMutation = trpc.scout.calculateStats.useMutation();
@@ -102,6 +105,7 @@ export function useBuilderLogic() {
   const handleGenerateBlueprint = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
+    setAiError(null);
     
     const finalPrompt = aiArchetypeLock !== "AUTO" 
       ? `[CRITICAL REQUIREMENT: YOU MUST SELECT THE '${aiArchetypeLock}' ARCHETYPE FOR THIS BUILD] ${aiPrompt}`
@@ -119,11 +123,18 @@ export function useBuilderLogic() {
       }
       
       setAiBlueprint(blueprint);
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Generation failed:", error);
-      alert("Failed to generate blueprint. Check your inputs or API key.");
+      if (error?.data?.code === 'UNAUTHORIZED') {
+        setAiError('Please log in to use AI Auto-Build.');
+      } else if (error?.message === 'LIMIT_REACHED') {
+        setAiError("You've used all of your AI builds for this month.");
+      } else {
+        setAiError('Something went wrong generating the blueprint. Your build was not counted, so please try again.');
+      }
     } finally {
       setIsGeneratingAi(false);
+      utils.scout.getQuota.invalidate();
     }
   };
 
@@ -661,6 +672,7 @@ export function useBuilderLogic() {
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
     aiBlueprint, setAiBlueprint,
+    aiError,
     serverArchetypes,
     progressionData,
     isArchLoading, isProgLoading,
