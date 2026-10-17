@@ -1,11 +1,12 @@
 import React from 'react';
-import { getLoginUrl } from '@/const';
+import { getSafeLoginUrl } from '@/utils/loginUrl';
 
 interface AuthPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+/** Shown when a logged-out visitor taps AI Auto-Build. The Manual Builder never needs an account. */
 export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
@@ -36,7 +37,7 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({ isOpen, onClos
         </div>
 
         <button
-          onClick={() => { window.location.href = getLoginUrl(); }}
+          onClick={() => { window.location.href = getSafeLoginUrl(); }}
           className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(77,141,255,0.4)] mb-2"
         >
           Log in / Create free account
