@@ -7,6 +7,8 @@ import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 import { getStatCaps } from '@/utils/builderUtils';
 import { calculateOVR } from '@/utils/ovrCalculator';
 import { shareBuildImage } from '@/utils/buildShareImage';
+import { useAuth } from '@/_core/hooks/useAuth';
+import { trpc } from '@/lib/trpc';
 
 // PHASE 3 SUB-COMPONENTS & MODALS
 import { PlaystyleSlotsRow } from '@/components/builder/PlaystyleSlots';
@@ -21,6 +23,8 @@ import { SkillsModal } from '@/components/builder/SkillsModal';
 import { FacilitiesModal } from '@/components/builder/FacilitiesModal';
 import { MasteriesModal } from '@/components/builder/MasteriesModal';
 import { PlaystyleHubModal } from '@/components/builder/PlaystyleHubModal';
+import { AccountMenu } from '@/components/builder/AccountMenu';
+import { AuthPromptModal } from '@/components/builder/AuthPromptModal';
 
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
@@ -51,6 +55,7 @@ export default function ManualBuilder() {
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
     aiBlueprint, setAiBlueprint,
+    aiError,
     serverArchetypes,
     progressionData,
     isArchLoading, isProgLoading,
@@ -101,8 +106,33 @@ export default function ManualBuilder() {
     [recommendedPositions, currentStats]
   );
 
+  // --- ACCOUNT / AI ACCESS ---
+  // Guests: Manual Builder only. Free accounts: 5 AI builds per month (enforced on the server).
+  const { isAuthenticated } = useAuth();
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const quotaQuery = trpc.scout.getQuota.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+  });
+
   // --- SHARE BUILD AS IMAGE ---
   const [isSharing, setIsSharing] = useState(false);
+
+  // The share image uses the SAME attribute values as the Attributes tab:
+  // RAW  = base + invested points (no height/weight, facility or mastery boosts)
+  // BOOSTED = currentStats (everything included)
+  const getShareStats = (): Record<string, number> => {
+    if (!currentStats) return {};
+    if (viewMode !== 'raw' || !serverArchetypes?.[archetype]) return currentStats;
+    const baseObj = serverArchetypes[archetype].base;
+    const raw: Record<string, number> = {};
+    for (const stat in baseObj) {
+      const caps = getStatCaps(archetype, stat);
+      const rawBase = caps.min || baseObj[stat] || 70;
+      raw[stat] = Math.min(caps.max || 99, rawBase + (addedPoints[stat] || 0));
+    }
+    return raw;
+  };
 
   const handleShareBuild = async () => {
     if (!currentStats || isSharing) return;
@@ -119,7 +149,8 @@ export default function ManualBuilder() {
         ovr: finalOvr,
         positionRatings,
         faceStats,
-        stats: currentStats,
+        stats: getShareStats(),
+        statsMode: viewMode === 'raw' ? 'raw' : 'boosted',
         playstylePlus: [activePsPlus].filter((p) => p && p !== 'None').map(String),
         playstyles: equippedPlaystyles.filter(Boolean),
         facilityPlaystyles: [fac1, fac2].filter(Boolean).map(String),
@@ -158,7 +189,10 @@ export default function ManualBuilder() {
            
            {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
-              <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
+              <div className="flex items-center gap-2">
+                <img src="/app-icon.png" alt="App Icon" className="w-7 h-7 object-contain rounded-md shadow-[0_0_8px_rgba(77,141,255,0.2)]" />
+                <AccountMenu />
+              </div>
 
               <div className="flex items-center gap-4">
                 <button
@@ -317,6 +351,10 @@ export default function ManualBuilder() {
           
           <button
             onClick={() => {
+              if (!isAuthenticated) {
+                setIsAuthPromptOpen(true);
+                return;
+              }
               setAiTargetLevel(level);
               setAiArchetypeLock("AUTO");
               setIsAiModalOpen(true);
@@ -414,7 +452,12 @@ export default function ManualBuilder() {
         setAiBlueprint={setAiBlueprint}
         progressionData={progressionData}
         serverArchetypes={serverArchetypes}
+        quota={quotaQuery.data ?? null}
+        aiError={aiError}
+        onUpgrade={() => { window.location.href = '/pricing'; }}
       />
+
+      <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
 
       <PhysicalsModal 
         isOpen={activeModal}
