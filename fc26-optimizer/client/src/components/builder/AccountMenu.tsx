@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/_core/hooks/useAuth';
-import { getLoginUrl } from '@/const';
 import { trpc } from '@/lib/trpc';
 
 const PLAN_LABEL: Record<string, string> = {
@@ -30,7 +29,8 @@ export const AccountMenu: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <a
-        href={getLoginUrl()}
+        // 👉 FIX: Uses hardcoded URL instead of undefined function
+        href="/api/auth/login"
         className="flex items-center px-3 py-1 rounded-full border border-[#26334A] bg-[#131A2A] text-[#F4F7FB] text-[11px] font-bold transition-colors hover:bg-[#192235] hover:border-[#4D8DFF]/50"
       >
         Log in
