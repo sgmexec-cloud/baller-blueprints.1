@@ -69,7 +69,6 @@ CRITICAL: You must explicitly define their 'Tactical Role' (e.g. Inverted Winger
 Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations and weaknesses—what are they notoriously bad at? 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
-// 👉 NEW: Explicit archetype selection policy to prevent intuitive guessing
 const ARCHETYPE_SELECTION_POLICY = `
 ARCHETYPE SELECTION — MANDATORY DECISION PROCESS
 Use ONLY archetype data provided in the FC27 context and the Stage 1 scouting report.
@@ -208,6 +207,7 @@ export const scoutRouter = router({
       const isProTier = input.isDevMode || currentUser?.tier === "owner" || currentUser?.tier === "vip" || currentUser?.tier === "premium_plus" || currentUser?.tier === "premium";
       const aiModel = isProTier ? "gpt-4o" : "gpt-4o-mini"; 
 
+      // 👉 STAGE 1 LLM CALL
       const stage1Response = await invokeLLM({
         model: aiModel,
         messages: [
@@ -215,6 +215,9 @@ export const scoutRouter = router({
           { role: "user", content: `Player Identity: ${input.playerIdentity}` }
         ]
       } as any);
+
+      // Extract usage for Stage 1
+      const stage1Usage = (stage1Response as any).usage || { prompt_tokens: 0, completion_tokens: 0 };
 
       const hiddenScoutReport = stage1Response.choices[0]?.message?.content;
       if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
@@ -233,7 +236,6 @@ export const scoutRouter = router({
         filterRules.push(`- PLAYSTYLES: The 'playstylePlus' array MUST include: ${input.customPlaystyles.join(", ")}.`);
       }
 
-      // 👉 NEW: Injected ARCHETYPE_SELECTION_POLICY into the Stage 2 prompt
       const stage2SystemPrompt = `You are the ultimate FC 27 Data Analyst. Translate the scout report into strict FC 27 JSON using ONLY this context:
 ${context}
 
@@ -275,6 +277,7 @@ ${filterRules.join("\n")}
   - tertiaryAttributes: 3-4 rounded attributes.
 - Output ONLY raw JSON.`;
 
+      // 👉 STAGE 2 LLM CALL
       const stage2Response = await invokeLLM({
         model: aiModel,
         messages: [
@@ -282,6 +285,31 @@ ${filterRules.join("\n")}
           { role: "user", content: `Translate this report into JSON:\n\n${hiddenScoutReport}` }
         ]
       } as any);
+
+      // Extract usage for Stage 2
+      const stage2Usage = (stage2Response as any).usage || { prompt_tokens: 0, completion_tokens: 0 };
+
+      // 👉 LOG THE TOKENS AND COST TO RENDER
+      const totalInputTokens = (stage1Usage.prompt_tokens || 0) + (stage2Usage.prompt_tokens || 0);
+      const totalOutputTokens = (stage1Usage.completion_tokens || 0) + (stage2Usage.completion_tokens || 0);
+      
+      // Gemini 3.8 Flash Pricing: $0.75 / 1M input, $3.75 / 1M output
+      const inputCostUSD = (totalInputTokens / 1_000_000) * 0.75;
+      const outputCostUSD = (totalOutputTokens / 1_000_000) * 3.75;
+      const totalCostUSD = inputCostUSD + outputCostUSD;
+
+      console.log(`
+==================================================
+📊 BUILD TOKEN USAGE REPORT [${input.playerIdentity}]
+==================================================
+Stage 1 In: ${stage1Usage.prompt_tokens} | Out: ${stage1Usage.completion_tokens}
+Stage 2 In: ${stage2Usage.prompt_tokens} | Out: ${stage2Usage.completion_tokens}
+--------------------------------------------------
+TOTAL INPUT TOKENS  : ${totalInputTokens}
+TOTAL OUTPUT TOKENS : ${totalOutputTokens}
+ESTIMATED BUILD COST: $${totalCostUSD.toFixed(6)} USD
+==================================================
+      `);
 
       const rawContent = stage2Response.choices[0]?.message?.content;
       if (!rawContent) throw new Error("Stage 2 LLM returned empty response");
@@ -291,7 +319,6 @@ ${filterRules.join("\n")}
 
       const parsed = JSON.parse(cleanedJson);
 
-      // 👉 NEW: Hard validation check to ensure the Archetype is strictly valid before proceeding
       const validArchetypes = new Set(
         getArchetypeProfiles("FC27")
           .map((row: any) => row.Archetype?.trim())
