@@ -22,6 +22,8 @@ export const users = pgTable("users", {
   tier: tierEnum("tier").default("free").notNull(),
   monthlyBuilds: integer("monthlyBuilds").default(0).notNull(),
   lastBuildDate: timestamp("lastBuildDate"),
+  // When monthlyBuilds was last reset (renewal webhook). Used as a safety net if a webhook is ever missed.
+  buildsResetAt: timestamp("buildsResetAt"),
 
   stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
   stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
