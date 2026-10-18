@@ -1,7 +1,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { users } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import type { InferInsertModel } from "drizzle-orm";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -42,39 +42,35 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// 👉 NEW: Save the 6-digit code and expiration time to the user
+// Save the 6-digit code and expiration time to the user.
+// For email logins openId === the (normalised) email, and openId is UNIQUE. The email column is not,
+// so matching on email could overwrite the code on several rows with the same address.
 export async function setOtpCode(email: string, otp: string, expires: Date) {
   const db = await getDb();
   if (!db) return;
 
   await db.update(users)
     .set({ otpCode: otp, otpExpires: expires })
-    .where(eq(users.email, email));
+    .where(eq(users.openId, email));
 }
 
-// 👉 NEW: Verify the code and wipe it so it can't be reused
+// Verify the code and wipe it in ONE atomic statement.
+// Previously this was "select, compare, then update", so two simultaneous requests carrying the same
+// correct code could both succeed before either one cleared it. Now only one UPDATE can match.
 export async function verifyOtpCode(email: string, code: string) {
   const db = await getDb();
   if (!db) return null;
 
-  // Find the user by their email
-  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
-  const user = result[0];
+  const rows = await db.update(users)
+    .set({ otpCode: null, otpExpires: null, lastSignedIn: new Date() })
+    .where(
+      and(
+        eq(users.openId, email),
+        eq(users.otpCode, code),
+        gt(users.otpExpires, new Date()) // not expired
+      )
+    )
+    .returning();
 
-  // If no user, wrong code, or no expiration set, reject!
-  if (!user || user.otpCode !== code || !user.otpExpires) {
-    return null; 
-  }
-
-  // If the current time is past the expiration time, reject!
-  if (new Date() > user.otpExpires) {
-    return null; 
-  }
-
-  // Success! Clear the OTP fields so the code can't be used twice
-  await db.update(users)
-    .set({ otpCode: null, otpExpires: null })
-    .where(eq(users.email, email));
-
-  return user;
+  return rows[0] ?? null;
 }
