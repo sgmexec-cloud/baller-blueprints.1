@@ -147,7 +147,15 @@ export const scoutRouter = router({
   me: publicProcedure
     .query(({ ctx }) => {
       const u = (ctx as any).user;
-      return u ? { id: u.id as number, name: (u.name ?? null) as string | null, email: (u.email ?? null) as string | null, tier: u.tier as string } : null;
+      return u
+        ? {
+            id: u.id as number,
+            name: (u.name ?? null) as string | null,
+            email: (u.email ?? null) as string | null,
+            tier: u.tier as string,
+            hasSubscription: Boolean(u.stripeSubscriptionId),
+          }
+        : null;
     }),
 
   /** How many AI builds the logged-in user has left this month (for the UI). */
