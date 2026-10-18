@@ -1,33 +1,44 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import { jwtVerify } from "jose";
 import * as cookie from "cookie";
+import { eq, type InferSelectModel } from "drizzle-orm";
+import { getDb } from "../db";
+import { users } from "../../drizzle/schema";
+import { getJwtSecret } from "./jwtSecret";
 
-// The exact same secret we used to lock the cookie in auth.ts
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-secret-clubdna-key-change-me");
+type DbUser = InferSelectModel<typeof users>;
 
 export async function createContext({ req, res }: CreateExpressContextOptions) {
-  let userId = null;
+  let userId: string | null = null;
+  let user: DbUser | null = null;
 
   try {
-    // 1. Grab the cookies from the user's browser
+    // 1. Read the login cookie
     const cookies = cookie.parse(req.headers.cookie || "");
     const token = cookies.clubdna_auth;
 
-    // 2. If they have a token, unlock it and find out who they are!
+    // 2. Verify it and find out who it belongs to
     if (token) {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      userId = payload.userId as string; // This is their Discord ID
+      const { payload } = await jwtVerify(token, getJwtSecret());
+      userId = typeof payload.userId === "string" ? payload.userId : null;
+    }
+
+    // 3. Load the account. protectedProcedure and the quota check need ctx.user:
+    //    without it every logged-in user was treated as logged out.
+    if (userId) {
+      const db = await getDb();
+      if (db) {
+        const rows = await db.select().from(users).where(eq(users.openId, userId)).limit(1);
+        user = rows[0] ?? null;
+      }
     }
   } catch (error) {
-    // If the token is fake or expired, we just ignore it
+    // Fake/expired token, or JWT_SECRET missing: treat the visitor as logged out
   }
 
-  // 3. Pass the userId to the rest of our app
-  return {
-    req,
-    res,
-    userId,
-  };
+  return { req, res, userId, user };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
+// trpc.ts imports this name
+export type TrpcContext = Context;
