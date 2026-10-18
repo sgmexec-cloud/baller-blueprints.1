@@ -50,6 +50,9 @@ function getTierFromPriceId(priceId: string): "premium" | "premium_plus" | "vip"
 
 async function startServer() {
   const app = express();
+  // Behind a host/proxy (Railway, Render, Cloudflare...) req.ip is the PROXY's address unless this is set.
+  // The login rate limits are per IP, so without it every visitor would share one limit.
+  app.set("trust proxy", 1);
   const server = createServer(app);
   
   try {
