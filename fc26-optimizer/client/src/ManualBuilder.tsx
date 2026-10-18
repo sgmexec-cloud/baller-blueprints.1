@@ -7,7 +7,7 @@ import { SPECIALIZATIONS_DATA } from '@/constants/playstylesData';
 import { getStatCaps } from '@/utils/builderUtils';
 import { calculateOVR } from '@/utils/ovrCalculator';
 import { shareBuildImage } from '@/utils/buildShareImage';
-import { useAuth } from '@/_core/hooks/useAuth';
+import { useAccount } from '@/hooks/useAccount';
 import { trpc } from '@/lib/trpc';
 
 // PHASE 3 SUB-COMPONENTS & MODALS
@@ -108,7 +108,7 @@ export default function ManualBuilder() {
 
   // --- ACCOUNT / AI ACCESS ---
   // Guests: Manual Builder only. Free accounts: 5 AI builds per month (enforced on the server).
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAccount();
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const quotaQuery = trpc.scout.getQuota.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -284,7 +284,7 @@ export default function ManualBuilder() {
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pac}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.sho}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pas}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.def}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.dri}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.def}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
@@ -454,7 +454,7 @@ export default function ManualBuilder() {
         serverArchetypes={serverArchetypes}
         quota={quotaQuery.data ?? null}
         aiError={aiError}
-        onUpgrade={() => { window.location.assign('/pricing'); }} // 👉 FIX APPLIED HERE
+        onUpgrade={() => { window.location.href = '/pricing'; }}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
