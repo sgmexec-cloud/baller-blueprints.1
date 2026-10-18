@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { authRouter } from "../auth";
+import { billingRouter } from "../billing";
 
 import Stripe from "stripe";
 import { getDb } from "../db";
@@ -60,6 +61,7 @@ async function startServer() {
     if (db) {
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
+      await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "buildsResetAt" timestamp;`);
       
       try {
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'premium_plus';`);
@@ -148,6 +150,7 @@ async function startServer() {
                   stripeCustomerId: customerId,
                   stripeSubscriptionId: subscriptionId,
                   monthlyBuilds: 0,
+                  buildsResetAt: new Date(),
                 })
                 .where(eq(users.id, matchedUsers[0].id));
 
@@ -162,16 +165,35 @@ async function startServer() {
           const subscription = event.data.object as Stripe.Subscription;
           const customerId = subscription.customer as string;
           const priceId = subscription.items.data[0].price.id;
-          const newTier = getTierFromPriceId(priceId);
+          const mappedTier = getTierFromPriceId(priceId);
+          const inactive = ["canceled", "unpaid", "incomplete_expired"].includes(subscription.status);
 
-          await db.update(users)
-            .set({
-              tier: newTier,
-              monthlyBuilds: 0,
-            })
-            .where(eq(users.stripeCustomerId, customerId));
+          if (!inactive && mappedTier === "free") {
+            // The price id isn't one of STRIPE_PRICE_PREMIUM / _PREMIUM_PLUS / _VIP: don't silently downgrade a paying customer
+            console.error(`❌ Unknown Stripe price ${priceId} for customer ${customerId}. Check the STRIPE_PRICE_* env vars.`);
+          } else {
+            const newTier = inactive ? "free" : mappedTier;
 
-          console.log(`✅ UPDATED tier to ${newTier} for customer ${customerId}!`);
+            // NOTE: monthlyBuilds is deliberately NOT reset here. If a plan change refilled the allowance, users
+            // could switch plans back and forth for unlimited builds. The reset happens on invoice.paid (renewal).
+            await db.update(users)
+              .set({ tier: newTier })
+              .where(eq(users.stripeCustomerId, customerId));
+
+            console.log(`✅ UPDATED tier to ${newTier} for customer ${customerId}!`);
+          }
+        }
+
+        // Monthly renewal paid -> fresh build allowance
+        if (event.type === "invoice.paid") {
+          const invoice = event.data.object as Stripe.Invoice;
+          if (invoice.billing_reason === "subscription_cycle" && invoice.customer) {
+            await db.update(users)
+              .set({ monthlyBuilds: 0, buildsResetAt: new Date() })
+              .where(eq(users.stripeCustomerId, invoice.customer as string));
+
+            console.log(`🔄 Monthly builds reset for customer ${invoice.customer}.`);
+          }
         }
 
         if (event.type === "customer.subscription.deleted") {
@@ -246,6 +268,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   
   app.use("/api/auth", authRouter);
+  app.use("/api/billing", billingRouter);
   
   app.use(
     "/api/trpc",
