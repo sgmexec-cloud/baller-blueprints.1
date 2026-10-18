@@ -107,20 +107,19 @@ export function useBuilderLogic() {
     setIsGeneratingAi(true);
     setAiError(null);
     
-    const finalPrompt = aiArchetypeLock !== "AUTO" 
-      ? `[CRITICAL REQUIREMENT: YOU MUST SELECT THE '${aiArchetypeLock}' ARCHETYPE FOR THIS BUILD] ${aiPrompt}`
-      : aiPrompt;
+    // The archetype preference is sent as its own parameter so the server can enforce it.
+    // (It used to be pasted into the player description, where only the first AI step saw it and it was ignored.)
+    const forcedArchetype = aiArchetypeLock !== "AUTO" ? aiArchetypeLock : undefined;
 
     try {
       const blueprint = await generateReportMutation.mutateAsync({
-        playerIdentity: finalPrompt,
+        playerIdentity: aiPrompt,
+        forcedArchetype,
         gameVersion: gameVersion
       });
       
-      if (aiArchetypeLock === "AUTO") {
-        const targetArch = blueprint.archetype && serverArchetypes?.[blueprint.archetype] ? blueprint.archetype : archetype;
-        setAiArchetypeLock(targetArch);
-      }
+      // NOTE: the lock is deliberately left as the user chose it. It used to be overwritten with the AI's pick
+      // after an AUTO run, which would now force that archetype on the next generate.
       
       setAiBlueprint(blueprint);
     } catch (error: any) {
