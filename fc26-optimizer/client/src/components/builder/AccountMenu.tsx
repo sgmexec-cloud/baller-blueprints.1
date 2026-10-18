@@ -73,9 +73,15 @@ export const AccountMenu: React.FC = () => {
                 </div>
               </div>
             )}
+            <a
+              href="/pricing"
+              className="mt-3 block w-full text-center py-2 rounded-lg bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white text-[10px] font-black uppercase tracking-widest"
+            >
+              {q && q.tier === 'vip' ? 'Plans & billing' : 'Upgrade'}
+            </a>
             <button
               onClick={() => { setOpen(false); logout(); }}
-              className="mt-3 w-full py-2 rounded-lg bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] text-[10px] font-black uppercase tracking-widest hover:bg-[#192235] transition-colors"
+              className="mt-2 w-full py-2 rounded-lg bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] text-[10px] font-black uppercase tracking-widest hover:bg-[#192235] transition-colors"
             >
               Log out
             </button>
