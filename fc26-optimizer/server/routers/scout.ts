@@ -143,6 +143,13 @@ export const scoutRouter = router({
 
   // ---------- ACCOUNT REQUIRED: AI Auto-Build ----------
 
+  /** Who is logged in (or null). Returns ONLY safe fields: the user row also holds the login code. */
+  me: publicProcedure
+    .query(({ ctx }) => {
+      const u = (ctx as any).user;
+      return u ? { id: u.id as number, name: (u.name ?? null) as string | null, email: (u.email ?? null) as string | null, tier: u.tier as string } : null;
+    }),
+
   /** How many AI builds the logged-in user has left this month (for the UI). */
   getQuota: protectedProcedure
     .query(async ({ ctx }) => {
