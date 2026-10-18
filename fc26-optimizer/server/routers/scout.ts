@@ -182,6 +182,19 @@ export const scoutRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in to use AI builds." });
       }
 
+      // Resolve the archetype preference (if any) to its exact name BEFORE reserving a build,
+      // so a bad value never costs the user a build.
+      let forcedArchetype: string | null = null;
+      if (input.forcedArchetype) {
+        const validArchetypes = Array.from(
+          new Set(getArchetypeProfiles("FC27").map((r: any) => String(r.Archetype).trim()))
+        ).filter(Boolean) as string[];
+        forcedArchetype = validArchetypes.find(a => normAttr(a) === normAttr(input.forcedArchetype!)) ?? null;
+        if (!forcedArchetype) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown archetype." });
+        }
+      }
+
       // Reserve ONE build atomically BEFORE spending any AI money.
       // (Free: 5 per calendar month. Paid tiers: see buildQuota.ts. The limit can never be passed,
       //  even by parallel requests, and nothing here comes from the client.)
@@ -209,7 +222,7 @@ export const scoutRouter = router({
         const context = getScoutingContext("FC27");
         
         const filterRules: string[] = [];
-        if (input.forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: You MUST use the exact archetype "${input.forcedArchetype}".`);
+        if (forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: The "archetype" field MUST be exactly "${forcedArchetype}". Do NOT choose any other archetype. Pick the playstyles, attributes and specialisation that belong to "${forcedArchetype}".`);
         else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
         
         if (input.customHeight) filterRules.push(`- HEIGHT: You MUST use the exact height "${input.customHeight}".`);
@@ -275,6 +288,10 @@ ${filterRules.join("\n")}
         cleanedJson = cleanedJson.replace(/^```(json)?/i, "").replace(/```$/, "").trim();
 
         const parsed = JSON.parse(cleanedJson);
+
+        // Guarantee: if the user picked an archetype, that is what they get, whatever the AI answered.
+        // (The specialisation check below runs against this archetype, so a mismatched spec is dropped.)
+        if (forcedArchetype) parsed.archetype = forcedArchetype;
 
         if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
           parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
