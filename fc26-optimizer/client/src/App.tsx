@@ -7,11 +7,13 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import CardPreview from "./pages/CardPreview";
 import ManualBuilder from "./ManualBuilder";
+import Login from "./pages/Login";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={ManualBuilder} />
+      <Route path={"/login"} component={Login} />
       <Route path={"/card-preview"} component={CardPreview} />
       <Route path={"/home"} component={Home} />
       <Route path={"/404"} component={NotFound} />
