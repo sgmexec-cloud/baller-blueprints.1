@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '@/_core/hooks/useAuth';
-import { getSafeLoginUrl } from '@/utils/loginUrl';
+import { useAccount } from '@/hooks/useAccount';
 import { trpc } from '@/lib/trpc';
 
 const PLAN_LABEL: Record<string, string> = {
@@ -17,7 +16,7 @@ const PLAN_LABEL: Record<string, string> = {
  *  - Logged in:  a small "AI 3/5" chip that opens a popover (plan, builds left, log out).
  */
 export const AccountMenu: React.FC = () => {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout } = useAccount();
   const [open, setOpen] = useState(false);
 
   const quotaQuery = trpc.scout.getQuota.useQuery(undefined, {
@@ -30,7 +29,7 @@ export const AccountMenu: React.FC = () => {
   if (!isAuthenticated) {
     return (
       <a
-        href={getSafeLoginUrl()}
+        href="/login"
         className="flex items-center px-3 py-1 rounded-full border border-[#26334A] bg-[#131A2A] text-[#F4F7FB] text-[11px] font-bold transition-colors hover:bg-[#192235] hover:border-[#4D8DFF]/50"
       >
         Log in
@@ -75,7 +74,7 @@ export const AccountMenu: React.FC = () => {
               </div>
             )}
             <button
-              onClick={async () => { setOpen(false); await logout(); }}
+              onClick={() => { setOpen(false); logout(); }}
               className="mt-3 w-full py-2 rounded-lg bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] text-[10px] font-black uppercase tracking-widest hover:bg-[#192235] transition-colors"
             >
               Log out
