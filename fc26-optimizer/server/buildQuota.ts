@@ -6,8 +6,8 @@ import { getDb } from "./db";
  *
  * - Guests never reach this: AI procedures are protectedProcedure (login required).
  * - Free accounts: 5 AI builds per calendar month (resets automatically, no Stripe event needed).
- * - Paid tiers: reset by your Stripe webhook (monthlyBuilds = 0). As a safety net, a paid user's
- *   counter also resets if their last build was more than 35 days ago (e.g. a missed webhook).
+ * - Paid tiers: reset by the Stripe webhook on each paid renewal (invoice.paid). Safety net: if no reset has
+ *   happened for 31 days (e.g. the webhook event isn't subscribed), the counter resets by itself.
  * - owner: unmetered.
  */
 export const TIER_LIMITS: Record<string, number> = {
@@ -25,7 +25,10 @@ const NEEDS_RESET = sql`(
   CASE
     WHEN tier = 'free'
       THEN ("lastBuildDate" IS NOT NULL AND "lastBuildDate" < date_trunc('month', now()))
-    ELSE ("lastBuildDate" IS NOT NULL AND "lastBuildDate" < now() - interval '35 days')
+    ELSE (
+      COALESCE("buildsResetAt", "lastBuildDate") IS NOT NULL
+      AND COALESCE("buildsResetAt", "lastBuildDate") < now() - interval '31 days'
+    )
   END
 )`;
 
@@ -63,6 +66,7 @@ export async function reserveBuild(userId: number): Promise<ReserveResult> {
     await db.execute(sql`
       UPDATE users
       SET "monthlyBuilds" = CASE WHEN ${NEEDS_RESET} THEN 1 ELSE "monthlyBuilds" + 1 END,
+          "buildsResetAt" = CASE WHEN ${NEEDS_RESET} THEN now() ELSE "buildsResetAt" END,
           "lastBuildDate" = now()
       WHERE id = ${userId}
         AND (${NEEDS_RESET} OR "monthlyBuilds" < ${limit})
