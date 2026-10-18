@@ -8,12 +8,14 @@ import Home from "./pages/Home";
 import CardPreview from "./pages/CardPreview";
 import ManualBuilder from "./ManualBuilder";
 import Login from "./pages/Login";
+import Pricing from "./pages/Pricing";
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={ManualBuilder} />
       <Route path={"/login"} component={Login} />
+      <Route path={"/pricing"} component={Pricing} />
       <Route path={"/card-preview"} component={CardPreview} />
       <Route path={"/home"} component={Home} />
       <Route path={"/404"} component={NotFound} />
