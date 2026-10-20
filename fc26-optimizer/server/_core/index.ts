@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { authRouter } from "../auth";
 import { billingRouter } from "../billing";
+import { ensureBuildTables } from "../builds";
 
 import Stripe from "stripe";
 import { getDb } from "../db";
@@ -62,6 +63,11 @@ async function startServer() {
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeCustomerId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" text;`);
       await db.execute(sql`ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "buildsResetAt" timestamp;`);
+      try {
+        await ensureBuildTables(db); // saved_builds + user_profiles (separate from the old FC26 "builds" table)
+      } catch (tableErr) {
+        console.error("❌ Could not create the saved_builds / user_profiles tables:", tableErr);
+      }
       
       try {
         await db.execute(sql`ALTER TYPE "tier" ADD VALUE IF NOT EXISTS 'premium_plus';`);
