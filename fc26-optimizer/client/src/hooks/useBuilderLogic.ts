@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { trpc } from "@/lib/trpc"; 
 
 import { STAT_GROUPS, CLUB_BUDGETS } from '@/constants/builderData';
@@ -7,6 +7,8 @@ import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES, FIXED_PLAYSTYLE_PLUS } fro
 import type { StatReq } from '@/types/builder';
 import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
 import { pickBestPlaystylePlus } from '@/utils/psPlusSynergy';
+import { useAccount } from '@/hooks/useAccount';
+import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
 
 export function useBuilderLogic() {
   const [level, setLevel] = useState<number>(25);
@@ -60,6 +62,22 @@ export function useBuilderLogic() {
   // AI Mutations
   const generateReportMutation = trpc.scout.generateReport.useMutation();
   const calculateStatsMutation = trpc.scout.calculateStats.useMutation();
+
+  // ── Global profile (paid plans): Facilities · Masteries · Club level, applied automatically once on load ──
+  const { isAuthenticated } = useAccount();
+  const profileQuery = trpc.scout.builds.profileGet.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+  });
+  const profileApplied = useRef(false);
+  useEffect(() => {
+    const profile = profileQuery.data as ProfileSnapshot | null | undefined;
+    if (!profile || profileApplied.current) return;
+    profileApplied.current = true;
+    setClubLevel(profile.clubLevel);
+    setEquippedFacilities(profile.equippedFacilities || {});
+    setUnlockedMasteries(profile.unlockedMasteries || {});
+  }, [profileQuery.data]);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
@@ -275,6 +293,65 @@ export function useBuilderLogic() {
     } finally {
       setIsGeneratingAi(false);
     }
+  };
+
+  // ── Saved builds ──
+  // A snapshot includes Facilities / Masteries / Club level, so editing your profile later never changes old builds.
+  const getSnapshot = (): BuildSnapshot => ({
+    v: 1,
+    archetype,
+    level,
+    height,
+    weight,
+    addedPoints: { ...addedPoints },
+    smLevel,
+    wfLevel,
+    equippedPlaystyles: equippedPlaystyles.slice(0, 3),
+    equippedSpecialization,
+    psPlusMode,
+    clubLevel,
+    equippedFacilities: { ...equippedFacilities },
+    unlockedMasteries: { ...unlockedMasteries },
+  });
+
+  const getProfileSnapshot = (): ProfileSnapshot => ({
+    clubLevel,
+    equippedFacilities: { ...equippedFacilities },
+    unlockedMasteries: { ...unlockedMasteries },
+  });
+
+  const applySnapshot = (snap: BuildSnapshot): { ok: boolean; message?: string } => {
+    const archData = serverArchetypes?.[snap.archetype];
+    if (!archData) return { ok: false, message: 'This build uses an archetype that is no longer available.' };
+
+    // Only keep attributes that exist for this archetype
+    const validStats = new Set(Object.keys(archData.base));
+    const cleanPoints: Record<string, number> = {};
+    for (const [stat, pts] of Object.entries(snap.addedPoints || {})) {
+      if (validStats.has(stat) && pts > 0) cleanPoints[stat] = pts;
+    }
+
+    const starCaps = ARCHETYPE_STAR_CAPS[snap.archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const slots = ['', '', ''];
+    (snap.equippedPlaystyles || []).slice(0, 3).forEach((p, i) => { slots[i] = p || ''; });
+
+    setArchetype(snap.archetype);
+    setLevel(snap.level);
+    setHeight(snap.height);
+    setWeight(snap.weight);
+    setAddedPoints(cleanPoints);
+    setSmLevel(clamp(snap.smLevel, starCaps.sm.min, starCaps.sm.max));
+    setWfLevel(clamp(snap.wfLevel, starCaps.wf.min, starCaps.wf.max));
+    setEquippedPlaystyles(slots);
+    setEquippedSpecialization(snap.equippedSpecialization ?? null);
+    setPsPlusMode(snap.psPlusMode ?? 'auto');
+    setClubLevel(snap.clubLevel);
+    setEquippedFacilities(snap.equippedFacilities || {});
+    setUnlockedMasteries(snap.unlockedMasteries || {});
+    setSelectedPsView(null);
+    setExpandedPerk(null);
+    return { ok: true };
   };
 
   const openFacilitiesModal = () => {
@@ -681,6 +758,7 @@ export function useBuilderLogic() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
     psPlusChoice, setPsPlusMode,
+    getSnapshot, applySnapshot, getProfileSnapshot,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
