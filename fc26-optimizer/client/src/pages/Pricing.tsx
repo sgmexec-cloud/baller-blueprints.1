@@ -10,19 +10,19 @@ const RANK: Record<PlanId, number> = { free: 0, premium: 1, premium_plus: 2, vip
 const PLANS: { id: PlanId; name: string; price: string; builds: number; features: string[]; highlight?: boolean }[] = [
   {
     id: 'free', name: 'Free', price: '£0', builds: 5,
-    features: ['5 AI builds per month', 'Manual Builder, unlimited', 'Share your build as an image'],
+    features: ['5 AI builds per month', 'Manual Builder, unlimited', 'Save 1 build', 'Share your build as an image'],
   },
   {
     id: 'premium', name: 'Premium', price: '£0.99', builds: 20,
-    features: ['20 AI builds per month', 'Everything in Free'],
+    features: ['20 AI builds per month', 'Save up to 5 builds', 'Saved Facilities & Masteries profile'],
   },
   {
     id: 'premium_plus', name: 'Premium+', price: '£1.99', builds: 60, highlight: true,
-    features: ['60 AI builds per month', 'Everything in Premium'],
+    features: ['60 AI builds per month', 'Save up to 15 builds', 'Everything in Premium'],
   },
   {
     id: 'vip', name: 'VIP', price: '£3.99', builds: 150,
-    features: ['150 AI builds per month', 'Everything in Premium+', 'Priority support'],
+    features: ['150 AI builds per month', 'Save up to 50 builds', 'Everything in Premium+', 'Priority support'],
   },
 ];
 
