@@ -25,6 +25,7 @@ import { MasteriesModal } from '@/components/builder/MasteriesModal';
 import { PlaystyleHubModal } from '@/components/builder/PlaystyleHubModal';
 import { AccountMenu } from '@/components/builder/AccountMenu';
 import { AuthPromptModal } from '@/components/builder/AuthPromptModal';
+import { MyBuildsModal } from '@/components/builder/MyBuildsModal';
 
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
@@ -66,6 +67,7 @@ export default function ManualBuilder() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
     psPlusChoice, setPsPlusMode, handleUnlockPlaystyle,
+    getSnapshot, applySnapshot, getProfileSnapshot,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
@@ -110,6 +112,8 @@ export default function ManualBuilder() {
   // Guests: Manual Builder only. Free accounts: 5 AI builds per month (enforced on the server).
   const { isAuthenticated } = useAccount();
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [authReason, setAuthReason] = useState<'ai' | 'builds'>('ai');
+  const [isBuildsOpen, setIsBuildsOpen] = useState(false);
   const quotaQuery = trpc.scout.getQuota.useQuery(undefined, {
     enabled: isAuthenticated,
     refetchOnWindowFocus: false,
@@ -352,6 +356,7 @@ export default function ManualBuilder() {
           <button
             onClick={() => {
               if (!isAuthenticated) {
+                setAuthReason('ai');
                 setIsAuthPromptOpen(true);
                 return;
               }
@@ -362,6 +367,19 @@ export default function ManualBuilder() {
             className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all text-[#59657A] hover:text-[#8E9AAF] hover:bg-[#131A2A]"
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >✨ AI AUTO-BUILD</button>
+
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                setAuthReason('builds');
+                setIsAuthPromptOpen(true);
+                return;
+              }
+              setIsBuildsOpen(true);
+            }}
+            className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all text-[#59657A] hover:text-[#8E9AAF] hover:bg-[#131A2A]"
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >📁 MY BUILDS</button>
         </div>
 
         {/* TAB RENDERING VIA EXTRACTED SUB-COMPONENTS */}
@@ -457,7 +475,17 @@ export default function ManualBuilder() {
         onUpgrade={() => { window.location.href = '/pricing'; }}
       />
 
-      <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
+      <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} reason={authReason} />
+
+      <MyBuildsModal
+        isOpen={isBuildsOpen}
+        onClose={() => setIsBuildsOpen(false)}
+        archetype={archetype}
+        level={level}
+        getSnapshot={getSnapshot}
+        applySnapshot={applySnapshot}
+        getProfileSnapshot={getProfileSnapshot}
+      />
 
       <PhysicalsModal 
         isOpen={activeModal}
