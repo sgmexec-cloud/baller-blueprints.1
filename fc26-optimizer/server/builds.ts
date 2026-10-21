@@ -41,6 +41,12 @@ const ProfileSchema = z.object({
   clubLevel: z.number().int().min(1).max(60),
   equippedFacilities: facilitiesSchema,
   unlockedMasteries: masteriesSchema,
+  // The level reached on each archetype. Masteries complete at 10 and 30 (worked out on the client).
+  archetypeLevels: z
+    .record(z.string().max(64), z.number().int().min(1).max(40))
+    .refine(v => Object.keys(v).length <= 40, "Too many archetypes")
+    .optional()
+    .default({}),
 });
 
 const SnapshotSchema = z.object({
