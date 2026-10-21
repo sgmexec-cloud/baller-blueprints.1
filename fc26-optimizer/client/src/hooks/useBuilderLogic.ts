@@ -9,6 +9,7 @@ import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost
 import { pickBestPlaystylePlus } from '@/utils/psPlusSynergy';
 import { useAccount } from '@/hooks/useAccount';
 import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
+import { masteryFromLevel, mergeMasteries } from '@/utils/masteryFromLevel';
 
 export function useBuilderLogic() {
   const [level, setLevel] = useState<number>(25);
@@ -70,14 +71,31 @@ export function useBuilderLogic() {
     refetchOnWindowFocus: false,
   });
   const profileApplied = useRef(false);
+  const levelSynced = useRef(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  // The level you've reached on each archetype (1-40). Masteries complete at 10 and 30.
+  const [archetypeLevels, setArchetypeLevels] = useState<Record<string, number>>({});
+
   useEffect(() => {
-    const profile = profileQuery.data as ProfileSnapshot | null | undefined;
+    const profile = profileQuery.data as Partial<ProfileSnapshot> | null | undefined;
     if (!profile || profileApplied.current) return;
     profileApplied.current = true;
-    setClubLevel(profile.clubLevel);
+    const levels = profile.archetypeLevels || {};
+    setClubLevel(profile.clubLevel ?? 10);
     setEquippedFacilities(profile.equippedFacilities || {});
-    setUnlockedMasteries(profile.unlockedMasteries || {});
+    setArchetypeLevels(levels);
+    // Archetypes with a level are driven by that level; the rest keep their saved manual masteries
+    setUnlockedMasteries(mergeMasteries(profile.unlockedMasteries || {}, levels));
+    setProfileLoaded(true);
   }, [profileQuery.data]);
+
+  // Open the builder at your real level for the current archetype (once)
+  useEffect(() => {
+    if (!profileLoaded || levelSynced.current || !archetype) return;
+    levelSynced.current = true;
+    const saved = archetypeLevels[archetype];
+    if (saved) setLevel(saved);
+  }, [profileLoaded, archetype]);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
@@ -117,6 +135,23 @@ export function useBuilderLogic() {
     setEquippedSpecialization(null);
     setPsPlusMode('auto');
     setExpandedPerk(null);
+    if (archetypeLevels[newArch]) setLevel(archetypeLevels[newArch]);
+  };
+
+  // Set (or clear, with null) the level you've reached on one archetype. Its masteries follow automatically.
+  const setArchetypeLevel = (arch: string, lvl: number | null) => {
+    if (lvl === null) {
+      // No level recorded: leave that archetype's masteries as they are
+      setArchetypeLevels(prev => {
+        const next = { ...prev };
+        delete next[arch];
+        return next;
+      });
+      return;
+    }
+    const clean = Math.max(1, Math.min(40, Math.round(lvl)));
+    setArchetypeLevels(prev => ({ ...prev, [arch]: clean }));
+    setUnlockedMasteries(prev => ({ ...prev, [arch]: masteryFromLevel(clean) }));
   };
 
   // Phase 1 of AI Build - Get the Blueprint & show Step 2 UI
@@ -318,6 +353,7 @@ export function useBuilderLogic() {
     clubLevel,
     equippedFacilities: { ...equippedFacilities },
     unlockedMasteries: { ...unlockedMasteries },
+    archetypeLevels: { ...archetypeLevels },
   });
 
   const applySnapshot = (snap: BuildSnapshot): { ok: boolean; message?: string } => {
@@ -395,6 +431,13 @@ export function useBuilderLogic() {
   };
 
   const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30') => {
+    // Toggling by hand contradicts a recorded level, so that archetype goes back to manual control
+    setArchetypeLevels(prev => {
+      if (!(archName in prev)) return prev;
+      const next = { ...prev };
+      delete next[archName];
+      return next;
+    });
     setUnlockedMasteries(prev => {
       const current = prev[archName] || { l10: false, l30: false };
       if (tier === 'l30') {
@@ -759,6 +802,7 @@ export function useBuilderLogic() {
     isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
     psPlusChoice, setPsPlusMode,
     getSnapshot, applySnapshot, getProfileSnapshot,
+    archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
