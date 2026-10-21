@@ -9,7 +9,8 @@ import {
 } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles } from "../mathEngine27";
 import { rolesToPositions } from "../positionMap";
-import { reserveBuild, refundBuild, getQuota } from "../buildQuota";
+import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
+import { PREVIEW_COOKIE } from "../tierPreview";
 import { buildsRouter } from "../builds";
 import { TRPCError } from "@trpc/server";
 import fs from "fs/promises";
@@ -157,9 +158,44 @@ export const scoutRouter = router({
             name: (u.name ?? null) as string | null,
             email: (u.email ?? null) as string | null,
             tier: u.tier as string,
+            // The owner can preview other plans: tier is the plan in effect, realTier is the stored one
+            realTier: (u.realTier ?? u.tier) as string,
+            previewing: Boolean(u.previewing),
             hasSubscription: Boolean(u.stripeSubscriptionId),
           }
         : null;
+    }),
+
+  /** OWNER ONLY: view the whole app as another plan. Use "owner" to switch back. */
+  setPreviewTier: protectedProcedure
+    .input(z.object({ tier: z.enum(["owner", "free", "premium", "premium_plus", "vip"]) }))
+    .mutation(({ ctx, input }) => {
+      if ((ctx.user as any).realTier !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Owner only." });
+      }
+      const res = (ctx as any).res;
+      if (input.tier === "owner") {
+        res.clearCookie(PREVIEW_COOKIE, { path: "/" });
+      } else {
+        res.cookie(PREVIEW_COOKIE, input.tier, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 12 * 60 * 60 * 1000,
+        });
+      }
+      return { tier: input.tier };
+    }),
+
+  /** OWNER ONLY: zero my AI build counter so a plan's limit can be tested again. */
+  resetMyBuildCounter: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      if ((ctx.user as any).realTier !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Owner only." });
+      }
+      await resetBuilds(Number((ctx.user as any).id));
+      return { success: true };
     }),
 
   /** How many AI builds the logged-in user has left this month (for the UI). */
@@ -167,7 +203,7 @@ export const scoutRouter = router({
     .query(async ({ ctx }) => {
       const userId = Number((ctx.user as any).id);
       if (!Number.isFinite(userId)) throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in." });
-      return getQuota(userId);
+      return getQuota(userId, (ctx.user as any).tier);
     }),
 
   generateReport: protectedProcedure
@@ -190,6 +226,10 @@ export const scoutRouter = router({
       // so a bad value never costs the user a build.
       let forcedArchetype: string | null = null;
       if (input.forcedArchetype) {
+        // Archetype Select: Premium and above (checked here, before a build is reserved)
+        if (((ctx.user as any).tier ?? "free") === "free") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "PAID_FEATURE" });
+        }
         const validArchetypes = Array.from(
           new Set(getArchetypeProfiles("FC27").map((r: any) => String(r.Archetype).trim()))
         ).filter(Boolean) as string[];
@@ -202,7 +242,7 @@ export const scoutRouter = router({
       // Reserve ONE build atomically BEFORE spending any AI money.
       // (Free: 5 per calendar month. Paid tiers: see buildQuota.ts. The limit can never be passed,
       //  even by parallel requests, and nothing here comes from the client.)
-      const quota = await reserveBuild(userId);
+      const quota = await reserveBuild(userId, (ctx.user as any).tier);
       if (!quota.allowed) {
         throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED" });
       }
