@@ -111,7 +111,7 @@ export default function ManualBuilder() {
 
   // --- ACCOUNT / AI ACCESS ---
   // Guests: Manual Builder only. Free accounts: 5 AI builds per month (enforced on the server).
-  const { isAuthenticated } = useAccount();
+  const { user: accountUser, isAuthenticated } = useAccount();
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const quotaQuery = trpc.scout.getQuota.useQuery(undefined, {
@@ -459,6 +459,7 @@ export default function ManualBuilder() {
         quota={quotaQuery.data ?? null}
         aiError={aiError}
         onUpgrade={() => { window.location.href = '/pricing'; }}
+        canSelectArchetype={!!accountUser && accountUser.tier !== 'free'}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
