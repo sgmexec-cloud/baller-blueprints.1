@@ -14,7 +14,7 @@ const PLANS: { id: PlanId; name: string; price: string; builds: number; features
   },
   {
     id: 'premium', name: 'Premium', price: '£0.99', builds: 20,
-    features: ['20 AI builds per month', 'Save up to 5 builds', 'Saved Facilities & Masteries profile'],
+    features: ['20 AI builds per month', 'Choose your own archetype for AI builds', 'Save up to 5 builds', 'Saved profile: archetype levels, Facilities & Masteries'],
   },
   {
     id: 'premium_plus', name: 'Premium+', price: '£1.99', builds: 60, highlight: true,
