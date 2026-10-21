@@ -21,6 +21,8 @@ export interface AiGeneratorModalProps {
   /** Last error from generating a blueprint */
   aiError?: string | null;
   onUpgrade?: () => void;
+  /** Archetype Select is a paid feature (Premium and above) */
+  canSelectArchetype?: boolean;
 }
 
 export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
@@ -42,6 +44,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
   quota,
   aiError,
   onUpgrade,
+  canSelectArchetype = true,
 }) => {
   if (!isOpen) return null;
 
@@ -73,11 +76,14 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
             </p>
 
             <div className="mb-4">
-              <label className="block text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">Archetype Preference</label>
+              <label className="flex items-center justify-between text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">
+                <span>Archetype Preference</span>
+                {!canSelectArchetype && <span className="text-[#facc15]">🔒 Premium</span>}
+              </label>
               <select 
-                value={aiArchetypeLock}
+                value={canSelectArchetype ? aiArchetypeLock : 'AUTO'}
                 onChange={(e) => setAiArchetypeLock(e.target.value)}
-                disabled={isGeneratingAi}
+                disabled={isGeneratingAi || !canSelectArchetype}
                 className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg p-2.5 text-xs text-[#F4F7FB] font-bold outline-none focus:border-[#4D8DFF] transition-colors disabled:opacity-50 appearance-none"
               >
                 <option value="AUTO">✨ Let AI Decide</option>
@@ -85,6 +91,12 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                    <option key={arch} value={arch}>{arch}</option>
                 ))}
               </select>
+              {!canSelectArchetype && (
+                <p className="mt-1.5 text-[10px] text-[#8E9AAF] leading-relaxed">
+                  Choosing the archetype yourself is included in the paid plans; the AI picks the best fit.{' '}
+                  {onUpgrade && <button onClick={onUpgrade} className="text-[#4D8DFF] font-bold underline">See plans</button>}
+                </p>
+              )}
             </div>
 
             {quota && (
@@ -151,10 +163,15 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
                  <div>
-                   <h4 className="text-[#21E6A4] font-black text-[10px] tracking-wider uppercase mb-0.5">AI Recommended</h4>
+                   <h4 className="text-[#21E6A4] font-black text-[10px] tracking-wider uppercase mb-0.5">{aiArchetypeLock !== 'AUTO' ? 'Your Pick' : 'AI Recommended'}</h4>
                    <p className="text-[#F4F7FB] font-bold text-lg leading-none">{aiBlueprint.archetype}</p>
                  </div>
                </div>
+               {aiArchetypeLock !== 'AUTO' && (
+                 <p className="text-[10px] text-[#facc15] font-semibold leading-relaxed mb-3">
+                   This is a {aiBlueprint.archetype} interpretation of the player: points, PlayStyles and costs follow the {aiBlueprint.archetype} archetype, even where their real-life style differs.
+                 </p>
+               )}
                <p className="text-[10px] text-[#8E9AAF] leading-relaxed italic border-l-2 border-[#4D8DFF] pl-2 mb-4">"{aiBlueprint.scoutSummary}"</p>
                
                <div className="flex items-center justify-between bg-[#0D1220] p-3 rounded-lg border border-[#26334A]/60">
