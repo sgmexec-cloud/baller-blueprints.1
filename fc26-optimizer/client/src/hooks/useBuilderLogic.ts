@@ -65,7 +65,7 @@ export function useBuilderLogic() {
   const calculateStatsMutation = trpc.scout.calculateStats.useMutation();
 
   // ── Global profile (paid plans): Facilities · Masteries · Club level, applied automatically once on load ──
-  const { isAuthenticated } = useAccount();
+  const { user: accountUser, isAuthenticated } = useAccount();
   const profileQuery = trpc.scout.builds.profileGet.useQuery(undefined, {
     enabled: isAuthenticated,
     refetchOnWindowFocus: false,
@@ -162,7 +162,9 @@ export function useBuilderLogic() {
     
     // The archetype preference is sent as its own parameter so the server can enforce it.
     // (It used to be pasted into the player description, where only the first AI step saw it and it was ignored.)
-    const forcedArchetype = aiArchetypeLock !== "AUTO" ? aiArchetypeLock : undefined;
+    // Archetype Select is a paid feature (Premium and above); free accounts always let the AI choose.
+    const canPickArchetype = !!accountUser && accountUser.tier !== "free";
+    const forcedArchetype = canPickArchetype && aiArchetypeLock !== "AUTO" ? aiArchetypeLock : undefined;
 
     try {
       const blueprint = await generateReportMutation.mutateAsync({
@@ -179,6 +181,8 @@ export function useBuilderLogic() {
       console.error("AI Generation failed:", error);
       if (error?.data?.code === 'UNAUTHORIZED') {
         setAiError('Please log in to use AI Auto-Build.');
+      } else if (error?.message === 'PAID_FEATURE') {
+        setAiError('Choosing the archetype yourself is included in the paid plans. Set it back to "Let AI Decide" to continue.');
       } else if (error?.message === 'LIMIT_REACHED') {
         setAiError("You've used all of your AI builds for this month.");
       } else {
