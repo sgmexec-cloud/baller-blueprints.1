@@ -26,6 +26,7 @@ import { PlaystyleHubModal } from '@/components/builder/PlaystyleHubModal';
 import { AccountMenu } from '@/components/builder/AccountMenu';
 import { AuthPromptModal } from '@/components/builder/AuthPromptModal';
 import { ProfileModal } from '@/components/builder/ProfileModal';
+import { PreviewBanner } from '@/components/builder/PreviewBanner';
 
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
@@ -463,6 +464,8 @@ export default function ManualBuilder() {
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
+
+      <PreviewBanner />
 
       <ProfileModal
         isOpen={isProfileOpen}
