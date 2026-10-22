@@ -40,6 +40,14 @@ function appOrigin(req: Request): string {
   return (process.env.APP_URL || `${req.protocol}://${req.get("host")}`).replace(/\/$/, "");
 }
 
+
+// The webhook writes the purchased plan onto the account. If the owner subscribed by accident (for example while
+// previewing the Free plan), it would overwrite "owner". So owners can't use these endpoints.
+function isOwner(user: any): boolean {
+  return (user?.realTier ?? user?.tier) === "owner";
+}
+const OWNER_BLOCK = "Owner accounts can't subscribe or change plans. This protects your owner access.";
+
 async function currentUser(req: Request, res: Response) {
   const { user } = await createContext({ req, res } as any);
   return user;
@@ -63,6 +71,7 @@ billingRouter.post("/checkout", async (req, res) => {
   try {
     const user = await currentUser(req, res);
     if (!user) return res.status(401).json({ error: "Please log in first." });
+    if (isOwner(user)) return res.status(403).json({ error: OWNER_BLOCK });
 
     const plan = String(req.body?.plan ?? "");
     const price = priceFor(plan);
@@ -100,6 +109,7 @@ billingRouter.post("/change-plan", async (req, res) => {
   try {
     const user = await currentUser(req, res);
     if (!user) return res.status(401).json({ error: "Please log in first." });
+    if (isOwner(user)) return res.status(403).json({ error: OWNER_BLOCK });
 
     const plan = String(req.body?.plan ?? "");
     const price = priceFor(plan);
