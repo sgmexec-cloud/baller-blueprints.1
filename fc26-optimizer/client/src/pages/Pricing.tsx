@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAccount } from '@/hooks/useAccount';
+import { PreviewBanner } from '@/components/builder/PreviewBanner';
 
 type PlanId = 'free' | 'premium' | 'premium_plus' | 'vip';
 const RANK: Record<PlanId, number> = { free: 0, premium: 1, premium_plus: 2, vip: 3 };
@@ -139,6 +140,7 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] px-4 py-8">
+      <PreviewBanner />
       <div className="max-w-lg mx-auto">
         <div className="flex justify-center mb-6">
           <img src="/clubs-dna-logo.png" alt="ClubsDNA" className="w-52 object-contain drop-shadow-md" />
