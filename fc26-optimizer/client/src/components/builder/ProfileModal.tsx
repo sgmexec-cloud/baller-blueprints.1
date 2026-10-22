@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { trpc } from '@/lib/trpc';
 import { useAccount } from '@/hooks/useAccount';
 import { MyBuildsPanel } from '@/components/builder/MyBuildsPanel';
+import { useTierPreview, type PreviewTier } from '@/hooks/useTierPreview';
 import { masteryFromLevel } from '@/utils/masteryFromLevel';
 import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
 
@@ -44,6 +45,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
 }) => {
   const { user, logout } = useAccount();
   const utils = trpc.useUtils();
+  const { setPreview, resetCounter, busy: previewBusy } = useTierPreview();
 
   const quotaQuery = trpc.scout.getQuota.useQuery(undefined, { enabled: isOpen, refetchOnWindowFocus: false });
   const listQuery = trpc.scout.builds.list.useQuery(undefined, { enabled: isOpen, refetchOnWindowFocus: false });
@@ -161,6 +163,52 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
               </button>
             </div>
           </section>
+
+          {/* OWNER TOOLS: only visible on the owner account */}
+          {user?.realTier === 'owner' && (
+            <section className="bg-[#0D1220] border border-[#facc15]/40 rounded-xl p-4">
+              <div className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#facc15] mb-1">Owner tools</div>
+              <p className="text-[11px] text-[#8E9AAF] leading-relaxed mb-3">
+                View ClubsDNA exactly as each plan sees it. Limits and locked features are enforced on the server, so
+                what you see is what that plan really gets.
+              </p>
+              <div className="grid grid-cols-5 gap-1.5">
+                {([
+                  ['owner', 'Owner'],
+                  ['free', 'Free'],
+                  ['premium', 'Premium'],
+                  ['premium_plus', 'Prem+'],
+                  ['vip', 'VIP'],
+                ] as [PreviewTier, string][]).map(([id, label]) => {
+                  const active = (user.previewing ? user.tier : 'owner') === id;
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => setPreview(id)}
+                      disabled={previewBusy}
+                      className={`py-2 rounded-lg border text-[9px] font-black uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                        active
+                          ? 'bg-[#facc15] border-[#facc15] text-[#080B14]'
+                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB]'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={async () => {
+                  await resetCounter();
+                  setNotice({ type: 'success', text: 'AI build counter reset to 0.' });
+                }}
+                disabled={previewBusy}
+                className="mt-3 w-full py-2 rounded-lg bg-[#131A2A] border border-[#26334A] text-[#F4F7FB] text-[10px] font-black uppercase tracking-widest hover:bg-[#192235] transition-colors disabled:opacity-50"
+              >
+                Reset my AI build counter
+              </button>
+            </section>
+          )}
 
           {/* TABS */}
           <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl">
