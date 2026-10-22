@@ -21,9 +21,9 @@ export const TIER_LIMITS: Record<string, number> = {
 const rowsOf = (res: any): any[] => res?.rows ?? (Array.isArray(res) ? res : []);
 
 // True when this user's counter belongs to a previous period and should count as 0.
-const NEEDS_RESET = sql`(
+const needsReset = (tier: string) => sql`(
   CASE
-    WHEN tier = 'free'
+    WHEN ${tier}::text = 'free'
       THEN ("lastBuildDate" IS NOT NULL AND "lastBuildDate" < date_trunc('month', now()))
     ELSE (
       COALESCE("buildsResetAt", "lastBuildDate") IS NOT NULL
@@ -46,7 +46,7 @@ export interface ReserveResult {
  * A single UPDATE both checks the limit and increments the counter, so parallel requests
  * can never push a user past their cap.
  */
-export async function reserveBuild(userId: number): Promise<ReserveResult> {
+export async function reserveBuild(userId: number, tierOverride?: string): Promise<ReserveResult> {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
@@ -55,8 +55,10 @@ export async function reserveBuild(userId: number): Promise<ReserveResult> {
   )[0];
   if (!found) throw new Error("User not found");
 
-  const tier: string = found.tier ?? "free";
+  // The plan the user is treated as having (the owner can preview other plans); defaults to the stored plan
+  const tier: string = tierOverride ?? found.tier ?? "free";
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
+  const NEEDS_RESET = needsReset(tier);
 
   if (limit === Infinity) {
     return { allowed: true, metered: false, tier, used: 0, limit };
@@ -103,23 +105,32 @@ export interface QuotaInfo {
 }
 
 /** Read-only view for the UI ("3 of 5 left"), applying the same reset rule as reserveBuild. */
-export async function getQuota(userId: number): Promise<QuotaInfo> {
+export async function getQuota(userId: number, tierOverride?: string): Promise<QuotaInfo> {
   const db = await getDb();
   if (!db) throw new Error("Database connection failed");
 
+  const stored = rowsOf(await db.execute(sql`SELECT tier FROM users WHERE id = ${userId} LIMIT 1`))[0];
+  if (!stored) throw new Error("User not found");
+  const tier: string = tierOverride ?? stored.tier ?? "free";
+
   const row = rowsOf(
     await db.execute(sql`
-      SELECT tier,
-             CASE WHEN ${NEEDS_RESET} THEN 0 ELSE "monthlyBuilds" END AS used
+      SELECT CASE WHEN ${needsReset(tier)} THEN 0 ELSE "monthlyBuilds" END AS used
       FROM users WHERE id = ${userId} LIMIT 1
     `)
   )[0];
   if (!row) throw new Error("User not found");
 
-  const tier: string = row.tier ?? "free";
   const limit = TIER_LIMITS[tier] ?? TIER_LIMITS.free;
   const used = Number(row.used) || 0;
 
   if (limit === Infinity) return { tier, used, limit: null, remaining: null };
   return { tier, used, limit, remaining: Math.max(0, limit - used) };
+}
+
+/** Owner testing only: zero a user's AI build counter so a plan's limit can be tested again. */
+export async function resetBuilds(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error("Database connection failed");
+  await db.execute(sql`UPDATE users SET "monthlyBuilds" = 0, "buildsResetAt" = now() WHERE id = ${userId}`);
 }
