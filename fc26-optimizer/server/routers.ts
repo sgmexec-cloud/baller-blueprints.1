@@ -50,16 +50,21 @@ export const appRouter = router({
         const filePath = path.join(process.cwd(), 'server', folderName, fileName);
         
         const fileContent = await fs.readFile(filePath, 'utf-8');
-        const lines = fileContent.trim().split('\n');
+        const lines = fileContent.trim().split(/\r?\n/);
         
-        const progressionData: Record<number, { apAvailable: number, signatureUpgrades: number, customSlots: number }> = {};
+        // Columns: Level, AP Available (cumulative), Signature playstyle Upgrade, New playstyle slot (cumulative count),
+        //          Masteries (cumulative count of mastery tiers unlocked)
+        const progressionData: Record<number, { apAvailable: number, signatureUpgrades: number, customSlots: number, masteries: number }> = {};
         
         for (let i = 1; i < lines.length; i++) {
-          const [level, ap, signatures, custom] = lines[i].split(',');
+          if (!lines[i].trim()) continue;
+          const [level, ap, signatures, custom, masteries] = lines[i].split(',').map(v => v.trim());
+          if (!Number.isFinite(Number(level))) continue;
           progressionData[Number(level)] = {
             apAvailable: Number(ap),
-            signatureUpgrades: Number(signatures),
-            customSlots: Number(custom)
+            signatureUpgrades: Number(signatures) || 0,
+            customSlots: Number(custom) || 0,
+            masteries: Number(masteries) || 0
           };
         }
         
