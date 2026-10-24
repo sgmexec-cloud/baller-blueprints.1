@@ -273,12 +273,15 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
                         <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-1 rounded ${m?.l30 ? 'bg-[#21E6A4]/20 text-[#21E6A4]' : 'bg-[#131A2A] text-[#59657A]'}`}>
                           M30
                         </span>
+                        <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-1 rounded ${m?.l55 ? 'bg-[#21E6A4]/20 text-[#21E6A4]' : 'bg-[#131A2A] text-[#59657A]'}`}>
+                          M55
+                        </span>
 
                         <input
                           type="number"
                           inputMode="numeric"
                           min={1}
-                          max={40}
+                          max={55}
                           placeholder="–"
                           aria-label={`${arch} level`}
                           value={lvl ?? ''}
