@@ -16,14 +16,15 @@ export const PlaystyleSlotsRow: React.FC<PlaystyleSlotsRowProps> = ({
   // Only ONE Playstyle+ slot: it shows whichever of Signature / Specialisation is currently equipped
   const slotsData = [
      { id: 'psplus', type: 'gold', name: hasPsPlus ? activePsPlus : '', unlocked: true, unlockText: '' },
-     { id: 'lvl5', type: 'silver', name: equippedPlaystyles[0], unlocked: level >= 5, unlockText: 'LVL 5' },
-     { id: 'lvl15', type: 'silver', name: equippedPlaystyles[1], unlocked: level >= 15, unlockText: 'LVL 15' },
-     { id: 'lvl40', type: 'silver', name: equippedPlaystyles[2], unlocked: level >= 40, unlockText: 'LVL 40' },
+     { id: 'slot1', type: 'silver', name: equippedPlaystyles[0], unlocked: level >= 5, unlockText: 'LVL 5' },
+     { id: 'slot2', type: 'silver', name: equippedPlaystyles[1], unlocked: level >= 15, unlockText: 'LVL 15' },
+     { id: 'slot3', type: 'silver', name: equippedPlaystyles[2], unlocked: level >= 40, unlockText: 'LVL 40' },
+     { id: 'slot4', type: 'silver', name: equippedPlaystyles[3], unlocked: level >= 55, unlockText: 'LVL 55' },
      { id: 'facil1', type: 'silver', name: fac1, unlocked: !!fac1, unlockText: 'FAC 1' },
      { id: 'facil2', type: 'silver', name: fac2, unlocked: !!fac2, unlockText: 'FAC 2' }
   ];
 
-  const isActionable = (id: string) => id === 'psplus' || id.startsWith('lvl');
+  const isActionable = (id: string) => id === 'psplus' || id.startsWith('slot');
 
   return (
      <div className="flex justify-center gap-[4px] sm:gap-1.5 w-full">
