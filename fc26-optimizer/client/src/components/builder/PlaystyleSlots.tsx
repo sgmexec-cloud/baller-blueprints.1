@@ -2,20 +2,19 @@ import React from 'react';
 import { getPlaystyleIconPath } from '@/utils/builderUtils';
 import type { PlaystyleSlotsRowProps, GridSlotProps } from '@/types/builder';
 
-export const PlaystyleSlotsRow: React.FC<PlaystyleSlotsRowProps> = ({
+export const PlaystyleSlotsRow: React.FC<any> = ({
   interactive = false,
-  activePsPlus,
+  sig1,
+  sig2,
   equippedPlaystyles,
   level,
   fac1,
   fac2,
   setActiveModal
 }) => {
-  const hasPsPlus = !!activePsPlus && activePsPlus !== 'None';
-
-  // Only ONE Playstyle+ slot: it shows whichever of Signature / Specialisation is currently equipped
   const slotsData = [
-     { id: 'psplus', type: 'gold', name: hasPsPlus ? activePsPlus : '', unlocked: true, unlockText: '' },
+     { id: 'sig1', type: sig1?.type || 'silver', name: sig1?.name || '', unlocked: true, unlockText: 'SIG 1' },
+     { id: 'sig2', type: sig2?.type || 'silver', name: sig2?.name || '', unlocked: true, unlockText: 'SIG 2' },
      { id: 'slot1', type: 'silver', name: equippedPlaystyles[0], unlocked: level >= 5, unlockText: 'LVL 5' },
      { id: 'slot2', type: 'silver', name: equippedPlaystyles[1], unlocked: level >= 15, unlockText: 'LVL 15' },
      { id: 'slot3', type: 'silver', name: equippedPlaystyles[2], unlocked: level >= 40, unlockText: 'LVL 40' },
@@ -24,13 +23,12 @@ export const PlaystyleSlotsRow: React.FC<PlaystyleSlotsRowProps> = ({
      { id: 'facil2', type: 'silver', name: fac2, unlocked: !!fac2, unlockText: 'FAC 2' }
   ];
 
-  const isActionable = (id: string) => id === 'psplus' || id.startsWith('slot');
+  const isActionable = (id: string) => id.startsWith('sig') || id.startsWith('slot');
 
   return (
      <div className="flex justify-center gap-[4px] sm:gap-1.5 w-full">
         {slotsData.map(slot => {
            const handleSlotClick = () => {
-              // Playstyle+ and level slots both open the PlayStyle Hub
               if (interactive && slot.unlocked && isActionable(slot.id)) setActiveModal('playstyles');
            };
 
