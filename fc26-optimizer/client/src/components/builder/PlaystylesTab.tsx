@@ -48,10 +48,10 @@ export const PlaystylesTab: React.FC<PlaystylesTabProps> = ({
                <span className="text-[8px] text-[#21E6A4]">TAP TO EDIT</span>
             </div>
             <div className="grid grid-cols-3 gap-2">
-               {[0, 1, 2].map(idx => (
+               {[0, 1, 2, 3].map(idx => (
                   <GridSlot 
                      key={idx}
-                     slot={{ id: `lvl${idx}`, type: 'silver', name: equippedPlaystyles[idx], unlocked: level >= [5, 15, 40][idx], unlockText: `LVL ${[5, 15, 40][idx]}` }} 
+                     slot={{ id: `slot${idx + 1}`, type: 'silver', name: equippedPlaystyles[idx], unlocked: level >= [5, 15, 40, 55][idx], unlockText: `LVL ${[5, 15, 40, 55][idx]}` }} 
                      interactive={true} 
                      onClick={() => setActiveModal('playstyles')} 
                   />
