@@ -3,13 +3,16 @@ import { trpc } from "@/lib/trpc";
 
 import { STAT_GROUPS, CLUB_BUDGETS } from '@/constants/builderData';
 import { ARCH_PHYSICALS, ARCHETYPE_STAR_CAPS, STAR_UPGRADE_COSTS } from '@/constants/archetypeData';
-import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES, FIXED_PLAYSTYLE_PLUS } from '@/constants/playstylesData';
+import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES } from '@/constants/playstylesData';
 import type { StatReq } from '@/types/builder';
 import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
-import { pickBestPlaystylePlus } from '@/utils/psPlusSynergy';
+import { getMaxLevel, getSlotUnlockLevels, getSignatureUnlockLevels, getSignatureUpgradesAt, samePlaystyle, FALLBACK_SLOT_LEVELS } from '@/utils/gameRules';
 import { useAccount } from '@/hooks/useAccount';
 import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
 import { masteryFromLevel, mergeMasteries } from '@/utils/masteryFromLevel';
+
+// One empty string per playstyle slot (4 since level 55)
+const emptySlots = (): string[] => FALLBACK_SLOT_LEVELS.map(() => '');
 
 export function useBuilderLogic() {
   const [level, setLevel] = useState<number>(25);
@@ -24,13 +27,11 @@ export function useBuilderLogic() {
 
   const [clubLevel, setClubLevel] = useState<number>(10);
   const [equippedFacilities, setEquippedFacilities] = useState<Record<string, number>>({}); 
-  const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean }>>({});
+  const [unlockedMasteries, setUnlockedMasteries] = useState<Record<string, { l10: boolean, l30: boolean, l55?: boolean }>>({});
   
   // Equip States
-  const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(['', '', '']);
+  const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(emptySlots());
   const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
-  // 'auto' = pick the best-synergy Playstyle+ live; 'signature' / 'spec' = the player's (or AI's) explicit choice
-  const [psPlusMode, setPsPlusMode] = useState<'auto' | 'signature' | 'spec'>('auto');
   const [expandedPerk, setExpandedPerk] = useState<string | null>(null);
   
   // Navigation & UI State
@@ -98,6 +99,13 @@ export function useBuilderLogic() {
   }, [profileLoaded, archetype]);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
+
+  // Rules that come from FC27_PROGRESSION.csv (level cap 55, slots at 5/15/40/55, signature Plus at 20/55)
+  const maxLevel = getMaxLevel(progressionData);
+  const slotUnlockLevels = getSlotUnlockLevels(progressionData);
+  const signatureUnlockLevels = getSignatureUnlockLevels(progressionData);
+  const unlockedSlotsAt = (lvl: number) => slotUnlockLevels.map((_, i) => i).filter(i => lvl >= slotUnlockLevels[i]);
+
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
   const activeStarCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
 
@@ -113,10 +121,9 @@ export function useBuilderLogic() {
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
       setSmLevel(starCaps.sm.min);
       setWfLevel(starCaps.wf.min);
-      setEquippedPlaystyles(['', '', '']);
+      setEquippedPlaystyles(emptySlots());
       setSelectedPsView(null);
       setEquippedSpecialization(null);
-      setPsPlusMode('auto');
       setExpandedPerk(null);
     }
   }, [serverArchetypes, gameVersion]);
@@ -130,10 +137,9 @@ export function useBuilderLogic() {
     const starCaps = ARCHETYPE_STAR_CAPS[newArch] || ARCHETYPE_STAR_CAPS['Finisher'];
     setSmLevel(starCaps.sm.min);
     setWfLevel(starCaps.wf.min);
-    setEquippedPlaystyles(['', '', '']);
+    setEquippedPlaystyles(emptySlots());
     setSelectedPsView(null);
     setEquippedSpecialization(null);
-    setPsPlusMode('auto');
     setExpandedPerk(null);
     if (archetypeLevels[newArch]) setLevel(archetypeLevels[newArch]);
   };
@@ -149,7 +155,7 @@ export function useBuilderLogic() {
       });
       return;
     }
-    const clean = Math.max(1, Math.min(40, Math.round(lvl)));
+    const clean = Math.max(1, Math.min(maxLevel, Math.round(lvl)));
     setArchetypeLevels(prev => ({ ...prev, [arch]: clean }));
     setUnlockedMasteries(prev => ({ ...prev, [arch]: masteryFromLevel(clean) }));
   };
@@ -213,7 +219,7 @@ export function useBuilderLogic() {
       const maxApForAi = progressionData?.[aiTargetLevel]?.apAvailable ?? (Math.floor(aiTargetLevel * 1.5) + 10);
       const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
 
-      const unlockedSlotIndexes = [0, 1, 2].filter(i => aiTargetLevel >= [5, 15, 40][i]);
+      const unlockedSlotIndexes = unlockedSlotsAt(aiTargetLevel);
       const standardSlotsCount = unlockedSlotIndexes.length;
 
       // Calculate Foundation Boosts for the math engine offset
@@ -260,6 +266,9 @@ export function useBuilderLogic() {
         if (masteryStatus.l30 && archMastery.l30) { 
           Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
         }
+        if (masteryStatus.l55 && archMastery.l55) { 
+          Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        }
       }
 
       const mathResult = await calculateStatsMutation.mutateAsync({
@@ -285,8 +294,12 @@ export function useBuilderLogic() {
       }
 
       if (mathResult && mathResult.playstyles) {
-        const standardList = mathResult.playstyles.standard || [];
-        const newEquipped = ['', '', ''];
+        // The 2 signature playstyles are always equipped (regular, then Plus), so they never take a slot
+        const signatureNames: string[] = serverArchetypes?.[targetArch]?.signatures ?? [];
+        const standardList = (mathResult.playstyles.standard || []).filter(
+          (n: string) => !signatureNames.some(sn => samePlaystyle(sn, n))
+        );
+        const newEquipped = emptySlots();
         
         unlockedSlotIndexes.forEach((slotIdx, arrayIdx) => {
           if (standardList[arrayIdx]) {
@@ -300,26 +313,8 @@ export function useBuilderLogic() {
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
           const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
           setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
-
-          // Only ONE Playstyle+ can be equipped: keep whichever fits this build best
-          if (matchedSpec) {
-            const statsArr = ((mathResult as any).stats ?? []) as { attribute: string; final: number }[];
-            const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-            setPsPlusMode(
-              pickBestPlaystylePlus({
-                signature: FIXED_PLAYSTYLE_PLUS[targetArch] || 'None',
-                spec: matchedSpec.perk,
-                getStat: (stat) => statsArr.find(s => norm(s.attribute) === norm(stat))?.final ?? 70,
-                rankedPreferences: aiBlueprint.playstylePlus,
-                focusAttributes: [...(aiBlueprint.coreAttributes ?? []), ...(aiBlueprint.secondaryAttributes ?? [])],
-              })
-            );
-          } else {
-            setPsPlusMode('auto');
-          }
         } else {
           setEquippedSpecialization(null);
-          setPsPlusMode('auto');
         }
       }
 
@@ -345,9 +340,8 @@ export function useBuilderLogic() {
     addedPoints: { ...addedPoints },
     smLevel,
     wfLevel,
-    equippedPlaystyles: equippedPlaystyles.slice(0, 3),
+    equippedPlaystyles: equippedPlaystyles.slice(0, FALLBACK_SLOT_LEVELS.length),
     equippedSpecialization,
-    psPlusMode,
     clubLevel,
     equippedFacilities: { ...equippedFacilities },
     unlockedMasteries: { ...unlockedMasteries },
@@ -373,8 +367,12 @@ export function useBuilderLogic() {
 
     const starCaps = ARCHETYPE_STAR_CAPS[snap.archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const slots = ['', '', ''];
-    (snap.equippedPlaystyles || []).slice(0, 3).forEach((p, i) => { slots[i] = p || ''; });
+    const signatureNames: string[] = archData.signatures ?? [];
+    const slots = emptySlots();
+    (snap.equippedPlaystyles || []).slice(0, slots.length).forEach((p, i) => {
+      // a signature playstyle is always equipped already, so it can't also sit in a slot
+      slots[i] = p && !signatureNames.some(sn => samePlaystyle(sn, p)) ? p : '';
+    });
 
     setArchetype(snap.archetype);
     setLevel(snap.level);
@@ -385,7 +383,6 @@ export function useBuilderLogic() {
     setWfLevel(clamp(snap.wfLevel, starCaps.wf.min, starCaps.wf.max));
     setEquippedPlaystyles(slots);
     setEquippedSpecialization(snap.equippedSpecialization ?? null);
-    setPsPlusMode(snap.psPlusMode ?? 'auto');
     setClubLevel(snap.clubLevel);
     setEquippedFacilities(snap.equippedFacilities || {});
     setUnlockedMasteries(snap.unlockedMasteries || {});
@@ -434,7 +431,7 @@ export function useBuilderLogic() {
     if (distance < -40) setViewingFacTier(Math.max(1, viewingFacTier - 1));
   };
 
-  const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30') => {
+  const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30' | 'l55') => {
     // Toggling by hand contradicts a recorded level, so that archetype goes back to manual control
     setArchetypeLevels(prev => {
       if (!(archName in prev)) return prev;
@@ -443,14 +440,19 @@ export function useBuilderLogic() {
       return next;
     });
     setUnlockedMasteries(prev => {
-      const current = prev[archName] || { l10: false, l30: false };
-      if (tier === 'l30') {
-        const nextL30 = !current.l30;
-        return { ...prev, [archName]: { l10: nextL30 ? true : current.l10, l30: nextL30 } };
-      } else {
-        const nextL10 = !current.l10;
-        return { ...prev, [archName]: { l10: nextL10, l30: nextL10 ? current.l30 : false } };
+      const cur = prev[archName] || { l10: false, l30: false, l55: false };
+      const state = { l10: !!cur.l10, l30: !!cur.l30, l55: !!cur.l55 };
+      // Unlocking a tier unlocks the ones below it; locking a tier locks the ones above it
+      if (tier === 'l10') {
+        const on = !state.l10;
+        return { ...prev, [archName]: { l10: on, l30: on ? state.l30 : false, l55: on ? state.l55 : false } };
       }
+      if (tier === 'l30') {
+        const on = !state.l30;
+        return { ...prev, [archName]: { l10: on ? true : state.l10, l30: on, l55: on ? state.l55 : false } };
+      }
+      const on = !state.l55;
+      return { ...prev, [archName]: { l10: on ? true : state.l10, l30: on ? true : state.l30, l55: on } };
     });
   };
 
@@ -501,6 +503,7 @@ export function useBuilderLogic() {
       if (!archMastery) return;
       if (status.l10 && archMastery.l10) { Object.entries(archMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
       if (status.l30 && archMastery.l30) { Object.entries(archMastery.l30).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
+      if (status.l55 && archMastery.l55) { Object.entries(archMastery.l55).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
     });
     return mods;
   }, [unlockedMasteries]);
@@ -613,7 +616,7 @@ export function useBuilderLogic() {
     if (isEquipped) {
       setEquippedPlaystyles(prev => prev.map(p => p === psName ? '' : p));
     } else {
-      const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
+      const unlockedSlotIndexes = unlockedSlotsAt(level);
       const emptyIndex = unlockedSlotIndexes.find(i => equippedPlaystyles[i] === '');
       
       if (emptyIndex !== undefined) {
@@ -646,8 +649,6 @@ export function useBuilderLogic() {
       }
       setEquippedSpecialization(specName);
     }
-    // Re-evaluate which single Playstyle+ fits best (the player can still override it in the Hub)
-    setPsPlusMode('auto');
   };
 
   // Auto-buy for locked playstyles: the caller has already checked affordability with getUpgradeData
@@ -736,27 +737,17 @@ export function useBuilderLogic() {
     else if (height <= 184 && agi >= 65 && (agi - str) >= 10 && acc >= 80) accelerate = 'Explosive';
   }
 
-  const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0), 0);
-  const masteryProgressPct = Math.round((activeMasteriesCount / 28) * 100);
+  const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0) + (status.l55 ? 1 : 0), 0);
+  const masteryProgressPct = Math.round((activeMasteriesCount / (Object.keys(MASTERIES).length * 3)) * 100);
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
   
-  const isPsPlusUnlocked = level >= 20;
-  const basePsPlus = FIXED_PLAYSTYLE_PLUS[archetype] || 'None';
+  const isPsPlusUnlocked = getSignatureUpgradesAt(progressionData, level) > 0;
 
   const specPerk = equippedSpecialization
     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk ?? null
     : null;
 
-  // Only ONE Playstyle+ at a time: signature XOR specialisation
-  const psPlusChoice: 'signature' | 'spec' = !specPerk
-    ? 'signature'
-    : psPlusMode === 'auto'
-      ? pickBestPlaystylePlus({ signature: basePsPlus, spec: specPerk, getStat: (stat) => currentStats?.[stat] ?? 70 })
-      : psPlusMode;
-
-  const activePsPlus = psPlusChoice === 'spec' && specPerk ? specPerk : basePsPlus;
-  
-  const unlockedSlotIndexes = [0, 1, 2].filter(i => level >= [5, 15, 40][i]);
+  const unlockedSlotIndexes = unlockedSlotsAt(level);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
 
   const facilityPlaystyles = useMemo(() => {
@@ -803,8 +794,7 @@ export function useBuilderLogic() {
     physicalModifiers, facilityModifiers, masteryModifiers,
     currentStats, availableAp, faceStats, accelerate,
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
-    isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
-    psPlusChoice, setPsPlusMode,
+    isPsPlusUnlocked, specPlaystyle,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
