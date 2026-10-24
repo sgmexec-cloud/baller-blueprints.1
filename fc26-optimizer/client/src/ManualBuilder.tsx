@@ -227,7 +227,7 @@ export default function ManualBuilder() {
                     onChange={(e) => { setLevel(Number(e.target.value)); setAddedPoints({}); }}
                     className="bg-transparent font-bold text-[#21E6A4] text-[14px] outline-none appearance-none cursor-pointer z-10 w-4 text-center"
                   >
-                    {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
+                    {Array.from({ length: 55 }, (_, i) => i + 1).map(l => (
                       <option key={l} value={l} className="bg-[#131A2A] text-[#21E6A4]">{l}</option>
                     ))}
                   </select>
