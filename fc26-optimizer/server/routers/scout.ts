@@ -110,7 +110,7 @@ export const scoutRouter = router({
           "Strength", "Aggression"
         ];
 
-        const builderData: Record<string, { pos: string, recommended: string[], base: Record<string, number> }> = {};
+        const builderData: Record<string, { pos: string, recommended: string[], signatures: string[], base: Record<string, number> }> = {};
         
         for (const row of profiles) {
           if (!row.Archetype) continue;
@@ -132,10 +132,15 @@ export const scoutRouter = router({
           }
 
           const recPositions = rolesToPositions(row.Recommended_Positions);
+          
+          // Parse Signature_PlayStyles into a clean array of strings
+          const rawSignatures = row.Signature_PlayStyles || '';
+          const signatures = rawSignatures.split('/').map((s: string) => s.trim()).filter(Boolean);
 
           builderData[archName] = {
             pos: recPositions[0], 
             recommended: recPositions, 
+            signatures: signatures,
             base: baseStats
           };
         }
