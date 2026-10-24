@@ -66,7 +66,7 @@ export default function ManualBuilder() {
     physicalModifiers, facilityModifiers, masteryModifiers,
     currentStats, availableAp, faceStats, accelerate,
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
-    isPsPlusUnlocked, basePsPlus, activePsPlus, specPlaystyle,
+    isPsPlusUnlocked, specPlaystyle, sig1, sig2, activePsPlus, basePsPlus,
     psPlusChoice, setPsPlusMode, handleUnlockPlaystyle,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
@@ -78,10 +78,8 @@ export default function ManualBuilder() {
     handleStarChange, handleSliderChange
   } = useBuilderLogic();
 
-  // --- POSITION BADGES & POSITION-BASED OVR ---
   const [activePosition, setActivePosition] = useState<string>('');
 
-  // Positions come from the server (mapped in-game positions for the archetype)
   const recommendedPositions = useMemo<string[]>(() => {
     if (!archetype) return ['ST'];
     const archData = serverArchetypes?.[archetype];
@@ -91,27 +89,20 @@ export default function ManualBuilder() {
     return ['ST'];
   }, [archetype, serverArchetypes]);
 
-  // Auto-select the first recommended position when the archetype (or its positions) change
   useEffect(() => {
     if (recommendedPositions.length > 0 && !recommendedPositions.includes(activePosition)) {
       setActivePosition(recommendedPositions[0]);
     }
   }, [recommendedPositions, activePosition, archetype]);
 
-  // currentStats from useBuilderLogic ALREADY includes base + invested points +
-  // physical, facility and mastery modifiers (capped). Do NOT add them again here,
-  // otherwise every position rating is inflated.
   const calcOvr = activePosition && currentStats ? calculateOVR(currentStats, activePosition) : 0;
   const finalOvr = calcOvr > 0 ? calcOvr : faceStats.ovr;
 
-  // Rating for every recommended position (shown as chips on the shared image)
   const positionRatings = useMemo(
     () => recommendedPositions.map((pos) => ({ pos, ovr: currentStats ? calculateOVR(currentStats, pos) : 0 })),
     [recommendedPositions, currentStats]
   );
 
-  // --- ACCOUNT / AI ACCESS ---
-  // Guests: Manual Builder only. Free accounts: 5 AI builds per month (enforced on the server).
   const { user: accountUser, isAuthenticated } = useAccount();
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -120,12 +111,8 @@ export default function ManualBuilder() {
     refetchOnWindowFocus: false,
   });
 
-  // --- SHARE BUILD AS IMAGE ---
   const [isSharing, setIsSharing] = useState(false);
 
-  // The share image uses the SAME attribute values as the Attributes tab:
-  // RAW  = base + invested points (no height/weight, facility or mastery boosts)
-  // BOOSTED = currentStats (everything included)
   const getShareStats = (): Record<string, number> => {
     if (!currentStats) return {};
     if (viewMode !== 'raw' || !serverArchetypes?.[archetype]) return currentStats;
@@ -156,7 +143,7 @@ export default function ManualBuilder() {
         faceStats,
         stats: getShareStats(),
         statsMode: viewMode === 'raw' ? 'raw' : 'boosted',
-        playstylePlus: [activePsPlus].filter((p) => p && p !== 'None').map(String),
+        playstylePlus: [sig1.name, sig2.name].filter((p) => p && p !== 'None').map(String),
         playstyles: equippedPlaystyles.filter(Boolean),
         facilityPlaystyles: [fac1, fac2].filter(Boolean).map(String),
         specialization: equippedSpecialization,
@@ -248,14 +235,12 @@ export default function ManualBuilder() {
                  }`}
                  style={{ backgroundImage: `url('/cards/${finalOvr >= 75 ? 'gold' : 'silver'}-card.png')` }}
               >
-                 {/* OVR Rating (changes with the selected position badge) */}
                  <div className="absolute z-20 flex flex-col items-center justify-center" style={{ left: '12%', top: '15%', width: '15%' }}>
                     <span className="text-[#080B14] text-[15px] font-bold leading-none tracking-tighter" style={{ fontFamily: "'Montserrat', sans-serif" }}>
                       {finalOvr}
                     </span>
                  </div>
                  
-                 {/* Player Avatar OR Specialization Icon */}
                  <div className="absolute z-10 flex justify-center" style={{ left: '11.8px', top: '14.7px', width: '77.1px', height: '77.1px' }}>
                     <img 
                       src={equippedSpecialization 
@@ -271,7 +256,6 @@ export default function ManualBuilder() {
                     />
                  </div>
                  
-                 {/* Bottom Icon: Archetype */}
                  <div className="absolute z-20 flex justify-center" style={{ left: '38.9%', top: '65.8%', width: '22.1%', height: '22.1%' }}>
                     <img 
                        src={`/archetypes/${archetype.replace(/\s+/g, '-').toLowerCase()}.png`}
@@ -294,7 +278,6 @@ export default function ManualBuilder() {
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
-                 {/* Clickable position badges: tap one to see the rating for that position */}
                  <div className="mt-3 flex flex-wrap gap-1.5">
                     {recommendedPositions.map((pos) => (
                       <button
@@ -316,10 +299,8 @@ export default function ManualBuilder() {
            <div className="mt-4 px-2">
               <PlaystyleSlotsRow 
                 interactive={true}
-                activePsPlus={activePsPlus}
-                basePsPlus={basePsPlus}
-                specPlaystyle={specPlaystyle}
-                equippedSpecialization={equippedSpecialization}
+                sig1={sig1}
+                sig2={sig2}
                 equippedPlaystyles={equippedPlaystyles}
                 level={level}
                 fac1={fac1}
@@ -369,7 +350,7 @@ export default function ManualBuilder() {
           >✨ AI AUTO-BUILD</button>
         </div>
 
-        {/* TAB RENDERING VIA EXTRACTED SUB-COMPONENTS */}
+        {/* TAB RENDERING */}
         {activeTab === 'info' && (
           <InfoTab 
             archetype={archetype}
@@ -427,9 +408,8 @@ export default function ManualBuilder() {
         {activeTab === 'playstyles' && (
           <PlaystylesTab 
             level={level}
-            activePsPlus={activePsPlus}
-            basePsPlus={basePsPlus}
-            specPlaystyle={specPlaystyle}
+            sig1={sig1}
+            sig2={sig2}
             equippedSpecialization={equippedSpecialization}
             equippedPlaystyles={equippedPlaystyles}
             fac1={fac1}
@@ -440,7 +420,6 @@ export default function ManualBuilder() {
 
       </div>
 
-      {/* MODALS RENDERING VIA EXTRACTED SUB-COMPONENTS */}
       <AiGeneratorModal 
         isOpen={isAiModalOpen}
         setIsOpen={setIsAiModalOpen}
@@ -553,7 +532,6 @@ export default function ManualBuilder() {
         addedPoints={addedPoints}
       />
 
-      {/* SPECIALIZATIONS MODAL */}
       {activeModal === 'specializations' && (
         <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden relative">
