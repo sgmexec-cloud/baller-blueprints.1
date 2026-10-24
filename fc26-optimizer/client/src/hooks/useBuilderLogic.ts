@@ -46,26 +46,23 @@ export function useBuilderLogic() {
   const [facTouchStart, setFacTouchStart] = useState<number | null>(null);
   const [facTouchEnd, setFacTouchEnd] = useState<number | null>(null);
 
-  // AI Feature State (Updated for 2-Step Flow)
+  // AI Feature State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiArchetypeLock, setAiArchetypeLock] = useState<string>("AUTO");
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
-  const [aiBlueprint, setAiBlueprint] = useState<any>(null); // Holds the blueprint for Step 2
+  const [aiBlueprint, setAiBlueprint] = useState<any>(null);
   const [aiError, setAiError] = useState<string | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
   const { data: serverArchetypes, isLoading: isArchLoading } = trpc.scout.getArchetypeBaseStats.useQuery({ gameVersion } as any);
-  
   const utils = trpc.useUtils();
 
-  // AI Mutations
   const generateReportMutation = trpc.scout.generateReport.useMutation();
   const calculateStatsMutation = trpc.scout.calculateStats.useMutation();
 
-  // ── Global profile (paid plans): Facilities · Masteries · Club level, applied automatically once on load ──
   const { user: accountUser, isAuthenticated } = useAccount();
   const profileQuery = trpc.scout.builds.profileGet.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -74,7 +71,6 @@ export function useBuilderLogic() {
   const profileApplied = useRef(false);
   const levelSynced = useRef(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  // The level you've reached on each archetype (1-40). Masteries complete at 10 and 30.
   const [archetypeLevels, setArchetypeLevels] = useState<Record<string, number>>({});
 
   useEffect(() => {
@@ -85,12 +81,10 @@ export function useBuilderLogic() {
     setClubLevel(profile.clubLevel ?? 10);
     setEquippedFacilities(profile.equippedFacilities || {});
     setArchetypeLevels(levels);
-    // Archetypes with a level are driven by that level; the rest keep their saved manual masteries
     setUnlockedMasteries(mergeMasteries(profile.unlockedMasteries || {}, levels));
     setProfileLoaded(true);
   }, [profileQuery.data]);
 
-  // Open the builder at your real level for the current archetype (once)
   useEffect(() => {
     if (!profileLoaded || levelSynced.current || !archetype) return;
     levelSynced.current = true;
@@ -99,13 +93,9 @@ export function useBuilderLogic() {
   }, [profileLoaded, archetype]);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
-
-  // Rules that come from FC27_PROGRESSION.csv (level cap 55, slots at 5/15/40/55, signature Plus at 20/55)
   const maxLevel = getMaxLevel(progressionData);
   const slotUnlockLevels = getSlotUnlockLevels(progressionData);
-  const signatureUnlockLevels = getSignatureUnlockLevels(progressionData);
   const unlockedSlotsAt = (lvl: number) => slotUnlockLevels.map((_, i) => i).filter(i => lvl >= slotUnlockLevels[i]);
-
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
   const activeStarCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
 
@@ -144,10 +134,8 @@ export function useBuilderLogic() {
     if (archetypeLevels[newArch]) setLevel(archetypeLevels[newArch]);
   };
 
-  // Set (or clear, with null) the level you've reached on one archetype. Its masteries follow automatically.
   const setArchetypeLevel = (arch: string, lvl: number | null) => {
     if (lvl === null) {
-      // No level recorded: leave that archetype's masteries as they are
       setArchetypeLevels(prev => {
         const next = { ...prev };
         delete next[arch];
@@ -160,15 +148,11 @@ export function useBuilderLogic() {
     setUnlockedMasteries(prev => ({ ...prev, [arch]: masteryFromLevel(clean) }));
   };
 
-  // Phase 1 of AI Build - Get the Blueprint & show Step 2 UI
   const handleGenerateBlueprint = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     setAiError(null);
     
-    // The archetype preference is sent as its own parameter so the server can enforce it.
-    // (It used to be pasted into the player description, where only the first AI step saw it and it was ignored.)
-    // Archetype Select is a paid feature (Premium and above); free accounts always let the AI choose.
     const canPickArchetype = !!accountUser && accountUser.tier !== "free";
     const forcedArchetype = canPickArchetype && aiArchetypeLock !== "AUTO" ? aiArchetypeLock : undefined;
 
@@ -178,54 +162,38 @@ export function useBuilderLogic() {
         forcedArchetype,
         gameVersion: gameVersion
       });
-      
-      // NOTE: the lock is deliberately left as the user chose it. It used to be overwritten with the AI's pick
-      // after an AUTO run, which would now force that archetype on the next generate.
-      
       setAiBlueprint(blueprint);
     } catch (error: any) {
       console.error("AI Generation failed:", error);
-      if (error?.data?.code === 'UNAUTHORIZED') {
-        setAiError('Please log in to use AI Auto-Build.');
-      } else if (error?.message === 'PAID_FEATURE') {
-        setAiError('Choosing the archetype yourself is included in the paid plans. Set it back to "Let AI Decide" to continue.');
-      } else if (error?.message === 'LIMIT_REACHED') {
-        setAiError("You've used all of your AI builds for this month.");
-      } else {
-        setAiError('Something went wrong generating the blueprint. Your build was not counted, so please try again.');
-      }
+      if (error?.data?.code === 'UNAUTHORIZED') setAiError('Please log in to use AI Auto-Build.');
+      else if (error?.message === 'PAID_FEATURE') setAiError('Choosing the archetype yourself is included in the paid plans. Set it back to "Let AI Decide" to continue.');
+      else if (error?.message === 'LIMIT_REACHED') setAiError("You've used all of your AI builds for this month.");
+      else setAiError('Something went wrong generating the blueprint. Your build was not counted, so please try again.');
     } finally {
       setIsGeneratingAi(false);
       utils.scout.getQuota.invalidate();
     }
   };
 
-  // Phase 2 of AI Build - Run math engine with confirmed level & foundation boosts
   const handleFinalizeBuild = async () => {
     if (!aiBlueprint) return;
     setIsGeneratingAi(true);
 
     try {
       const targetArch = aiBlueprint.archetype && serverArchetypes?.[aiBlueprint.archetype] ? aiBlueprint.archetype : archetype;
-      
       const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
-      // Clamp to this archetype's star range: costs don't exist outside it
       const targetSm = Math.max(starCaps.sm.min, Math.min(starCaps.sm.max, aiBlueprint.skillMoves || starCaps.sm.min));
       const targetWf = Math.max(starCaps.wf.min, Math.min(starCaps.wf.max, aiBlueprint.weakFoot || starCaps.wf.min));
-
       const smCost = getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, targetSm);
       const wfCost = getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, targetWf);
       
       const maxApForAi = progressionData?.[aiTargetLevel]?.apAvailable ?? (Math.floor(aiTargetLevel * 1.5) + 10);
       const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
-
       const unlockedSlotIndexes = unlockedSlotsAt(aiTargetLevel);
       const standardSlotsCount = unlockedSlotIndexes.length;
 
-      // Calculate Foundation Boosts for the math engine offset
       const foundationBoosts: Record<string, number> = {};
       const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
-      
       const newHeight = aiBlueprint.heightRange ? parseInt(aiBlueprint.heightRange) : height;
       const newWeight = aiBlueprint.weightRange ? parseInt(aiBlueprint.weightRange) : weight;
       const safeHeight = isNaN(newHeight) ? height : newHeight;
@@ -251,24 +219,16 @@ export function useBuilderLogic() {
         const facility = FACILITIES[name];
         if (facility) {
           const boostAmount = facility.boosts[tier - 1];
-          facility.stats.forEach(stat => { 
-            foundationBoosts[stat] = (foundationBoosts[stat] || 0) + boostAmount; 
-          });
+          facility.stats.forEach(stat => { foundationBoosts[stat] = (foundationBoosts[stat] || 0) + boostAmount; });
         }
       });
 
       const archMastery = MASTERIES[targetArch];
       const masteryStatus = unlockedMasteries[targetArch];
       if (archMastery && masteryStatus) {
-        if (masteryStatus.l10 && archMastery.l10) { 
-          Object.entries(archMastery.l10).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        }
-        if (masteryStatus.l30 && archMastery.l30) { 
-          Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        }
-        if (masteryStatus.l55 && archMastery.l55) { 
-          Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        }
+        if (masteryStatus.l10 && archMastery.l10) Object.entries(archMastery.l10).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        if (masteryStatus.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        if (masteryStatus.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
       }
 
       const mathResult = await calculateStatsMutation.mutateAsync({
@@ -277,7 +237,7 @@ export function useBuilderLogic() {
         gameVersion: gameVersion,
         standardSlots: standardSlotsCount,
         foundationBoosts: foundationBoosts,
-        starsPrepaid: true // stars were costed above and removed from apBudget BEFORE any attribute allocation
+        starsPrepaid: true 
       });
 
       setLevel(aiTargetLevel);
@@ -287,24 +247,16 @@ export function useBuilderLogic() {
       setSmLevel(targetSm);
       setWfLevel(targetWf);
 
-      if (mathResult && (mathResult as any).investedPoints) {
-        setAddedPoints((mathResult as any).investedPoints);
-      } else {
-        setAddedPoints({});
-      }
+      if (mathResult && (mathResult as any).investedPoints) setAddedPoints((mathResult as any).investedPoints);
+      else setAddedPoints({});
 
       if (mathResult && mathResult.playstyles) {
-        // The 2 signature playstyles are always equipped (regular, then Plus), so they never take a slot
         const signatureNames: string[] = serverArchetypes?.[targetArch]?.signatures ?? [];
-        const standardList = (mathResult.playstyles.standard || []).filter(
-          (n: string) => !signatureNames.some(sn => samePlaystyle(sn, n))
-        );
+        const standardList = (mathResult.playstyles.standard || []).filter((n: string) => !signatureNames.some(sn => samePlaystyle(sn, n)));
         const newEquipped = emptySlots();
         
         unlockedSlotIndexes.forEach((slotIdx, arrayIdx) => {
-          if (standardList[arrayIdx]) {
-            newEquipped[slotIdx] = standardList[arrayIdx];
-          }
+          if (standardList[arrayIdx]) newEquipped[slotIdx] = standardList[arrayIdx];
         });
         setEquippedPlaystyles(newEquipped);
 
@@ -329,8 +281,6 @@ export function useBuilderLogic() {
     }
   };
 
-  // ── Saved builds ──
-  // A snapshot includes Facilities / Masteries / Club level, so editing your profile later never changes old builds.
   const getSnapshot = (): BuildSnapshot => ({
     v: 1,
     archetype,
@@ -357,20 +307,16 @@ export function useBuilderLogic() {
   const applySnapshot = (snap: BuildSnapshot): { ok: boolean; message?: string } => {
     const archData = serverArchetypes?.[snap.archetype];
     if (!archData) return { ok: false, message: 'This build uses an archetype that is no longer available.' };
-
-    // Only keep attributes that exist for this archetype
     const validStats = new Set(Object.keys(archData.base));
     const cleanPoints: Record<string, number> = {};
     for (const [stat, pts] of Object.entries(snap.addedPoints || {})) {
       if (validStats.has(stat) && pts > 0) cleanPoints[stat] = pts;
     }
-
     const starCaps = ARCHETYPE_STAR_CAPS[snap.archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     const signatureNames: string[] = archData.signatures ?? [];
     const slots = emptySlots();
     (snap.equippedPlaystyles || []).slice(0, slots.length).forEach((p, i) => {
-      // a signature playstyle is always equipped already, so it can't also sit in a slot
       slots[i] = p && !signatureNames.some(sn => samePlaystyle(sn, p)) ? p : '';
     });
 
@@ -383,6 +329,7 @@ export function useBuilderLogic() {
     setWfLevel(clamp(snap.wfLevel, starCaps.wf.min, starCaps.wf.max));
     setEquippedPlaystyles(slots);
     setEquippedSpecialization(snap.equippedSpecialization ?? null);
+    
     setClubLevel(snap.clubLevel);
     setEquippedFacilities(snap.equippedFacilities || {});
     setUnlockedMasteries(snap.unlockedMasteries || {});
@@ -419,11 +366,7 @@ export function useBuilderLogic() {
     setFacTouchEnd(null);
     setFacTouchStart(e.targetTouches[0].clientX);
   };
-  
-  const handleFacTouchMove = (e: React.TouchEvent) => {
-    setFacTouchEnd(e.targetTouches[0].clientX);
-  };
-  
+  const handleFacTouchMove = (e: React.TouchEvent) => setFacTouchEnd(e.targetTouches[0].clientX);
   const handleFacTouchEnd = () => {
     if (!facTouchStart || !facTouchEnd) return;
     const distance = facTouchStart - facTouchEnd;
@@ -432,7 +375,6 @@ export function useBuilderLogic() {
   };
 
   const toggleMasteryUnlock = (archName: string, tier: 'l10' | 'l30' | 'l55') => {
-    // Toggling by hand contradicts a recorded level, so that archetype goes back to manual control
     setArchetypeLevels(prev => {
       if (!(archName in prev)) return prev;
       const next = { ...prev };
@@ -442,7 +384,6 @@ export function useBuilderLogic() {
     setUnlockedMasteries(prev => {
       const cur = prev[archName] || { l10: false, l30: false, l55: false };
       const state = { l10: !!cur.l10, l30: !!cur.l30, l55: !!cur.l55 };
-      // Unlocking a tier unlocks the ones below it; locking a tier locks the ones above it
       if (tier === 'l10') {
         const on = !state.l10;
         return { ...prev, [archName]: { l10: on, l30: on ? state.l30 : false, l55: on ? state.l55 : false } };
@@ -501,9 +442,9 @@ export function useBuilderLogic() {
     Object.entries(unlockedMasteries).forEach(([arch, status]) => {
       const archMastery = MASTERIES[arch];
       if (!archMastery) return;
-      if (status.l10 && archMastery.l10) { Object.entries(archMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
-      if (status.l30 && archMastery.l30) { Object.entries(archMastery.l30).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
-      if (status.l55 && archMastery.l55) { Object.entries(archMastery.l55).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); }
+      if (status.l10 && archMastery.l10) Object.entries(archMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
+      if (status.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
+      if (status.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
     });
     return mods;
   }, [unlockedMasteries]);
@@ -530,19 +471,15 @@ export function useBuilderLogic() {
   const spentAp = useMemo(() => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
-
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
       const rawBase = caps.min || serverArchetypes[archetype].base[statKey] || 70;
       const pointsAdded = addedPoints[statKey] || 0;
-
       total += getCostForPoints(archetype, statKey, rawBase, pointsAdded);
     }
-
     const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
     total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
-
     return total;
   }, [addedPoints, serverArchetypes, archetype, smLevel, wfLevel]);
 
@@ -550,52 +487,38 @@ export function useBuilderLogic() {
 
   const faceStats = useMemo(() => {
     if (!currentStats) return { pac: 70, sho: 70, pas: 70, dri: 70, def: 70, phy: 70, ovr: 70 };
-    
     const calc = (group: string[]) => Math.round(group.reduce((sum, stat) => sum + (currentStats[stat] || 70), 0) / group.length);
-    
     const pac = calc(STAT_GROUPS["Pace"]);
     const sho = calc(STAT_GROUPS["Shooting"]);
     const pas = calc(STAT_GROUPS["Passing"]);
     const dri = calc(STAT_GROUPS["Dribbling"]);
     const def = calc(STAT_GROUPS["Defending"]);
     const phy = calc(STAT_GROUPS["Physical"]);
-    
     const ovr = Math.round((pac + sho + pas + dri + def + phy) / 6) + 4;
-    
     return { pac, sho, pas, dri, def, phy, ovr };
   }, [currentStats]);
 
   const getUpgradeData = (reqs: StatReq[]) => {
     if (!reqs || reqs.length === 0) return { canEquip: true, cost: 0, upgrades: {} };
-
-    let totalCost = 0;
-    let isPossible = true;
-    let reason = '';
+    let totalCost = 0, isPossible = true, reason = '', allMet = true;
     const upgrades: Record<string, number> = {};
-    let allMet = true;
 
     for (const req of reqs) {
       const statName = req.stat;
       const targetVal = req.min;
-      
       const caps = getStatCaps(archetype, statName);
       const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70;
       const currentInvested = addedPoints[statName] || 0;
-      
       const userStatWithoutMods = rawBase + currentInvested;
 
       if (userStatWithoutMods < targetVal) {
         allMet = false;
-        const capMax = caps.max || 99;
-
-        if (targetVal > capMax) {
+        if (targetVal > (caps.max || 99)) {
           isPossible = false;
           reason = 'CAP EXCEEDED';
           break;
         }
-        
         const targetInvested = targetVal - rawBase;
-        
         if (targetInvested > currentInvested) {
             const costCurrent = getCostForPoints(archetype, statName, rawBase, currentInvested);
             const costTarget = getCostForPoints(archetype, statName, rawBase, targetInvested);
@@ -604,11 +527,9 @@ export function useBuilderLogic() {
         }
       }
     }
-
     if (allMet) return { canEquip: true, cost: 0, upgrades: {} };
     if (!isPossible) return { canEquip: false, reason, cost: 0, upgrades: {} };
     if (totalCost > availableAp) return { canEquip: false, reason: 'INSUFFICIENT AP', cost: totalCost, upgrades: {} };
-
     return { canEquip: true, cost: totalCost, upgrades };
   };
 
@@ -618,7 +539,6 @@ export function useBuilderLogic() {
     } else {
       const unlockedSlotIndexes = unlockedSlotsAt(level);
       const emptyIndex = unlockedSlotIndexes.find(i => equippedPlaystyles[i] === '');
-      
       if (emptyIndex !== undefined) {
         if (Object.keys(upgrades).length > 0) {
           setAddedPoints(prev => {
@@ -651,7 +571,6 @@ export function useBuilderLogic() {
     }
   };
 
-  // Auto-buy for locked playstyles: the caller has already checked affordability with getUpgradeData
   const handleUnlockPlaystyle = (upgrades: Record<string, number>) => {
     if (!upgrades || Object.keys(upgrades).length === 0) return;
     setAddedPoints(prev => {
@@ -740,12 +659,25 @@ export function useBuilderLogic() {
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0) + (status.l55 ? 1 : 0), 0);
   const masteryProgressPct = Math.round((activeMasteriesCount / (Object.keys(MASTERIES).length * 3)) * 100);
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
-  
   const isPsPlusUnlocked = getSignatureUpgradesAt(progressionData, level) > 0;
-
+  
   const specPerk = equippedSpecialization
     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk ?? null
     : null;
+
+  // Dual Signature Logic
+  const signatureNames: string[] = serverArchetypes?.[archetype]?.signatures ?? [];
+  const sigUpgrades = getSignatureUpgradesAt(progressionData, level);
+
+  const sig1 = {
+    name: specPerk || signatureNames[0] || '',
+    type: (specPerk || sigUpgrades > 0) ? 'gold' : 'silver'
+  };
+
+  const sig2 = {
+    name: signatureNames[1] || '',
+    type: sigUpgrades > 1 ? 'gold' : 'silver'
+  };
 
   const unlockedSlotIndexes = unlockedSlotsAt(level);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
@@ -794,7 +726,9 @@ export function useBuilderLogic() {
     physicalModifiers, facilityModifiers, masteryModifiers,
     currentStats, availableAp, faceStats, accelerate,
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
-    isPsPlusUnlocked, specPlaystyle,
+    isPsPlusUnlocked, specPlaystyle, sig1, sig2,
+    activePsPlus: sig1.name, basePsPlus: signatureNames[0] || 'None',
+    psPlusChoice: 'signature' as any, setPsPlusMode: (() => {}) as any,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
