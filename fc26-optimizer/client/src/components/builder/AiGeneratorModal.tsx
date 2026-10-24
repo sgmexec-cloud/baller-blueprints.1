@@ -183,7 +183,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                        disabled={isGeneratingAi}
                        className="bg-transparent text-[#F4F7FB] font-black text-sm outline-none cursor-pointer appearance-none"
                      >
-                       {Array.from({ length: 40 }, (_, i) => i + 1).map(l => (
+                       {Array.from({ length: 55 }, (_, i) => i + 1).map(l => (
                           <option key={l} value={l} className="bg-[#131A2A]">Level {l}</option>
                        ))}
                      </select>
