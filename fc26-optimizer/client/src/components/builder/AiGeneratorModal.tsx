@@ -23,6 +23,12 @@ export interface AiGeneratorModalProps {
   onUpgrade?: () => void;
   /** Archetype Select is a paid feature (Premium and above) */
   canSelectArchetype?: boolean;
+  /** Facilities for this build: let the AI choose within the Club level budget, or keep the ones already set */
+  facilityMode?: 'ai' | 'keep';
+  setFacilityMode?: (mode: 'ai' | 'keep') => void;
+  clubLevel?: number;
+  clubBudget?: number;
+  keptFacilityCount?: number;
 }
 
 export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
@@ -45,6 +51,11 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
   aiError,
   onUpgrade,
   canSelectArchetype = true,
+  facilityMode = 'keep',
+  setFacilityMode,
+  clubLevel = 0,
+  clubBudget = 0,
+  keptFacilityCount = 0,
 }) => {
   if (!isOpen) return null;
 
@@ -194,6 +205,37 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                   </div>
                </div>
              </div>
+
+             {setFacilityMode && (
+               <div className="mb-4">
+                 <div className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">Facilities</div>
+                 <div className="grid grid-cols-2 gap-2">
+                   {([
+                     ['ai', '✨ Let AI choose'],
+                     ['keep', `Keep mine${keptFacilityCount ? ` (${keptFacilityCount})` : ''}`],
+                   ] as const).map(([id, label]) => (
+                     <button
+                       key={id}
+                       onClick={() => setFacilityMode(id)}
+                       className={`py-2.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
+                         facilityMode === id
+                           ? 'bg-[#4D8DFF]/15 border-[#4D8DFF] text-[#4D8DFF]'
+                           : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB]'
+                       }`}
+                     >
+                       {label}
+                     </button>
+                   ))}
+                 </div>
+                 <p className="mt-1.5 text-[10px] text-[#8E9AAF] leading-relaxed">
+                   {facilityMode === 'ai'
+                     ? `Picks the facilities that save you the most AP within your Club level ${clubLevel} budget (${(clubBudget / 1_000_000).toFixed(1)}M). This replaces the facilities you have set.`
+                     : keptFacilityCount > 0
+                       ? `Uses the ${keptFacilityCount} facilit${keptFacilityCount === 1 ? 'y' : 'ies'} you've already set.`
+                       : `You haven't set any facilities, so none will be used.`}
+                 </p>
+               </div>
+             )}
 
              <div className="flex items-center gap-2 mb-4 bg-[#4caf50]/10 border border-[#4caf50]/30 p-2.5 rounded-lg">
                <span className="text-[#4caf50] text-sm leading-none">⚡</span>
