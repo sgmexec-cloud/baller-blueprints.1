@@ -27,6 +27,8 @@ import { AccountMenu } from '@/components/builder/AccountMenu';
 import { AuthPromptModal } from '@/components/builder/AuthPromptModal';
 import { ProfileModal } from '@/components/builder/ProfileModal';
 import { PreviewBanner } from '@/components/builder/PreviewBanner';
+import { FacilityPlanCard } from '@/components/builder/FacilityPlanCard';
+import { CLUB_BUDGETS } from '@/constants/builderData';
 
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
@@ -57,6 +59,8 @@ export default function ManualBuilder() {
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
     aiBlueprint, setAiBlueprint,
+    facilityMode, setFacilityMode,
+    aiFacilityPlan, setAiFacilityPlan,
     aiError,
     serverArchetypes,
     progressionData,
@@ -343,6 +347,7 @@ export default function ManualBuilder() {
               }
               setAiTargetLevel(level);
               setAiArchetypeLock("AUTO");
+              setFacilityMode(Object.keys(equippedFacilities).length > 0 ? 'keep' : 'ai');
               setIsAiModalOpen(true);
             }}
             className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all text-[#59657A] hover:text-[#8E9AAF] hover:bg-[#131A2A]"
@@ -440,11 +445,22 @@ export default function ManualBuilder() {
         aiError={aiError}
         onUpgrade={() => { window.location.href = '/pricing'; }}
         canSelectArchetype={!!accountUser && accountUser.tier !== 'free'}
+        facilityMode={facilityMode}
+        setFacilityMode={setFacilityMode}
+        clubLevel={clubLevel}
+        clubBudget={CLUB_BUDGETS[clubLevel] || 0}
+        keptFacilityCount={Object.keys(equippedFacilities).length}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
 
       <PreviewBanner />
+
+      <FacilityPlanCard
+        plan={aiFacilityPlan}
+        onClose={() => setAiFacilityPlan(null)}
+        onEdit={() => setActiveModal('facilities')}
+      />
 
       <ProfileModal
         isOpen={isProfileOpen}
