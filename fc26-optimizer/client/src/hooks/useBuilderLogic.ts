@@ -6,6 +6,7 @@ import { ARCH_PHYSICALS, ARCHETYPE_STAR_CAPS, STAR_UPGRADE_COSTS } from '@/const
 import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES } from '@/constants/playstylesData';
 import type { StatReq } from '@/types/builder';
 import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
+import { optimiseFacilities, normStat, type FacilityPlan } from '@/utils/facilityOptimizer';
 import { getMaxLevel, getSlotUnlockLevels, getSignatureUnlockLevels, getSignatureUpgradesAt, samePlaystyle, FALLBACK_SLOT_LEVELS } from '@/utils/gameRules';
 import { useAccount } from '@/hooks/useAccount';
 import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
@@ -54,6 +55,9 @@ export function useBuilderLogic() {
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
   const [aiBlueprint, setAiBlueprint] = useState<any>(null);
   const [aiError, setAiError] = useState<string | null>(null);
+  // Facilities in the AI step: 'ai' = pick the best ones within the Club level budget, 'keep' = use the ones already set
+  const [facilityMode, setFacilityMode] = useState<'ai' | 'keep'>('ai');
+  const [aiFacilityPlan, setAiFacilityPlan] = useState<FacilityPlan | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -215,13 +219,6 @@ export function useBuilderLogic() {
         foundationBoosts["Balance"] = -hModRaw + wModRaw;
       }
 
-      Object.entries(equippedFacilities).forEach(([name, tier]) => {
-        const facility = FACILITIES[name];
-        if (facility) {
-          const boostAmount = facility.boosts[tier - 1];
-          facility.stats.forEach(stat => { foundationBoosts[stat] = (foundationBoosts[stat] || 0) + boostAmount; });
-        }
-      });
 
       const archMastery = MASTERIES[targetArch];
       const masteryStatus = unlockedMasteries[targetArch];
@@ -230,6 +227,72 @@ export function useBuilderLogic() {
         if (masteryStatus.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
         if (masteryStatus.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
       }
+
+      // ── FACILITIES ──
+      // At this point foundationBoosts holds height/weight + masteries only. Facilities are added below.
+      const baseBoosts: Record<string, number> = { ...foundationBoosts };
+      const addFacilityBoosts = (target: Record<string, number>, facs: Record<string, number>) => {
+        Object.entries(facs).forEach(([name, tier]) => {
+          const facility = FACILITIES[name];
+          if (facility) {
+            const boostAmount = facility.boosts[tier - 1];
+            facility.stats.forEach(stat => { target[stat] = (target[stat] || 0) + boostAmount; });
+          }
+        });
+      };
+
+      let facilitiesForBuild: Record<string, number> = equippedFacilities;
+      let facilityPlan: FacilityPlan | null = null;
+
+      if (facilityMode === 'ai') {
+        // Pass 1: build WITHOUT facilities to see where every attribute lands
+        const baseline: any = await calculateStatsMutation.mutateAsync({
+          blueprint: aiBlueprint,
+          apBudget: availableApForMath,
+          gameVersion: gameVersion,
+          standardSlots: standardSlotsCount,
+          foundationBoosts: baseBoosts,
+          starsPrepaid: true
+        });
+
+        // In-game value of each attribute before any facility (points + height/weight + masteries)
+        const boostFor = (stat: string) => Object.entries(baseBoosts).reduce((sum, [k, v]) => (normStat(k) === normStat(stat) ? sum + v : sum), 0);
+        const landing: Record<string, number> = {};
+        for (const st of (baseline.stats ?? []) as { attribute: string; final: number }[]) {
+          landing[st.attribute] = st.final + boostFor(st.attribute);
+        }
+
+        // How much the build cares about each attribute: ones it spent points on count fully,
+        // the AI's picks count partly, everything else barely
+        const bought = new Set<string>(
+          Object.entries(baseline.investedPoints ?? {}).filter(([, v]) => (v as number) > 0).map(([k]) => normStat(k))
+        );
+        const role = new Map<string, number>();
+        const mark = (list: string[] | undefined, w: number) => (list ?? []).forEach(a => { if (!role.has(normStat(a))) role.set(normStat(a), w); });
+        mark(aiBlueprint.coreAttributes, 0.8);
+        mark(aiBlueprint.secondaryAttributes, 0.6);
+        mark(aiBlueprint.tertiaryAttributes, 0.4);
+        const relevance = (stat: string) => (bought.has(normStat(stat)) ? 1 : role.get(normStat(stat)) ?? 0.15);
+
+        // A tier-3 facility's free PlayStyle is worth more the higher the AI ranked it. Signatures are already free.
+        const signatureNames: string[] = serverArchetypes?.[targetArch]?.signatures ?? [];
+        const ranked: string[] = (aiBlueprint.playstyles ?? []).map((p: any) => p.name);
+
+        facilityPlan = optimiseFacilities({
+          facilities: FACILITIES,
+          budget: CLUB_BUDGETS[clubLevel] || 0,
+          currentStats: landing,
+          pointValue: (stat, lvl) => getApCost(targetArch, stat, lvl) * relevance(stat),
+          playstyleBonus: (ps) => {
+            if (signatureNames.some(sn => samePlaystyle(sn, ps))) return 0;
+            const rank = ranked.findIndex(r => samePlaystyle(r, ps));
+            return rank < 0 ? 0 : Math.max(0, 120 - 6 * rank);
+          },
+        });
+        facilitiesForBuild = facilityPlan.equipped;
+      }
+
+      addFacilityBoosts(foundationBoosts, facilitiesForBuild);
 
       const mathResult = await calculateStatsMutation.mutateAsync({
         blueprint: aiBlueprint,
@@ -241,6 +304,12 @@ export function useBuilderLogic() {
       });
 
       setLevel(aiTargetLevel);
+      if (facilityMode === 'ai') {
+        setEquippedFacilities(facilitiesForBuild);
+        setAiFacilityPlan(facilityPlan);
+      } else {
+        setAiFacilityPlan(null);
+      }
       setArchetype(targetArch);
       setHeight(safeHeight);
       setWeight(safeWeight);
@@ -351,10 +420,12 @@ export function useBuilderLogic() {
   };
 
   const handleEquipFacilityTier = (facName: string, tier: number) => {
+    setAiFacilityPlan(null);
     setEquippedFacilities(prev => ({ ...prev, [facName]: tier }));
   };
 
   const handleRemoveFacility = (facName: string) => {
+    setAiFacilityPlan(null);
     setEquippedFacilities(prev => {
       const next = { ...prev };
       delete next[facName];
@@ -718,6 +789,8 @@ export function useBuilderLogic() {
     aiArchetypeLock, setAiArchetypeLock,
     aiTargetLevel, setAiTargetLevel,
     aiBlueprint, setAiBlueprint,
+    facilityMode, setFacilityMode,
+    aiFacilityPlan, setAiFacilityPlan,
     aiError,
     serverArchetypes,
     progressionData,
