@@ -271,20 +271,23 @@ export function runMathEngine(
     return true;
   }
 
-  function upgradeToMin(attr: string, absoluteTarget: number): void {
+  // boosted = true: the target is an in-game value (height/weight, facility and mastery boosts count towards it).
+  // boosted = false: the target must be reached with the build's OWN points (what PlayStyle and specialisation
+  // requirements need: boosts do not count towards unlocking them).
+  function upgradeToMin(attr: string, absoluteTarget: number, boosted: boolean = true): void {
     const matched = matchAttr(attr, allNames);
     if (!matched) return;
-    const effectiveTarget = getEffectiveCap(matched, absoluteTarget);
+    const effectiveTarget = boosted ? getEffectiveCap(matched, absoluteTarget) : absoluteTarget;
     while (stats[matched].current < effectiveTarget && remainingAP > 0) {
       if (!upgradeOne(matched, 99)) break;
     }
   }
 
-  function costToReach(attr: string, target: number): number {
+  function costToReach(attr: string, target: number, boosted: boolean = true): number {
     const m = matchAttr(attr, allNames);
     if (!m) return Infinity;
     const s = stats[m];
-    const t = getEffectiveCap(m, target);
+    const t = boosted ? getEffectiveCap(m, target) : target;
     if (t > s.max) return Infinity;
     if (t > userCeiling(m)) return Infinity; // the user's ceiling blocks this requirement
     
@@ -321,12 +324,14 @@ export function runMathEngine(
   const equippedPlaystyles: string[] = [];
   const skippedPlaystyles: string[] = [];
   
-  // Remove any standard styles that are already in the PS+ list
+  // Candidates in the AI's priority order, minus the ones that are already equipped as a Signature / specialisation PS+.
+  // We keep going down the list until every unlocked slot is filled: a style that is unknown or too expensive is
+  // skipped and the next one is tried (cutting the list to the slot count first used to leave slots empty).
   const activePlaystyles = blueprint.playstyles
-    .filter(ps => !isPlaystyleConflict(ps.name, allEquippedPlus))
-    .slice(0, customSlots);
+    .filter(ps => !isPlaystyleConflict(ps.name, allEquippedPlus));
   
   for (const ps of activePlaystyles) {
+    if (equippedPlaystyles.length >= customSlots) break;
     const def = findPlaystyle(ps.name);
     if (!def) { 
       skippedPlaystyles.push(ps.name); 
@@ -339,10 +344,11 @@ export function runMathEngine(
       .filter(([a, v]) => a && v)
       .map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
       
-    const totalCost = reqs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    // Requirements are checked on the build's own points only (boosts don't count)
+    const totalCost = reqs.reduce((sum, r) => sum + costToReach(r.attr, r.val, false), 0);
     
     if (totalCost <= remainingAP) {
-      reqs.forEach(r => upgradeToMin(r.attr, r.val));
+      reqs.forEach(r => upgradeToMin(r.attr, r.val, false));
       equippedPlaystyles.push(ps.name);
     } else {
       skippedPlaystyles.push(ps.name);
@@ -350,9 +356,10 @@ export function runMathEngine(
   }
 
   if (blueprint.specialisationMinAttrs) {
-    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    // Specialisation requirements also need the build's own points (boosts don't count)
+    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val, false), 0);
     if (totalSpecCost <= remainingAP) {
-       blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
+       blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val, false));
     }
   }
 
