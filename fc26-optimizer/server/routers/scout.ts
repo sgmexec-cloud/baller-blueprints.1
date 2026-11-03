@@ -35,8 +35,7 @@ const BlueprintSchema = z.object({
   skillMoves: z.number().int().min(1).max(5),
   weakFoot: z.number().int().min(1).max(5),
   playstylePlus: z.array(z.string()),
-  playstyles: 
-z.array(PlaystyleSchema),
+  playstyles: z.array(PlaystyleSchema),
   specialisation: z.string().nullable().optional(),
   specialisationPlaystylePlus: z.string().nullable().optional(),
   specialisationMinAttrs: z.array(PlaystyleReqSchema).optional(),
@@ -47,8 +46,7 @@ z.array(PlaystyleSchema),
   reasoning: z.string().optional(),
 });
 
-export type Blueprint = 
-z.infer<typeof BlueprintSchema>;
+export type Blueprint = z.infer<typeof BlueprintSchema>;
 
 const attrMap = (lo: number, hi: number) =>
   z.record(z.string().max(40), z.number().int().min(lo).max(hi))
@@ -68,8 +66,7 @@ function normAttr(s: string): string {
   if (n.includes('fk') && n.includes('acc')) return 'fkaccuracy';
   if (n.startsWith('def') && n.includes('awar')) return 'defawareness';
   if (n.includes('stand') && n.includes('tack')) return 'standingtackle';
-  if (n.includes('slid') && 
-n.includes('tack')) return 'slidingtackle';
+  if (n.includes('slid') && n.includes('tack')) return 'slidingtackle';
   if (n.startsWith('short') && n.includes('pass')) return 'shortpassing';
   if (n.startsWith('long') && n.includes('pass')) return 'longpassing';
   if (n.includes('head') && n.includes('acc')) return 'headingaccuracy';
@@ -77,8 +74,7 @@ n.includes('tack')) return 'slidingtackle';
   return n;
 }
 
-// Logs the real token usage of every AI call so you can measure the true 
-cost per build:
+// Logs the real token usage of every AI call so you can measure the true cost per build:
 // cost = in_tokens x input_price + out_tokens x output_price (add stage1 + stage2 for one build).
 function logUsage(stage: string, tier: string, model: string, resp: any) {
   const u = resp?.usage;
@@ -87,12 +83,10 @@ function logUsage(stage: string, tier: string, model: string, resp: any) {
   );
 }
 
-const CHIEF_SCOUT_PROMPT 
-= `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. 
+const CHIEF_SCOUT_PROMPT = `You are an elite professional football scout. Produce an objective, evidence-based scouting report based strictly on the player's ABSOLUTE PEAK/PRIME era. 
 If a player changed positions during their career, you MUST evaluate them based solely on their most famous, highest-performing role. 
 CRITICAL: You must explicitly define their 'Tactical Role' (e.g. Inverted Winger, Ball-Winning Midfielder, Target Man) to anchor the evaluation. 
-Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight 
-stylistic limitations and weaknesses—what are they notoriously bad at? 
+Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations and weaknesses—what are they notoriously bad at? 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
 export const scoutRouter = router({
@@ -121,8 +115,7 @@ export const scoutRouter = router({
         const ALL_ATTRS = [
           "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
           "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
-          "Short Passing", "Long Passing", "Curve", "Agility", 
-"Balance", "Reactions",
+          "Short Passing", "Long Passing", "Curve", "Agility", "Balance", "Reactions",
           "Ball Control", "Dribbling", "Composure", "Interceptions", "Heading Accuracy",
           "Def Awareness", "Standing Tackle", "Sliding Tackle", "Jumping", "Stamina",
           "Strength", "Aggression"
@@ -179,8 +172,7 @@ export const scoutRouter = router({
         ? {
             id: u.id as number,
             name: (u.name ?? null) as string | null,
-            email: (u.email ?? null) as 
-string | null,
+            email: (u.email ?? null) as string | null,
             tier: u.tier as string,
             // The owner can preview other plans: tier is the plan in effect, realTier is the stored one
             realTier: (u.realTier ?? u.tier) as string,
@@ -233,8 +225,7 @@ string | null,
   generateReport: protectedProcedure
     .input(z.object({ 
       playerIdentity: z.string().min(1).max(1000), 
-      forcedArchetype: 
-z.string().optional(),
+      forcedArchetype: z.string().optional(),
       customHeight: z.string().optional(),
       customWeight: z.string().optional(),
       customSkillMoves: z.number().int().min(1).max(5).optional(),
@@ -244,8 +235,7 @@ z.string().optional(),
     .mutation(async ({ ctx, input }) => {
       const userId = Number((ctx.user as any).id);
       if (!Number.isFinite(userId)) {
-        throw new TRPCError({ code: 
-"UNAUTHORIZED", message: "Please log in to use AI builds." });
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in to use AI builds." });
       }
 
       // Resolve the archetype preference (if any) to its exact name BEFORE reserving a build,
@@ -254,8 +244,7 @@ z.string().optional(),
       if (input.forcedArchetype) {
         // Archetype Select: Premium and above (checked here, before a build is reserved)
         if (((ctx.user as any).tier ?? "free") === "free") {
-          throw new TRPCError({ code: 
-"FORBIDDEN", message: "PAID_FEATURE" });
+          throw new TRPCError({ code: "FORBIDDEN", message: "PAID_FEATURE" });
         }
         const validArchetypes = Array.from(
           new Set(getArchetypeProfiles("FC27").map((r: any) => String(r.Archetype).trim()))
@@ -293,13 +282,11 @@ z.string().optional(),
         const context = getScoutingContext("FC27");
         
         const filterRules: string[] = [];
-        if (forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: The 
-"archetype" field MUST be exactly "${forcedArchetype}". Do NOT choose any other archetype. Pick the playstyles, attributes and specialisation that belong to "${forcedArchetype}".`);
+        if (forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: The "archetype" field MUST be exactly "${forcedArchetype}". Do NOT choose any other archetype. Pick the playstyles, attributes and specialisation that belong to "${forcedArchetype}".`);
         else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
         
         if (input.customHeight) filterRules.push(`- HEIGHT: You MUST use the exact height "${input.customHeight}".`);
-        if (input.customWeight) filterRules.push(`- WEIGHT: You MUST use the exact weight "$
-{input.customWeight}".`);
+        if (input.customWeight) filterRules.push(`- WEIGHT: You MUST use the exact weight "${input.customWeight}".`);
         if (input.customSkillMoves) filterRules.push(`- SKILL MOVES: You MUST set "skillMoves" exactly to ${input.customSkillMoves}.`);
         if (input.customWeakFoot) filterRules.push(`- WEAK FOOT: You MUST set "weakFoot" exactly to ${input.customWeakFoot}.`);
         if (input.customPlaystyles && input.customPlaystyles.length > 0) {
@@ -334,13 +321,11 @@ RULES:
 ${filterRules.join("\n")}
 - HEIGHT & WEIGHT: (Unless overridden above) You MUST provide an EXACT, definitive height (e.g., "178cm" or "5'10\"") and an EXACT weight (e.g., "72kg" or "158 lbs"). DO NOT provide ranges.
 - PLAYSTYLES & PRIORITY: You MUST generate EXACTLY 4 items in 'playstylePlus' and EXACTLY 16 items in 'playstyles'. You MUST order the 16 'playstyles' strictly by relevance and priority. Standard playstyles CANNOT duplicate the Archetype's Signature Playstyles.
-- SPECIALISATION (OPTIONAL, default is NONE): Find the specialisation listed for your chosen archetype in the context. Select it 
-ONLY if BOTH are true:
+- SPECIALISATION (OPTIONAL, default is NONE): Find the specialisation listed for your chosen archetype in the context. Select it ONLY if BOTH are true:
   (a) its bonusPlaystylePlus appears in your 'playstylePlus' or your top 6 'playstyles', or matches the player's Signature Weapon; AND
   (b) at least 2/3 of its minimumAttributes are in your coreAttributes or secondaryAttributes.
   If either fails, output specialisation: null, specialisationPlaystylePlus: null, specialisationMinAttrs: [], specialisationReason: null. Leaving it empty is correct whenever the fit isn't clear.
-  If you do select it, copy the name, Playstyle+ and thresholds EXACTLY 
-from the context as objects like {"attr": "Finishing", "val": 85}, and state which of (a)/(b) it satisfies in specialisationReason.
+  If you do select it, copy the name, Playstyle+ and thresholds EXACTLY from the context as objects like {"attr": "Finishing", "val": 85}, and state which of (a)/(b) it satisfies in specialisationReason.
 - ATTRIBUTES: Quality over quantity. Select ONLY the defining attributes for Level 55 builds:
   - coreAttributes: EXACTLY 2-3 signature attributes (their absolute peak strengths).
   - secondaryAttributes: 3-4 strong supporting attributes.
@@ -366,8 +351,7 @@ from the context as objects like {"attr": "Finishing", "val": 85}, and state whi
 
         // Guarantee: if the user picked an archetype, that is what they get, whatever the AI answered.
         // (The specialisation check below runs against this archetype, so a mismatched spec is dropped.)
-        if (forcedArchetype) 
-parsed.archetype = forcedArchetype;
+        if (forcedArchetype) parsed.archetype = forcedArchetype;
 
         if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
           parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
@@ -410,8 +394,7 @@ parsed.archetype = forcedArchetype;
             } else {
               const buildAttrs = new Set([...(parsed.coreAttributes ?? []), ...(parsed.secondaryAttributes ?? [])].map(normAttr));
               const styles = new Set(
-                [...(parsed.playstylePlus ?? 
-[]), ...(parsed.playstyles ?? []).slice(0, 6).map((x: any) => x.name)]
+                [...(parsed.playstylePlus ?? []), ...(parsed.playstyles ?? []).slice(0, 6).map((x: any) => x.name)]
                   .map((x: string) => stripPlus(String(x)))
               );
               const synergy = !!real["Playstyle+"] && styles.has(stripPlus(real["Playstyle+"]));
@@ -420,8 +403,7 @@ parsed.archetype = forcedArchetype;
               if (!synergy && !aligned) {
                 clearSpec();
               } else {
-                parsed.specialisationPlaystylePlus = 
-real["Playstyle+"];
+                parsed.specialisationPlaystylePlus = real["Playstyle+"];
                 parsed.specialisationMinAttrs = reqs;
               }
             }
@@ -444,8 +426,7 @@ real["Playstyle+"];
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
-      // true when the caller has 
-already deducted the Skill Moves / Weak Foot cost from apBudget
+      // true when the caller has already deducted the Skill Moves / Weak Foot cost from apBudget
       starsPrepaid: z.boolean().optional(),
       attributePriorities: AttributePrioritiesSchema.optional()
     }))
@@ -453,16 +434,14 @@ already deducted the Skill Moves / Weak Foot cost from apBudget
       // Attribute Priorities are gated by the plan in effect (the server decides, never the client)
       const prio = input.attributePriorities;
       const hasW = !!prio?.weights && Object.keys(prio.weights).length > 0;
-      const hasMinMax = (!!prio?.min 
-&& Object.keys(prio.min).length > 0) || (!!prio?.max && Object.keys(prio.max).length > 0);
+      const hasMinMax = (!!prio?.min && Object.keys(prio.min).length > 0) || (!!prio?.max && Object.keys(prio.max).length > 0);
       const hasEx = (prio?.exclude?.length ?? 0) > 0;
       const needRank = hasEx ? 3 : hasMinMax ? 2 : hasW ? 1 : 0;
       const tierRank = ({ free: 0, premium: 1, premium_plus: 2, vip: 3, owner: 3 } as Record<string, number>)[String((ctx.user as any).tier ?? "free")] ?? 0;
       if (tierRank < needRank) {
         throw new TRPCError({ code: "FORBIDDEN", message: "PAID_FEATURE" });
       }
-      const priorities = needRank > 0 ? 
-prio : undefined;
+      const priorities = needRank > 0 ? prio : undefined;
 
       let customSlots = input.standardSlots;
       let signatureUpgrades = input.signatureSlots;
@@ -491,8 +470,7 @@ prio : undefined;
         playstylePlus: input.blueprint.playstylePlus,
         playstyles: input.blueprint.playstyles,
         specialisation: input.blueprint.specialisation ?? undefined,
-        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus ?? 
-undefined,
+        specialisationPlaystylePlus: input.blueprint.specialisationPlaystylePlus ?? undefined,
         specialisationMinAttrs: input.blueprint.specialisationMinAttrs,
         coreAttributes: input.blueprint.coreAttributes,
         secondaryAttributes: input.blueprint.secondaryAttributes,
@@ -524,8 +502,7 @@ undefined,
         
         if (earned) {
           earnedSpecPlaystyle = input.blueprint.specialisationPlaystylePlus;
-          earnedSpecName = input.blueprint.specialisation ?? 
-undefined;
+          earnedSpecName = input.blueprint.specialisation ?? undefined;
         }
       }
 
@@ -538,8 +515,7 @@ undefined;
       const standardPlaystyles = result.equippedPlaystyles?.slice(0, customSlots) || [];
       
       const ALL_PROFILES = getArchetypeProfiles("FC27");
-      const archProfile = 
-ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(input.blueprint.archetype));
+      const archProfile = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(input.blueprint.archetype));
       
       const recommendedPositions = rolesToPositions(archProfile?.Recommended_Positions);
 
