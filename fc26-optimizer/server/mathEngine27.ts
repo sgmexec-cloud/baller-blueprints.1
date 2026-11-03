@@ -327,7 +327,20 @@ export function runMathEngine(
   // Candidates in the AI's priority order, minus the ones that are already equipped as a Signature / specialisation PS+.
   // We keep going down the list until every unlocked slot is filled: a style that is unknown or too expensive is
   // skipped and the next one is tried (cutting the list to the slot count first used to leave slots empty).
-  const activePlaystyles = blueprint.playstyles
+  // The AI's 4 "playstylePlus" picks are its strongest matches for the player, so they go FIRST (they are not
+  // equipped as PS+ in the current system; they compete for the regular slots like everything else).
+  // Duplicates between that list and the ranked list are dropped.
+  const seenStyles = new Set<string>();
+  const orderedStyles = [
+    ...(blueprint.playstylePlus ?? []).map(n => ({ name: String(n).replace(/\+/g, '').trim(), requirements: [] as Array<{ attr: string; val: number }> })),
+    ...blueprint.playstyles,
+  ].filter(ps => {
+    const key = ps.name.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    if (!key || seenStyles.has(key)) return false;
+    seenStyles.add(key);
+    return true;
+  });
+  const activePlaystyles = orderedStyles
     .filter(ps => !isPlaystyleConflict(ps.name, allEquippedPlus));
   
   for (const ps of activePlaystyles) {
