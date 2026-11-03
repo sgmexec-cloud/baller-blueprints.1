@@ -239,13 +239,9 @@ export function useBuilderLogic() {
       }
 
 
-      const archMastery = MASTERIES[targetArch];
-      const masteryStatus = unlockedMasteries[targetArch];
-      if (archMastery && masteryStatus) {
-        if (masteryStatus.l10 && archMastery.l10) Object.entries(archMastery.l10).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        if (masteryStatus.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        if (masteryStatus.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-      }
+      // Masteries are permanent and apply to EVERY build, so add the bonuses from all archetypes
+      // (the same total the stats screen shows)
+      Object.entries(masteryModifiers).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; });
 
       // ── FACILITIES ──
       // At this point foundationBoosts holds height/weight + masteries only. Facilities are added below.
