@@ -588,22 +588,57 @@ export function runMathEngine(
   };
 }
 
+const plainName = (x: string) => String(x).replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+/**
+ * Which Signature does the specialisation's PlayStyle+ replace? Returns its index, or -1 for "none".
+ *  - Same PlayStyle as a Signature: that Signature simply becomes PlayStyle+ (nothing is replaced).
+ *  - Some Signatures are not PlayStyle+ yet: the specialisation takes the place of one of THOSE. If several qualify,
+ *    the one the player needs least goes (lowest `fit`; ties go to the second Signature).
+ *  - Every Signature is already PlayStyle+: the weakest of the 3 (the Signatures + the specialisation) is left out.
+ *    If that is the specialisation's PlayStyle+, nothing is replaced (-1). Ties never drop the specialisation.
+ * `fit` scores how well a PlayStyle matches the player (higher = better). Without it every score is 0.
+ */
+export function pickSpecialisationSwap(
+  archetypeName: string,
+  signatureUpgrades: number,
+  specialisationBonusPlus?: string,
+  fit?: (name: string) => number
+): number {
+  const base = getSignatureNames(archetypeName).slice(0, 4);
+  if (base.length === 0 || !specialisationBonusPlus) return -1;
+  const score = (n: string) => (fit ? fit(n) : 0);
+
+  const same = base.findIndex((ps: string) => plainName(ps) === plainName(specialisationBonusPlus));
+  if (same >= 0) return same;
+
+  const weakestOf = (indices: number[]): number =>
+    indices.reduce((best, i) => (score(base[i]) < score(base[best]) || (score(base[i]) === score(base[best]) && i > best) ? i : best), indices[0]);
+
+  const plain = base.map((_: string, i: number) => i).filter((i: number) => i >= signatureUpgrades);
+  if (plain.length > 0) return weakestOf(plain);
+
+  const weakest = weakestOf(base.map((_: string, i: number) => i));
+  return score(specialisationBonusPlus) < score(base[weakest]) ? -1 : weakest;
+}
+
 /**
  * The archetype's Signature PlayStyles as they appear on the build.
  * Signatures upgrade to PlayStyle+ one by one (signatureUpgrades). A specialisation's PlayStyle+ does NOT add a new
- * entry: it replaces one Signature (the first one, which is what the builder screen shows). If it is the same
- * PlayStyle as a Signature, that Signature is simply shown as PlayStyle+.
+ * entry: it replaces one Signature (see pickSpecialisationSwap). Pass `swapIndex` to use a decision already made.
  */
-export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string): string[] {
+export function resolveSignaturePlaystyles(
+  archetypeName: string,
+  signatureUpgrades: number,
+  specialisationBonusPlus?: string,
+  swapIndex?: number
+): string[] {
   const base = getSignatureNames(archetypeName).slice(0, 4);
   if (base.length === 0) return [];
   const signatures = base.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
   if (specialisationBonusPlus) {
-    const norm = (x: string) => x.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-    const specName = specialisationBonusPlus.replace(/\+/g, '').trim();
-    const same = base.findIndex((ps: string) => norm(ps) === norm(specName));
-    if (same >= 0) signatures[same] = `${base[same]}+`;
-    else signatures[0] = `${specName}+`;
+    const swap = swapIndex ?? pickSpecialisationSwap(archetypeName, signatureUpgrades, specialisationBonusPlus);
+    if (swap >= 0 && swap < signatures.length) signatures[swap] = `${specialisationBonusPlus.replace(/\+/g, '').trim()}+`;
   }
   return signatures;
 }
