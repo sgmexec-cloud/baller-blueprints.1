@@ -16,7 +16,8 @@ import { InfoTab } from '@/components/builder/InfoTab';
 import { ArchetypeTab } from '@/components/builder/ArchetypeTab';
 import { FoundationTab } from '@/components/builder/FoundationTab';
 import { AttributesTab } from '@/components/builder/AttributesTab';
-import { PlaystylesTab } from '@/components/builder/PlaystylesTab';
+import { PlaystylesTab } from '@/components/builder
+/PlaystylesTab';
 import { AiGeneratorModal } from '@/components/builder/AiGeneratorModal';
 import { PhysicalsModal } from '@/components/builder/PhysicalsModal';
 import { SkillsModal } from '@/components/builder/SkillsModal';
@@ -28,7 +29,9 @@ import { AuthPromptModal } from '@/components/builder/AuthPromptModal';
 import { ProfileModal } from '@/components/builder/ProfileModal';
 import { PreviewBanner } from '@/components/builder/PreviewBanner';
 import { FacilityPlanCard } from '@/components/builder/FacilityPlanCard';
-import { CLUB_BUDGETS } from '@/constants/builderData';
+import { PriorityReportCard } from '@/components/builder/PriorityReportCard';
+import { CLUB_BUDGETS } from 
+'@/constants/builderData';
 
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
@@ -61,6 +64,8 @@ export default function ManualBuilder() {
     aiBlueprint, setAiBlueprint,
     facilityMode, setFacilityMode,
     aiFacilityPlan, setAiFacilityPlan,
+    attributePriorities, setAttributePriorities,
+    aiPriorityReport, setAiPriorityReport,
     aiError,
     serverArchetypes,
     progressionData,
@@ -76,7 +81,8 @@ export default function ManualBuilder() {
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
     handleGenerateBlueprint, handleFinalizeBuild, handleSelectFacilityView,
-    handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
+    handleEquipFacilityTier, handleRemoveFacility, 
+handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization,
     handleStarChange, handleSliderChange
@@ -104,7 +110,8 @@ export default function ManualBuilder() {
 
   const positionRatings = useMemo(
     () => recommendedPositions.map((pos) => ({ pos, ovr: currentStats ? calculateOVR(currentStats, pos) : 0 })),
-    [recommendedPositions, currentStats]
+    [recommendedPositions, 
+currentStats]
   );
 
   const { user: accountUser, isAuthenticated } = useAccount();
@@ -115,7 +122,8 @@ export default function ManualBuilder() {
     refetchOnWindowFocus: false,
   });
 
-  const [isSharing, setIsSharing] = useState(false);
+  const [isSharing, setIsSharing] = 
+useState(false);
 
   const getShareStats = (): Record<string, number> => {
     if (!currentStats) return {};
@@ -125,7 +133,8 @@ export default function ManualBuilder() {
     for (const stat in baseObj) {
       const caps = getStatCaps(archetype, stat);
       const rawBase = caps.min || baseObj[stat] || 70;
-      raw[stat] = Math.min(caps.max || 99, rawBase + (addedPoints[stat] || 0));
+      raw[stat] = Math.min(caps.max 
+|| 99, rawBase + (addedPoints[stat] || 0));
     }
     return raw;
   };
@@ -151,7 +160,8 @@ export default function ManualBuilder() {
         playstyles: equippedPlaystyles.filter(Boolean),
         facilityPlaystyles: [fac1, fac2].filter(Boolean).map(String),
         specialization: equippedSpecialization,
-        apSpent: Math.max(0, maxAp - availableAp),
+        apSpent: Math.max(0, maxAp - 
+availableAp),
         apTotal: maxAp,
       });
     } catch (err) {
@@ -164,7 +174,8 @@ export default function ManualBuilder() {
 
   if (isArchLoading || isProgLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#080B14]">
+      <div className="min-h-screen flex flex-col items-center 
+justify-center bg-[#080B14]">
         <div className="w-12 h-12 rounded-full border-4 border-t-[#4D8DFF] border-[#131A2A] animate-spin mb-4"></div>
         <p className="text-[#4D8DFF] font-bold tracking-widest uppercase" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Loading Engine Data...</p>
       </div>
@@ -172,7 +183,8 @@ export default function ManualBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 pb-16 px-4">
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] 
+relative overflow-x-clip pt-2 pb-16 px-4">
       <div className="max-w-lg mx-auto relative">
         
         {/* MAIN APP LOGO */}
@@ -181,7 +193,8 @@ export default function ManualBuilder() {
         </div>
 
         {/* STICKY HEADER CARD */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3">
+        <div className="sticky top-0 z-40 bg-[#080B14]/95 
+backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3">
            
            {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
@@ -195,12 +208,14 @@ export default function ManualBuilder() {
                   onClick={handleShareBuild}
                   disabled={isSharing || !currentStats}
                   aria-label="Share build as image"
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#4D8DFF]/40 bg-[#192235] text-[#4D8DFF] text-[11px] font-bold transition-colors hover:bg-[#4D8DFF] hover:text-[#080B14] disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-[#4D8DFF]/40 bg-[#192235] 
+text-[#4D8DFF] text-[11px] font-bold transition-colors hover:bg-[#4D8DFF] hover:text-[#080B14] disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
                     <polyline points="16 6 12 2 8 6" />
-                    <line x1="12" y1="2" x2="12" y2="15" />
+                    <line x1="12" y1="2" 
+x2="12" y2="15" />
                   </svg>
                   {isSharing ? 'Creating…' : 'Share'}
                 </button>
@@ -208,7 +223,8 @@ export default function ManualBuilder() {
                 <div className="flex items-center gap-1.5">
                   <span className="text-[#F4F7FB] font-bold text-[14px]">{availableAp.toLocaleString()}</span>
                   <div className="w-4 h-4 rounded-full bg-[#facc15] flex items-center justify-center border border-[#eab308]">
-                    <span className="text-[#080B14] font-black text-[7px]">AP</span>
+                    <span 
+className="text-[#080B14] font-black text-[7px]">AP</span>
                   </div>
                 </div>
                 
@@ -274,11 +290,14 @@ export default function ManualBuilder() {
                  <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
                  
                  <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pac}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px] transform 
+translate-y-[2px]">{faceStats.pac}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">SHO</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.sho}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pas}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAS</span><span className="text-[#F4F7FB] font-bold text-[15px] transform 
+translate-y-[2px]">{faceStats.pas}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DRI</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.dri}</span></div>
-                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.def}</span></div>
+                    <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">DEF</span><span className="text-[#F4F7FB] font-bold text-[15px] transform 
+translate-y-[2px]">{faceStats.def}</span></div>
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PHY</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.phy}</span></div>
                  </div>
                  
@@ -290,7 +309,8 @@ export default function ManualBuilder() {
                         className={`px-2.5 py-0.5 rounded-sm font-bold text-[10px] uppercase transition-colors duration-200 ${
                           activePosition === pos 
                             ? 'bg-[#4caf50] text-white shadow-[0_0_8px_rgba(76,175,80,0.5)] border border-[#4caf50]' 
-                            : 'bg-[#131A2A] text-[#8E9AAF] border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB]'
+                            : 'bg-[#131A2A] text-[#8E9AAF] border border-[#26334A] hover:bg-[#26334A] 
+hover:text-[#F4F7FB]'
                         }`}
                       >
                         {pos}
@@ -342,7 +362,7 @@ export default function ManualBuilder() {
           <button
             onClick={() => {
               if (!isAuthenticated) {
-                            setIsAuthPromptOpen(true);
+                setIsAuthPromptOpen(true);
                 return;
               }
               setAiTargetLevel(level);
@@ -354,6 +374,13 @@ export default function ManualBuilder() {
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
           >✨ AI AUTO-BUILD</button>
         </div>
+
+        {/* PRIORITY RESULTS (shown after an AI build that used Attribute Priorities) */}
+        {aiPriorityReport && aiPriorityReport.length > 0 && (
+          <div className="mb-6">
+            <PriorityReportCard report={aiPriorityReport} onDismiss={() => setAiPriorityReport(null)} />
+          </div>
+        )}
 
         {/* TAB RENDERING */}
         {activeTab === 'info' && (
@@ -391,7 +418,8 @@ export default function ManualBuilder() {
           />
         )}
 
-        {activeTab === 'attributes' && currentStats && serverArchetypes && (
+        {activeTab === 'attributes' && 
+currentStats && serverArchetypes && (
           <AttributesTab 
             archetype={archetype}
             serverArchetypes={serverArchetypes}
@@ -403,7 +431,8 @@ export default function ManualBuilder() {
             wfLevel={wfLevel}
             setActiveModal={setActiveModal}
             physicalModifiers={physicalModifiers}
-            facilityModifiers={facilityModifiers}
+            
+facilityModifiers={facilityModifiers}
             masteryModifiers={masteryModifiers}
             handleSliderChange={handleSliderChange}
             availableAp={availableAp}
@@ -450,6 +479,9 @@ export default function ManualBuilder() {
         clubLevel={clubLevel}
         clubBudget={CLUB_BUDGETS[clubLevel] || 0}
         keptFacilityCount={Object.keys(equippedFacilities).length}
+        tier={accountUser?.tier ?? 'free'}
+        attributePriorities={attributePriorities}
+        setAttributePriorities={setAttributePriorities}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
@@ -459,7 +491,8 @@ export default function ManualBuilder() {
       <FacilityPlanCard
         plan={aiFacilityPlan}
         onClose={() => setAiFacilityPlan(null)}
-        onEdit={() => setActiveModal('facilities')}
+        onEdit={() => 
+setActiveModal('facilities')}
       />
 
       <ProfileModal
@@ -471,7 +504,8 @@ export default function ManualBuilder() {
         archetype={archetype}
         level={level}
         getSnapshot={getSnapshot}
-        applySnapshot={applySnapshot}
+        
+applySnapshot={applySnapshot}
         getProfileSnapshot={getProfileSnapshot}
       />
 
@@ -502,7 +536,8 @@ export default function ManualBuilder() {
         setIsOpen={setActiveModal}
         clubLevel={clubLevel}
         setClubLevel={setClubLevel}
-        remainingBudget={remainingBudget}
+        remainingBudget={remainingB
+udget}
         equippedFacilities={equippedFacilities}
         selectedFacView={selectedFacView}
         handleSelectFacilityView={handleSelectFacilityView}
@@ -511,7 +546,8 @@ export default function ManualBuilder() {
         handleFacTouchStart={handleFacTouchStart}
         handleFacTouchMove={handleFacTouchMove}
         handleFacTouchEnd={handleFacTouchEnd}
-        handleRemoveFacility={handleRemoveFacility}
+        handleRemoveFacility={handle
+RemoveFacility}
         handleEquipFacilityTier={handleEquipFacilityTier}
       />
 
@@ -537,7 +573,8 @@ export default function ManualBuilder() {
         handleUnlockPlaystyle={handleUnlockPlaystyle}
         isPsPlusUnlocked={isPsPlusUnlocked}
         equippedSpecialization={equippedSpecialization}
-        equippedPlaystyles={equippedPlaystyles}
+        equippedPlaystyles={equipped
+Playstyles}
         selectedPsView={selectedPsView}
         setSelectedPsView={setSelectedPsView}
         getUpgradeData={getUpgradeData}
@@ -556,7 +593,8 @@ export default function ManualBuilder() {
               <button onClick={() => setActiveModal(null)} className="text-[#8E9AAF] hover:text-[#F4F7FB] p-2 text-lg leading-none">✕</button>
             </div>
             <div className="flex items-center justify-between p-3 bg-[#131A2A] border-b border-[#26334A] shadow-md z-10">
-               <div className="text-[10px] text-[#8E9AAF] tracking-wide font-medium">Select a path for <span className="font-bold text-[#F4F7FB] uppercase tracking-widest">{archetype}</span></div>
+               <div className="text-[10px] text-[#8E9AAF] tracking-wide font-medium">Select a path for <span className="font-bold text-[#F4F7FB] uppercase tracking-widest">{archetype}</
+span></div>
                <div className="text-right">
                   <span className="text-[9px] uppercase tracking-widest text-[#8E9AAF] mr-2" style={{ fontFamily: "'Rajdhani', sans-serif" }}>AP Remaining</span>
                   <span className="text-base font-black text-[#facc15] drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]">{availableAp}</span>
@@ -568,7 +606,8 @@ export default function ManualBuilder() {
                  <div className="text-center text-[#8E9AAF] text-xs font-bold uppercase tracking-widest mt-10">No Specializations available for this archetype.</div>
               ) : (
                 SPECIALIZATIONS_DATA[archetype].map((spec) => {
-                  const isEquipped = equippedSpecialization === spec.name;
+                  const isEquipped = 
+equippedSpecialization === spec.name;
                   const { canEquip, cost, upgrades, reason } = getUpgradeData(spec.reqs);
                   return (
                     <div key={spec.name} className={`bg-[#0D1220] rounded-2xl overflow-hidden transition-all duration-300 border ${isEquipped ? 'border-[#facc15] shadow-[0_0_20px_rgba(250,204,21,0.15)] ring-1 ring-[#facc15]/30' : 'border-[#26334A]'}`}>
@@ -578,7 +617,8 @@ export default function ManualBuilder() {
                                <div className="text-sm font-black text-[#F4F7FB] uppercase tracking-wider">{spec.name}</div>
                                <div className="text-[9px] text-[#8E9AAF] font-bold tracking-widest uppercase mt-0.5 mb-2">{spec.inspiredBy}</div>
                                <div className="text-[10px] text-[#8E9AAF] font-medium leading-relaxed bg-[#080B14] p-2.5 rounded-lg border border-[#26334A]/50">
-                                 <span className="font-bold text-[#facc15] block mb-1">{spec.perk}</span>
+                                 <span 
+className="font-bold text-[#facc15] block mb-1">{spec.perk}</span>
                                  {spec.desc}
                                </div>
                              </div>
@@ -586,7 +626,8 @@ export default function ManualBuilder() {
                                <div className="space-y-2.5">
                                  {spec.reqs.map(req => {
                                     const caps = getStatCaps(archetype, req.stat);
-                                    const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[req.stat] || 70;
+                                    const rawBase = caps.min || serverArchetypes?.
+[archetype]?.base?.[req.stat] || 70;
                                     const currentInvested = addedPoints[req.stat] || 0;
                                     
                                     const userStatWithoutMods = rawBase + currentInvested;
@@ -595,10 +636,12 @@ export default function ManualBuilder() {
                                     const isImpossible = targetVal > (caps.max || 99);
                                     
                                     return (
-                                       <div key={req.stat}>
+                                       <div 
+key={req.stat}>
                                           <div className="flex justify-between items-end mb-1">
                                              <span className="text-[9px] font-bold uppercase tracking-wide text-[#8E9AAF] leading-none" style={{ fontFamily: "'Inter', sans-serif" }}>{req.stat}</span>
-                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>{userStatWithoutMods}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</span>{targetVal}</span>
+                                             <span className={`text-[10px] font-black leading-none ${isMet ? 'text-[#21E6A4]' : isImpossible ? 'text-[#ff4d4d]' : 'text-[#F4F7FB]'}`}>{userStatWithoutMods}<span className="text-[#59657A] font-medium text-[8px] mx-0.5">/</
+span>{targetVal}</span>
                                           </div>
                                        </div>
                                     )
@@ -606,7 +649,8 @@ export default function ManualBuilder() {
                                </div>
                              </div>
                           </div>
-                          <button onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)} disabled={!isEquipped && !canEquip} className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${isEquipped ? 'bg-[#131A2A] text-[#facc15] border border-[#facc15]/30 hover:bg-[#192235]' : !canEquip ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed' : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'}`}>
+                          <button onClick={() => handleActionSpecialization(spec.name, upgrades, isEquipped)} disabled={!isEquipped && !canEquip} className={`w-full py-3 rounded-xl font-bold uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2 ${isEquipped ? 'bg-[#131A2A] text-[#facc15] 
+border border-[#facc15]/30 hover:bg-[#192235]' : !canEquip ? 'bg-[#131A2A] text-[#59657A] border border-[#26334A] cursor-not-allowed' : 'bg-[#192235] border border-[#4D8DFF]/40 text-[#4D8DFF] hover:bg-[#4D8DFF] hover:text-[#080B14] shadow-[0_0_15px_rgba(77,141,255,0.15)]'}`}>
                             {isEquipped ? '✔ Equipped' : !canEquip ? reason : cost > 0 ? `Unlock (${cost} AP)` : 'Equip Path'}
                           </button>
                        </div>
