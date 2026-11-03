@@ -16,8 +16,7 @@ import { InfoTab } from '@/components/builder/InfoTab';
 import { ArchetypeTab } from '@/components/builder/ArchetypeTab';
 import { FoundationTab } from '@/components/builder/FoundationTab';
 import { AttributesTab } from '@/components/builder/AttributesTab';
-import { PlaystylesTab } from'@/components/builder
-/PlaystylesTab';
+import { PlaystylesTab } from '@/components/builder/PlaystylesTab';
 import { AiGeneratorModal } from '@/components/builder/AiGeneratorModal';
 import { PhysicalsModal } from '@/components/builder/PhysicalsModal';
 import { SkillsModal } from '@/components/builder/SkillsModal';
