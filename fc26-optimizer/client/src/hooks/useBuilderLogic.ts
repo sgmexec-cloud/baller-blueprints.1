@@ -61,6 +61,8 @@ export function useBuilderLogic() {
   const [aiFacilityPlan, setAiFacilityPlan] = useState<FacilityPlan | null>(null);
   const [attributePriorities, setAttributePriorities] = useState<AttributePriorities>(EMPTY_PRIORITIES);
   const [aiPriorityReport, setAiPriorityReport] = useState<any[] | null>(null);
+  // Which Signature the specialisation's PlayStyle+ replaced in the last AI build (only valid for that specialisation)
+  const [specSwap, setSpecSwap] = useState<{ spec: string; index: number } | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -354,8 +356,11 @@ export function useBuilderLogic() {
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
           const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
           setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
+          const aiSwap = (mathResult.playstyles as any).specSwapIndex;
+          setSpecSwap(matchedSpec && typeof aiSwap === 'number' ? { spec: matchedSpec.name, index: aiSwap } : null);
         } else {
           setEquippedSpecialization(null);
+          setSpecSwap(null);
         }
       }
 
@@ -761,15 +766,20 @@ export function useBuilderLogic() {
   const signatureNames: string[] = serverArchetypes?.[archetype]?.signatures ?? [];
   const sigUpgrades = getSignatureUpgradesAt(progressionData, level);
 
-  const sig1 = {
-    name: specPerk || signatureNames[0] || '',
-    type: (specPerk || sigUpgrades > 0) ? 'gold' : 'silver'
-  };
+  // The specialisation's PlayStyle+ takes the place of ONE Signature (it never adds a slot).
+  // Default: the second Signature (it is the one still plain until level 55). An AI build can choose differently,
+  // or leave the specialisation's PlayStyle+ out (index -1) when both Signatures fit the player better.
+  const plainPs = (x: string) => String(x).replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const specSameAs = specPerk ? signatureNames.findIndex(sn => plainPs(sn) === plainPs(specPerk)) : -1;
+  const aiSwap = specSwap && specSwap.spec === equippedSpecialization ? specSwap.index : null;
+  const swapIndex = !specPerk ? -1 : specSameAs >= 0 ? specSameAs : (aiSwap ?? 1);
+  const sigSlot = (i: number) =>
+    specPerk && swapIndex === i
+      ? { name: specPerk, type: 'gold' }
+      : { name: signatureNames[i] || '', type: sigUpgrades > i ? 'gold' : 'silver' };
 
-  const sig2 = {
-    name: signatureNames[1] || '',
-    type: sigUpgrades > 1 ? 'gold' : 'silver'
-  };
+  const sig1 = sigSlot(0);
+  const sig2 = sigSlot(1);
 
   const unlockedSlotIndexes = unlockedSlotsAt(level);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
