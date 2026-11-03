@@ -31,30 +31,41 @@ export const MasteriesModal: React.FC<MasteriesModalProps> = ({
                 <div className="h-full bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] transition-all duration-500 ease-out" style={{ width: `${masteryProgressPct}%` }} />
              </div>
           </div>
+          <div className="flex items-center text-[8px] font-bold uppercase tracking-widest text-[#8E9AAF]">
+            <span className="w-1/4" />
+            <span className="w-1/4 text-center">Level 10</span>
+            <span className="w-1/4 text-center">Level 30</span>
+            <span className="w-1/4 text-center">Level 55</span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24 hide-scrollbar bg-[#080B14]">
           {serverArchetypes && Object.keys(serverArchetypes).map(arch => {
-            const status = unlockedMasteries[arch] || { l10: false, l30: false };
+            const status = unlockedMasteries[arch] || { l10: false, l30: false, l55: false };
             const masteryDef = MASTERIES[arch];
             if (!masteryDef) return null;
             const iconFilename = arch.replace(/\s+/g, '-').toLowerCase() + '.png';
             return (
               <div key={arch} className="flex bg-[#0D1220] rounded-xl border border-[#26334A] overflow-hidden hover:border-[#4D8DFF]/40 transition-colors">
-                <div className="w-1/3 bg-[#131A2A] p-3 flex flex-col items-center justify-center border-r border-[#26334A]">
+                <div className="w-1/4 bg-[#131A2A] p-2 flex flex-col items-center justify-center border-r border-[#26334A]">
                    <div className="w-6 h-6 mb-1.5 flex items-center justify-center">
                       <img src={`/archetypes/${iconFilename}`} alt={arch} className="w-full h-full object-contain drop-shadow-md" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%234D8DFF"><path d="M12 2L2 22h20L12 2z"/></svg>'; }} />
                    </div>
-                   <span className="text-[9px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
+                   <span className="text-[8px] font-black uppercase tracking-wider text-[#F4F7FB] text-center leading-tight">{arch}</span>
                 </div>
-                <button onClick={() => toggleMasteryUnlock(arch, 'l10')} className={`w-1/3 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
+                <button onClick={() => toggleMasteryUnlock(arch, 'l10')} className={`w-1/4 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l10 ? 'bg-[#4D8DFF]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
                    {Object.entries(masteryDef.l10).map(([stat, val]) => (
                       <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l10 ? 'text-[#4D8DFF]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>{STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span></div>
                    ))}
                 </button>
-                <button onClick={() => toggleMasteryUnlock(arch, 'l30')} className={`w-1/3 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
+                <button onClick={() => toggleMasteryUnlock(arch, 'l30')} className={`w-1/4 p-2 flex flex-col items-center justify-center border-r border-[#26334A] transition-all duration-200 group ${status.l30 ? 'bg-[#8B5CF6]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
                    {Object.entries(masteryDef.l30).map(([stat, val]) => (
                       <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l30 ? 'text-[#8B5CF6]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>{STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span></div>
+                   ))}
+                </button>
+                <button onClick={() => toggleMasteryUnlock(arch, 'l55')} className={`w-1/4 p-2 flex flex-col items-center justify-center transition-all duration-200 group ${status.l55 ? 'bg-[#facc15]/20' : 'bg-[#0D1220] hover:bg-[#131A2A]'}`}>
+                   {Object.entries(masteryDef.l55).map(([stat, val]) => (
+                      <div key={stat} className={`text-[10px] font-black tracking-widest uppercase transition-colors ${status.l55 ? 'text-[#facc15]' : 'text-[#8E9AAF] group-hover:text-[#F4F7FB]'}`}>{STAT_ABBR[stat]} <span className="opacity-80 ml-0.5">+{val}</span></div>
                    ))}
                 </button>
               </div>
