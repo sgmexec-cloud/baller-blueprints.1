@@ -493,11 +493,11 @@ ${filterRules.join("\n")}
 
       const specReqs = input.blueprint.specialisationMinAttrs ?? [];
       if (input.blueprint.specialisationPlaystylePlus && specReqs.length > 0) {
+        // Boosts (height/weight, facilities, masteries) do NOT count towards unlocking a specialisation:
+        // only the build's own points do, the same rule the manual builder uses
         const earned = specReqs.every(req => {
           const stat = result.stats.find(s => normAttr(s.attribute) === normAttr(req.attr));
-          const boost = Object.entries(input.foundationBoosts)
-            .find(([k]) => normAttr(k) === normAttr(req.attr))?.[1] ?? 0;
-          return (stat?.final ?? 0) + boost >= req.val;
+          return (stat?.final ?? 0) >= req.val;
         });
         
         if (earned) {
