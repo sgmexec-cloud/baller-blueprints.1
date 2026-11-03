@@ -5,8 +5,7 @@ import { STAT_GROUPS, CLUB_BUDGETS } from '@/constants/builderData';
 import { ARCH_PHYSICALS, ARCHETYPE_STAR_CAPS, STAR_UPGRADE_COSTS } from '@/constants/archetypeData';
 import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES } from '@/constants/playstylesData';
 import type { StatReq } from '@/types/builder';
-import { getModifier, 
-getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
+import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
 import { optimiseFacilities, normStat, type FacilityPlan } from '@/utils/facilityOptimizer';
 import { getMaxLevel, getSlotUnlockLevels, getSignatureUnlockLevels, getSignatureUpgradesAt, samePlaystyle, FALLBACK_SLOT_LEVELS } from '@/utils/gameRules';
 import { useAccount } from '@/hooks/useAccount';
@@ -19,8 +18,7 @@ const emptySlots = (): string[] => FALLBACK_SLOT_LEVELS.map(() => '');
 
 export function useBuilderLogic() {
   const [level, setLevel] = useState<number>(25);
-  const [archetype, setArchetype] = 
-useState<string>('');
+  const [archetype, setArchetype] = useState<string>('');
   const [height, setHeight] = useState<number>(175);
   const [weight, setWeight] = useState<number>(75);
   
@@ -35,8 +33,7 @@ useState<string>('');
   
   // Equip States
   const [equippedPlaystyles, setEquippedPlaystyles] = useState<string[]>(emptySlots());
-  const [equippedSpecialization, setEquippedSpecialization] = 
-useState<string | null>(null);
+  const [equippedSpecialization, setEquippedSpecialization] = useState<string | null>(null);
   const [expandedPerk, setExpandedPerk] = useState<string | null>(null);
   
   // Navigation & UI State
@@ -59,8 +56,7 @@ useState<string | null>(null);
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
   const [aiBlueprint, setAiBlueprint] = useState<any>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-  // Facilities in the AI step: 'ai' = 
-pick the best ones within the Club level budget, 'keep' = use the ones already set
+  // Facilities in the AI step: 'ai' = pick the best ones within the Club level budget, 'keep' = use the ones already set
   const [facilityMode, setFacilityMode] = useState<'ai' | 'keep'>('ai');
   const [aiFacilityPlan, setAiFacilityPlan] = useState<FacilityPlan | null>(null);
   const [attributePriorities, setAttributePriorities] = useState<AttributePriorities>(EMPTY_PRIORITIES);
@@ -92,8 +88,7 @@ pick the best ones within the Club level budget, 'keep' = use the ones already s
     setClubLevel(profile.clubLevel ?? 10);
     setEquippedFacilities(profile.equippedFacilities || {});
     setArchetypeLevels(levels);
-    setUnlockedMasteries(mergeMasteries(profile.unlockedMasteries || 
-{}, levels));
+    setUnlockedMasteries(mergeMasteries(profile.unlockedMasteries || {}, levels));
     setProfileLoaded(true);
   }, [profileQuery.data]);
 
@@ -105,16 +100,14 @@ pick the best ones within the Club level budget, 'keep' = use the ones already s
   }, [profileLoaded, archetype]);
 
   const maxAp = progressionData?.[level]?.apAvailable ?? (Math.floor(level * 1.5) + 10);
-  const maxLevel = 
-getMaxLevel(progressionData);
+  const maxLevel = getMaxLevel(progressionData);
   const slotUnlockLevels = getSlotUnlockLevels(progressionData);
   const unlockedSlotsAt = (lvl: number) => slotUnlockLevels.map((_, i) => i).filter(i => lvl >= slotUnlockLevels[i]);
   const activeBounds = ARCH_PHYSICALS[archetype] || ARCH_PHYSICALS['Finisher'];
   const activeStarCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
 
   useEffect(() => {
-    if (serverArchetypes && 
-Object.keys(serverArchetypes).length > 0) {
+    if (serverArchetypes && Object.keys(serverArchetypes).length > 0) {
       const targetArch = serverArchetypes[archetype] ? archetype : Object.keys(serverArchetypes)[0];
       setArchetype(targetArch);
       const bounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
@@ -162,8 +155,7 @@ Object.keys(serverArchetypes).length > 0) {
     setUnlockedMasteries(prev => ({ ...prev, [arch]: masteryFromLevel(clean) }));
   };
 
-  const handleGenerateBlueprint = 
-async () => {
+  const handleGenerateBlueprint = async () => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     setAiError(null);
@@ -182,8 +174,7 @@ async () => {
       console.error("AI Generation failed:", error);
       if (error?.data?.code === 'UNAUTHORIZED') setAiError('Please log in to use AI Auto-Build.');
       else if (error?.message === 'PAID_FEATURE') setAiError('Choosing the archetype yourself is included in the paid plans. Set it back to "Let AI Decide" to continue.');
-      else if (error?.message === 'LIMIT_REACHED') 
-setAiError("You've used all of your AI builds for this month.");
+      else if (error?.message === 'LIMIT_REACHED') setAiError("You've used all of your AI builds for this month.");
       else setAiError('Something went wrong generating the blueprint. Your build was not counted, so please try again.');
     } finally {
       setIsGeneratingAi(false);
@@ -206,8 +197,7 @@ setAiError("You've used all of your AI builds for this month.");
       const maxApForAi = progressionData?.[aiTargetLevel]?.apAvailable ?? (Math.floor(aiTargetLevel * 1.5) + 10);
       const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
       const unlockedSlotIndexes = unlockedSlotsAt(aiTargetLevel);
-      const standardSlotsCount = 
-unlockedSlotIndexes.length;
+      const standardSlotsCount = unlockedSlotIndexes.length;
       // The server was working this out from the post-star budget, which can be one level too low
       const signatureSlotsCount = getSignatureUpgradesAt(progressionData, aiTargetLevel);
 
@@ -229,8 +219,7 @@ unlockedSlotIndexes.length;
       const activeBounds = ARCH_PHYSICALS[targetArch] || ARCH_PHYSICALS['Finisher'];
       const newHeight = aiBlueprint.heightRange ? parseInt(aiBlueprint.heightRange) : height;
       const newWeight = aiBlueprint.weightRange ? parseInt(aiBlueprint.weightRange) : weight;
-      const safeHeight = isNaN(newHeight) ? height : 
-newHeight;
+      const safeHeight = isNaN(newHeight) ? height : newHeight;
       const safeWeight = isNaN(newWeight) ? weight : newWeight;
 
       const hModRaw = getModifier(safeHeight, activeBounds.baseH, 4);
@@ -239,8 +228,7 @@ newHeight;
       if (activeBounds.type === 'GK') {
         foundationBoosts["Sprint Speed"] = hModRaw - wModRaw;
         foundationBoosts["Strength"] = hModRaw + wModRaw;
-        
-foundationBoosts["Acceleration"] = -hModRaw - wModRaw;
+        foundationBoosts["Acceleration"] = -hModRaw - wModRaw;
       } else {
         foundationBoosts["Jumping"] = hModRaw + wModRaw;
         foundationBoosts["Sprint Speed"] = hModRaw - wModRaw;
@@ -256,8 +244,7 @@ foundationBoosts["Acceleration"] = -hModRaw - wModRaw;
       if (archMastery && masteryStatus) {
         if (masteryStatus.l10 && archMastery.l10) Object.entries(archMastery.l10).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
         if (masteryStatus.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
-        if (masteryStatus.l55 && 
-archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
+        if (masteryStatus.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; }); 
       }
 
       // ── FACILITIES ──
@@ -302,8 +289,7 @@ archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { foundatio
           Object.entries(baseline.investedPoints ?? {}).filter(([, v]) => (v as number) > 0).map(([k]) => normStat(k))
         );
         const role = new Map<string, number>();
-        const mark = (list: string[] | undefined, w: number) => (list ?? []).forEach(a => { if (!role.has(normStat(a))) 
-role.set(normStat(a), w); });
+        const mark = (list: string[] | undefined, w: number) => (list ?? []).forEach(a => { if (!role.has(normStat(a))) role.set(normStat(a), w); });
         mark(aiBlueprint.coreAttributes, 0.8);
         mark(aiBlueprint.secondaryAttributes, 0.6);
         mark(aiBlueprint.tertiaryAttributes, 0.4);
@@ -319,8 +305,7 @@ role.set(normStat(a), w); });
           currentStats: landing,
           pointValue: (stat, lvl) => getApCost(targetArch, stat, lvl) * relevance(stat),
           playstyleBonus: (ps) => {
-            if (signatureNames.some(sn 
-=> samePlaystyle(sn, ps))) return 0;
+            if (signatureNames.some(sn => samePlaystyle(sn, ps))) return 0;
             const rank = ranked.findIndex(r => samePlaystyle(r, ps));
             return rank < 0 ? 0 : Math.max(0, 120 - 6 * rank);
           },
@@ -364,16 +349,14 @@ role.set(normStat(a), w); });
         const newEquipped = emptySlots();
         
         unlockedSlotIndexes.forEach((slotIdx, arrayIdx) => {
-          if (standardList[arrayIdx]) 
-newEquipped[slotIdx] = standardList[arrayIdx];
+          if (standardList[arrayIdx]) newEquipped[slotIdx] = standardList[arrayIdx];
         });
         setEquippedPlaystyles(newEquipped);
 
         if (mathResult.playstyles.specialisation) {
           const specUpper = mathResult.playstyles.specialisation.toUpperCase();
           const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
-          const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === 
-specUpper);
+          const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
           setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
         } else {
           setEquippedSpecialization(null);
@@ -385,8 +368,7 @@ specUpper);
       setAiBlueprint(null);
     } catch (error) {
       console.error("AI Generation failed:", error);
-      if ((error as any)?.message === 'PAID_FEATURE') alert("Attribute 
-Priorities aren't included in your plan.");
+      if ((error as any)?.message === 'PAID_FEATURE') alert("Attribute Priorities aren't included in your plan.");
       else alert("Failed to finalize build. Check your connection.");
     } finally {
       setIsGeneratingAi(false);
@@ -412,8 +394,7 @@ Priorities aren't included in your plan.");
   const getProfileSnapshot = (): ProfileSnapshot => ({
     clubLevel,
     equippedFacilities: { ...equippedFacilities },
-    unlockedMasteries: 
-{ ...unlockedMasteries },
+    unlockedMasteries: { ...unlockedMasteries },
     archetypeLevels: { ...archetypeLevels },
   });
 
@@ -421,8 +402,7 @@ Priorities aren't included in your plan.");
     const archData = serverArchetypes?.[snap.archetype];
     if (!archData) return { ok: false, message: 'This build uses an archetype that is no longer available.' };
     const validStats = new Set(Object.keys(archData.base));
-    const cleanPoints: Record<string, 
-number> = {};
+    const cleanPoints: Record<string, number> = {};
     for (const [stat, pts] of Object.entries(snap.addedPoints || {})) {
       if (validStats.has(stat) && pts > 0) cleanPoints[stat] = pts;
     }
@@ -430,8 +410,7 @@ number> = {};
     const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
     const signatureNames: string[] = archData.signatures ?? [];
     const slots = emptySlots();
-    (snap.equippedPlaystyles || []).slice(0, slots.length).forEach((p, i) 
-=> {
+    (snap.equippedPlaystyles || []).slice(0, slots.length).forEach((p, i) => {
       slots[i] = p && !signatureNames.some(sn => samePlaystyle(sn, p)) ? p : '';
     });
 
@@ -443,8 +422,7 @@ number> = {};
     setSmLevel(clamp(snap.smLevel, starCaps.sm.min, starCaps.sm.max));
     setWfLevel(clamp(snap.wfLevel, starCaps.wf.min, starCaps.wf.max));
     setEquippedPlaystyles(slots);
-    setEquippedSpecialization(sn
-ap.equippedSpecialization ?? null);
+    setEquippedSpecialization(snap.equippedSpecialization ?? null);
     
     setClubLevel(snap.clubLevel);
     setEquippedFacilities(snap.equippedFacilities || {});
@@ -482,8 +460,7 @@ ap.equippedSpecialization ?? null);
 
   const handleFacTouchStart = (e: React.TouchEvent) => {
     setFacTouchEnd(null);
-    setFacTouchStart(e.targetTouches
-[0].clientX);
+    setFacTouchStart(e.targetTouches[0].clientX);
   };
   const handleFacTouchMove = (e: React.TouchEvent) => setFacTouchEnd(e.targetTouches[0].clientX);
   const handleFacTouchEnd = () => {
@@ -505,8 +482,7 @@ ap.equippedSpecialization ?? null);
       const state = { l10: !!cur.l10, l30: !!cur.l30, l55: !!cur.l55 };
       if (tier === 'l10') {
         const on = !state.l10;
-        return { ...prev, [archName]: 
-{ l10: on, l30: on ? state.l30 : false, l55: on ? state.l55 : false } };
+        return { ...prev, [archName]: { l10: on, l30: on ? state.l30 : false, l55: on ? state.l55 : false } };
       }
       if (tier === 'l30') {
         const on = !state.l30;
@@ -531,8 +507,7 @@ ap.equippedSpecialization ?? null);
       mods["Strength"] = (mods["Strength"] || 0) + hModRaw + wModRaw;
       mods["Acceleration"] = (mods["Acceleration"] || 0) - hModRaw - wModRaw;
       mods["Agility"] = (mods["Agility"] || 0) - hModRaw - wModRaw;
-      mods["Balance"] = (mods["Balance"] || 0) - hModRaw 
-+ wModRaw;
+      mods["Balance"] = (mods["Balance"] || 0) - hModRaw + wModRaw;
     }
     return mods;
   }, [height, weight, activeBounds]);
@@ -543,8 +518,7 @@ ap.equippedSpecialization ?? null);
     }, 0);
   }, [equippedFacilities]);
 
-  const totalClubBudget = CLUB_BUDGETS[clubLevel] || 
-1000000;
+  const totalClubBudget = CLUB_BUDGETS[clubLevel] || 1000000;
   const remainingBudget = totalClubBudget - totalFacilityCost;
 
   const facilityModifiers = useMemo(() => {
@@ -553,8 +527,7 @@ ap.equippedSpecialization ?? null);
       const facility = FACILITIES[name];
       if (facility) {
         const boostAmount = facility.boosts[tier - 1];
-        facility.stats.forEach(stat => { mods[stat] = (mods[stat] || 0) + 
-boostAmount; });
+        facility.stats.forEach(stat => { mods[stat] = (mods[stat] || 0) + boostAmount; });
       }
     });
     return mods;
@@ -565,8 +538,7 @@ boostAmount; });
     Object.entries(unlockedMasteries).forEach(([arch, status]) => {
       const archMastery = MASTERIES[arch];
       if (!archMastery) return;
-      if (status.l10 && archMastery.l10) Object.entries(a
-rchMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
+      if (status.l10 && archMastery.l10) Object.entries(archMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
       if (status.l30 && archMastery.l30) Object.entries(archMastery.l30).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
       if (status.l55 && archMastery.l55) Object.entries(archMastery.l55).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; }); 
     });
@@ -574,8 +546,7 @@ rchMastery.l10).forEach(([s, v]) => { mods[s] = (mods[s] || 0) + v; });
   }, [unlockedMasteries]);
 
   const currentStats = useMemo(() => {
-    if (!serverArchetypes || !serverArchetypes[archetype]) 
-return null;
+    if (!serverArchetypes || !serverArchetypes[archetype]) return null;
     const computed: Record<string, number> = {};
     const baseObj = serverArchetypes[archetype].base;
 
@@ -594,8 +565,7 @@ return null;
   }, [serverArchetypes, archetype, physicalModifiers, facilityModifiers, masteryModifiers, addedPoints]);
 
   const spentAp = useMemo(() => {
-    if (!serverArchetypes || !serverArchetypes[archetype]) 
-return 0;
+    if (!serverArchetypes || !serverArchetypes[archetype]) return 0;
     let total = 0;
     for (const statKey in addedPoints) {
       const caps = getStatCaps(archetype, statKey);
@@ -603,8 +573,7 @@ return 0;
       const pointsAdded = addedPoints[statKey] || 0;
       total += getCostForPoints(archetype, statKey, rawBase, pointsAdded);
     }
-    const starCaps = ARCHETYPE_STAR_CAPS[archetype] || 
-ARCHETYPE_STAR_CAPS['Finisher'];
+    const starCaps = ARCHETYPE_STAR_CAPS[archetype] || ARCHETYPE_STAR_CAPS['Finisher'];
     total += getTotalStarCost(starCaps.sm.tier, starCaps.sm.min, smLevel);
     total += getTotalStarCost(starCaps.wf.tier, starCaps.wf.min, wfLevel);
     return total;
@@ -633,8 +602,7 @@ ARCHETYPE_STAR_CAPS['Finisher'];
     for (const req of reqs) {
       const statName = req.stat;
       const targetVal = req.min;
-      const caps = 
-getStatCaps(archetype, statName);
+      const caps = getStatCaps(archetype, statName);
       const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[statName] || 70;
       const currentInvested = addedPoints[statName] || 0;
       const userStatWithoutMods = rawBase + currentInvested;
@@ -699,8 +667,7 @@ getStatCaps(archetype, statName);
     }
   };
 
-  const handleUnlockPlaystyle = (upgrades: Record<string, 
-number>) => {
+  const handleUnlockPlaystyle = (upgrades: Record<string, number>) => {
     if (!upgrades || Object.keys(upgrades).length === 0) return;
     setAddedPoints(prev => {
       const next = { ...prev };
@@ -711,8 +678,7 @@ number>) => {
 
   const handleStarChange = (type: 'sm' | 'wf', targetValue: number) => {
     const caps = activeStarCaps[type];
-    let safeTarget = 
-Math.max(caps.min, Math.min(caps.max, targetValue));
+    let safeTarget = Math.max(caps.min, Math.min(caps.max, targetValue));
     const currentLevel = type === 'sm' ? smLevel : wfLevel;
     const currentCost = getTotalStarCost(caps.tier, caps.min, currentLevel);
     const targetCost = getTotalStarCost(caps.tier, caps.min, safeTarget);
@@ -720,8 +686,7 @@ Math.max(caps.min, Math.min(caps.max, targetValue));
     if (targetCost - currentCost > availableAp) {
        let affordableLevel = currentLevel;
        let costAccumulator = currentCost;
-       const costs = 
-STAR_UPGRADE_COSTS[caps.tier];
+       const costs = STAR_UPGRADE_COSTS[caps.tier];
        for (let i = currentLevel + 1; i <= safeTarget; i++) {
          let stepCost = costs[i];
          if (costAccumulator + stepCost <= currentCost + availableAp) { affordableLevel++; costAccumulator += stepCost; } 
@@ -733,8 +698,7 @@ STAR_UPGRADE_COSTS[caps.tier];
     else setWfLevel(safeTarget);
   };
 
-  const handleSliderChange = 
-(statKey: string, targetValue: number) => {
+  const handleSliderChange = (statKey: string, targetValue: number) => {
     if (!serverArchetypes || !serverArchetypes[archetype]) return;
     const caps = getStatCaps(archetype, statKey);
     const rawBase = caps.min || serverArchetypes[archetype].base[statKey] || 70;
@@ -773,8 +737,7 @@ STAR_UPGRADE_COSTS[caps.tier];
 
     setAddedPoints(prev => {
       const next = { ...prev };
-      if (targetInvested <= 0) delete 
-next[statKey]; 
+      if (targetInvested <= 0) delete next[statKey]; 
       else next[statKey] = targetInvested;
       return next;
     });
@@ -792,8 +755,7 @@ next[statKey];
   const activeMasteriesCount = Object.values(unlockedMasteries).reduce((count, status) => count + (status.l10 ? 1 : 0) + (status.l30 ? 1 : 0) + (status.l55 ? 1 : 0), 0);
   const masteryProgressPct = Math.round((activeMasteriesCount / (Object.keys(MASTERIES).length * 3)) * 100);
   const activeFacilitiesCount = Object.keys(equippedFacilities).length;
-  const isPsPlusUnlocked = getSignatureUpgradesAt(progressionData, 
-level) > 0;
+  const isPsPlusUnlocked = getSignatureUpgradesAt(progressionData, level) > 0;
   
   const specPerk = equippedSpecialization
     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk ?? null
@@ -824,8 +786,7 @@ level) > 0;
   }, [equippedFacilities]);
   const fac1 = facilityPlaystyles[0] || null;
   const fac2 = facilityPlaystyles[1] || null;
-  const specPlaystyle = equippedSpecialization ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === 
-equippedSpecialization)?.perk : null;
+  const specPlaystyle = equippedSpecialization ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk : null;
 
   return {
     level, setLevel,
@@ -839,8 +800,7 @@ equippedSpecialization)?.perk : null;
     equippedFacilities,
     unlockedMasteries,
     equippedPlaystyles, setEquippedPlaystyles,
-    equippedSpecialization, 
-setEquippedSpecialization,
+    equippedSpecialization, setEquippedSpecialization,
     expandedPerk, setExpandedPerk,
     activeTab, setActiveTab,
     activeModal, setActiveModal,
@@ -865,16 +825,14 @@ setEquippedSpecialization,
     maxAp, activeBounds, activeStarCaps,
     physicalModifiers, facilityModifiers, masteryModifiers,
     currentStats, availableAp, faceStats, accelerate,
-    masteryProgressPct, 
-activeMasteriesCount, activeFacilitiesCount,
+    masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, specPlaystyle, sig1, sig2,
     activePsPlus: sig1.name, basePsPlus: signatureNames[0] || 'None',
     psPlusChoice: 'signature' as any, setPsPlusMode: (() => {}) as any,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
-    handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, 
-handleSelectFacilityView,
+    handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization, handleUnlockPlaystyle,
