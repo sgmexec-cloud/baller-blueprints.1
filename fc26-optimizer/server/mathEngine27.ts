@@ -9,7 +9,8 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   Pace: ["Acceleration", "SprintSpeed"],
   Shooting: ["AttackPositioning", "Finishing", "ShotPower", "LongShots", "Volleys", "Penalties"],
   Passing: ["Vision", "Crossing", "FKAccuracy", "ShortPassing", "LongPassing", "Curve"],
-  Dribbling: ["Agility", "Balance", "Reactions", "BallControl", "Dribbling", "Composure"],
+  Dribbling: ["Agility", "Balance", 
+"Reactions", "BallControl", "Dribbling", "Composure"],
   Defending: ["Interceptions", "HeadingAccuracy", "DefAwareness", "StandingTackle", "SlidingTackle"],
   Physicality: ["Jumping", "Stamina", "Strength", "Aggression"],
   "Skill Moves": ["SkillMoves"],
@@ -44,6 +45,33 @@ export const STANDARD_ATTRS = [
 // Skill Moves / Weak Foot are paid for separately (stars-first) and are never part of the attribute pool
 const STAR_KEYS = new Set(['skillmoves', 'weakfoot']);
 
+/**
+ * Attribute Priorities (tier-gated on the server).
+ * All attribute values are IN-GAME values (they include height/weight, facility and mastery boosts).
+ *  - weights: 1-5, how much the user wants an attribute (Premium and above)
+ *  - min / max: target floor / hard 
+ceiling (Premium+ and above)
+ *  - exclude: skipped unless nothing else can use the AP (VIP, soft)
+ */
+export interface AttributePriorities {
+  weights?: Record<string, number>;
+  min?: Record<string, number>;
+  max?: Record<string, number>;
+  exclude?: string[];
+}
+
+export interface PriorityReportRow {
+  attribute: string;
+  weight: number | null;
+  min: number | null;
+  max: number | null;
+  excluded: boolean;
+  final: number;          // in-game value reached (points + boosts)
+  minMet: boolean | null; // null when no minimum was set
+  pointsAdded: number;
+  apSpent: number;
+}
+
 export interface StatResult {
   attribute: string;
   base: number;
@@ -65,6 +93,8 @@ export interface MathEngineResult {
   weakFootLevel?: number;
   /** AP the engine itself spent on Skill Moves / Weak Foot (0 when starsPrepaid is true) */
   starApSpent?: number;
+  /** Only present when attribute priorities were used */
+  priorityReport?: PriorityReportRow[];
 }
 
 export interface ScoutingBlueprint {
@@ -84,13 +114,15 @@ export interface ScoutingBlueprint {
 
 function normAttr(s: string): string { 
   let n = s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); 
-  if (n.startsWith('att') && n.includes('pos')) return 'attackpositioning';
+  if (n.startsWith('att') && n.includes('pos')) return 
+'attackpositioning';
   if (n.includes('fk') && n.includes('acc')) return 'fkaccuracy';
   if (n.startsWith('def') && n.includes('awar')) return 'defawareness';
   if (n.includes('stand') && n.includes('tack')) return 'standingtackle';
   if (n.includes('slid') && n.includes('tack')) return 'slidingtackle';
   if (n.startsWith('short') && n.includes('pass')) return 'shortpassing';
-  if (n.startsWith('long') && n.includes('pass')) return 'longpassing';
+  if (n.startsWith('long') && n.includes('pass')) return 
+'longpassing';
   if (n.includes('head') && n.includes('acc')) return 'headingaccuracy';
   if (n.includes('sprint')) return 'sprintspeed';
   return n;
@@ -114,27 +146,33 @@ function getUpgradeCost(costDict: any, archKey: string, attrKey: string, rawBase
   return archDict[dictAttrKey]?.[nextLevel] ?? 999999;
 }
 
-// 👉 NEW: Playstyle conflict utility directly in the engine to filter AI hallucinations
+// Playstyle conflict utility directly in the engine to filter AI hallucinations
 function isPlaystyleConflict(targetStyle: string, equippedPlusStyles: string[]): boolean {
   const normalize = (s: string) => s.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  const targetBase = normalize(targetStyle);
+  const targetBase = 
+normalize(targetStyle);
   return equippedPlusStyles.some(plusStyle => normalize(plusStyle) === targetBase);
 }
+
+// Cap used by the weighted allocator when the USER gave an attribute a weight
+const WEIGHT_CAPS: Record<number, number> = { 1: 85, 2: 87, 3: 90, 4: 93, 5: 95 };
 
 export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
-  customSlots: number = blueprint.playstyles.length,
+  customSlots: number = 
+blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
   foundationBoosts: Record<string, number> = {},
-  options: { starsPrepaid?: boolean } = {}
+  options: { starsPrepaid?: boolean; priorities?: AttributePriorities } = {}
 ): MathEngineResult {
   const ALL_ARCHETYPES = getAllArchetypes("FC27");
   const COST_DICT = getCostDict("FC27");
   const PLAYSTYLES = getPlaystyles("FC27");
 
   const archKey = blueprint.archetype;
-  const archetypeRows = ALL_ARCHETYPES.filter((r: any) => normAttr(r.Archetype) === normAttr(archKey));
+  const archetypeRows = ALL_ARCHETYPES.filter((r: any) 
+=> normAttr(r.Archetype) === normAttr(archKey));
 
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
@@ -144,7 +182,8 @@ export function runMathEngine(
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    const b = parseInt(row["Base Value"], 10);
+    const b = parseInt(row["Base 
+Value"], 10);
     const baseVal = Number.isNaN(b) ? 70 : b;
     const m = parseInt(row["Max Value"], 10);
     const maxVal = Number.isNaN(m) ? 99 : m;
@@ -162,9 +201,51 @@ export function runMathEngine(
     normalizedBoosts[normAttr(key)] = val;
   }
 
+  // ── ATTRIBUTE PRIORITIES (all optional; with none given the engine behaves exactly as before) ──
+  const pr = options.priorities ?? {};
+  const toMap = (rec?: 
+Record<string, number>): Record<string, number> => {
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(rec ?? {})) {
+      const m = matchAttr(k, attrNames);
+      if (m && Number.isFinite(v)) out[m] = v;
+    }
+    return out;
+  };
+  const userWeights = toMap(pr.weights);
+  const userMin = toMap(pr.min);
+  const userMax = toMap(pr.max);
+  const excluded = new 
+Set<string>();
+  for (const e of pr.exclude ?? []) {
+    const m = matchAttr(e, attrNames);
+    if (m) excluded.add(m);
+  }
+  // A minimum above its own maximum makes no sense: the ceiling wins
+  for (const k of Object.keys(userMin)) {
+    if (userMax[k] !== undefined && userMin[k] > userMax[k]) delete userMin[k];
+  }
+  const hasPriorities =
+    Object.keys(userWeights).length > 0 || Object.keys(userMin).length > 
+0 ||
+    Object.keys(userMax).length > 0 || excluded.size > 0;
+
+  // The AI's own picks act as soft priors: core 3, secondary 2, tertiary 1
+  const rolePrior = new Map<string, { w: number; cap: number }>();
+  const setRole = (list: string[] | undefined, w: number, cap: number) => {
+    (list ?? []).forEach(a => {
+      const m = matchAttr(a, attrNames);
+      if (m && !rolePrior.has(m)) rolePrior.set(m, { w, cap });
+    });
+  };
+  setRole(blueprint.coreAttributes, 3, 95);
+  setRole(blueprint.secondaryAttributes, 2, 90);
+  setRole(blueprint.tertiaryAttributes, 1, 85);
+
   function getHardCap(attrName: string, defaultCap: number): number {
     const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
-    return isPreferred ? 99 : defaultCap;
+    return isPreferred ? 99 : 
+defaultCap;
   }
   
   function getEffectiveCap(attrName: string, absoluteCap: number): number {
@@ -172,14 +253,21 @@ export function runMathEngine(
     return Math.max(0, absoluteCap - boost);
   }
 
+  // The user's hard ceiling, converted to a raw (pre-boost) value. 99+ means "no ceiling".
+  function userCeiling(attr: string): number {
+    const c = userMax[attr];
+    return c === undefined ? 999 : getEffectiveCap(attr, c);
+  }
+
   function upgradeOne(attr: string, hardCap: number = 99): boolean {
     const matched = matchAttr(attr, allNames);
     if (!matched) return false;
     const s = stats[matched];
     
-    if (s.current >= Math.min(s.max, hardCap)) return false;
+    if (s.current >= Math.min(s.max, hardCap, userCeiling(matched))) return false;
     
-    const cost = getUpgradeCost(COST_DICT, archKey, matched, s.base, s.pointsAdded);
+    const cost = getUpgradeCost(COST_DICT, 
+archKey, matched, s.base, s.pointsAdded);
     if (cost > remainingAP) return false;
     
     s.current += 1;
@@ -202,8 +290,10 @@ export function runMathEngine(
     const m = matchAttr(attr, allNames);
     if (!m) return Infinity;
     const s = stats[m];
-    const t = getEffectiveCap(m, target);
+    const t = getEffectiveCap(m, 
+target);
     if (t > s.max) return Infinity;
+    if (t > userCeiling(m)) return Infinity; // the user's ceiling blocks this requirement
     
     let total = 0;
     for (let lvl = s.current; lvl < t; lvl++) {
@@ -222,13 +312,12 @@ export function runMathEngine(
 
   const apBeforeStars = remainingAP;
   if (!options.starsPrepaid) {
-    if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
+    if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", 
+blueprint.skillMoves);
     if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
   }
   const starApSpent = apBeforeStars - remainingAP;
 
-  // 👉 NEW: We resolve signatures *before* processing standard styles to check for conflicts
-  // We don't have signatureUpgrades here yet, but we have blueprint.playstylePlus from the AI
   const allEquippedPlus = [...blueprint.playstylePlus]; 
   if (blueprint.specialisationPlaystylePlus) {
     allEquippedPlus.push(blueprint.specialisationPlaystylePlus);
@@ -237,7 +326,7 @@ export function runMathEngine(
   const equippedPlaystyles: string[] = [];
   const skippedPlaystyles: string[] = [];
   
-  // 👉 NEW: Filter active playstyles to remove any standard styles that are already in the PS+ list
+  // Remove any standard styles that are already in the PS+ list
   const activePlaystyles = blueprint.playstyles
     .filter(ps => !isPlaystyleConflict(ps.name, allEquippedPlus))
     .slice(0, customSlots);
@@ -255,7 +344,8 @@ export function runMathEngine(
       .filter(([a, v]) => a && v)
       .map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
       
-    const totalCost = reqs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    const totalCost = reqs.reduce((sum, r) => sum + 
+costToReach(r.attr, r.val), 0);
     
     if (totalCost <= remainingAP) {
       reqs.forEach(r => upgradeToMin(r.attr, r.val));
@@ -266,10 +356,21 @@ export function runMathEngine(
   }
 
   if (blueprint.specialisationMinAttrs) {
-    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
+    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, 
+r.val), 0);
     if (totalSpecCost <= remainingAP) {
        blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
     }
+  }
+
+  // PRIORITIES, step 1: chase the user's minimum targets, cheapest first
+  if (hasPriorities) {
+    const mins = Object.entries(userMin)
+      .map(([a, t]) => ({ a, t, cost: costToReach(a, t) }))
+      .filter(x => 
+Number.isFinite(x.cost))
+      .sort((x, y) => x.cost - y.cost);
+    for (const m of mins) upgradeToMin(m.a, m.t);
   }
   
   if (preferredAttributes.length > 0) {
@@ -286,7 +387,8 @@ export function runMathEngine(
         
       for (const matched of candidates) {
         const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
-        if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
+        if (focusSpent + cost <= focusBudget && remainingAP >= 
+cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
             focusSpent += cost;
@@ -300,7 +402,8 @@ export function runMathEngine(
 
   const postTaxAP = remainingAP;
   const primaryBudget = postTaxAP * 0.55;
-  const secondaryBudget = postTaxAP * 0.30;
+  const secondaryBudget = 
+postTaxAP * 0.30;
   
   function fillBucket(attrs: string[], budgetLimit: number, baseHardCap: number) {
     let bucketSpent = 0;
@@ -312,7 +415,8 @@ export function runMathEngine(
         .filter(m => {
           if (!m) return false;
           const dynamicCap = getHardCap(m, baseHardCap);
-          const effectiveCap = getEffectiveCap(m, dynamicCap);
+          const effectiveCap = 
+getEffectiveCap(m, dynamicCap);
           return stats[m].current < Math.min(effectiveCap, stats[m].max);
         })
         .sort((a, b) => stats[a!].current - stats[b!].current);
@@ -320,7 +424,8 @@ export function runMathEngine(
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
+        const cost = getUpgradeCost(COST_DICT, 
+archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, effectiveCap);
@@ -334,18 +439,53 @@ export function runMathEngine(
     }
   }
 
-  fillBucket(blueprint.coreAttributes, primaryBudget, 95);
-  fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
-  fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
+  // PRIORITIES, step 2: weighted greedy. Each step buys the point with the best weight^2 / cost.
+  // Weight = the user's 1-5 if given, otherwise the AI's role (core 3 / secondary 2 / tertiary 1).
+  function weightedFill() {
+    let progress = true;
+    while (progress && remainingAP > 0) {
+      progress = false;
+      let best: string | null = null;
+      let bestScore = 0;
+      for (const a of attrNames) {
+        if (excluded.has(a)) continue;
+        const uw = userWeights[a];
+        const rp = rolePrior.get(a);
+        const w = uw ?? rp?.w ?? 0;
+        if (w <= 0) continue;
+        const baseCap = uw !== undefined ? (WEIGHT_CAPS[Math.round(uw)] ?? 90) : (rp?.cap ?? 85);
+        const s = stats[a];
+        const limit = Math.min(s.max, getEffectiveCap(a, getHardCap(a, baseCap)), userCeiling(a));
+        if (s.current >= limit) continue;
+        const cost = getUpgradeCost(COST_DICT, archKey, a, s.base, s.pointsAdded);
+        if (cost >= 999999 || cost > remainingAP) continue;
+        const score = (w * w) / 
+Math.max(cost, 1);
+        if (score > bestScore) { bestScore = score; best = a; }
+      }
+      if (best && upgradeOne(best, 99)) progress = true;
+    }
+  }
+
+  if (hasPriorities) {
+    weightedFill();
+  } else {
+    fillBucket(blueprint.coreAttributes, primaryBudget, 95);
+    fillBucket(blueprint.secondaryAttributes, secondaryBudget, 90);
+    fillBucket(blueprint.tertiaryAttributes, remainingAP, 85); 
+  }
 
   let progressRoundRobin = true;
   const spilloverPool: { attr: string; cap: number }[] = [];
   
-  const sortedAttrs = [...attrNames].sort((a, b) => {
-    const costA = getUpgradeCost(COST_DICT, archKey, a, stats[a].base, stats[a].pointsAdded);
-    const costB = getUpgradeCost(COST_DICT, archKey, b, stats[b].base, stats[b].pointsAdded);
-    return costA - costB;
-  });
+  const sortedAttrs = [...attrNames]
+    .filter(a => !(hasPriorities && excluded.has(a))) // excluded attributes wait for the last-resort sweep
+    .sort((a, b) => {
+      const costA = getUpgradeCost(COST_DICT, archKey, a, stats[a].base, 
+stats[a].pointsAdded);
+      const costB = getUpgradeCost(COST_DICT, archKey, b, stats[b].base, stats[b].pointsAdded);
+      return costA - costB;
+    });
 
   sortedAttrs.forEach(a => {
     spilloverPool.push({ attr: a, cap: 99 });
@@ -369,6 +509,7 @@ export function runMathEngine(
     }
   }
 
+  // Last-resort sweep so AP is fully spent (excluded attributes may be used here, ceilings never)
   let microProgress = true;
   while (microProgress && remainingAP > 0) {
     microProgress = false;
@@ -377,7 +518,8 @@ export function runMathEngine(
 
     for (const attr of attrNames) {
       const s = stats[attr];
-      if (s.current >= s.max) continue;
+      if (s.current >= Math.min(s.max, 
+userCeiling(attr))) continue;
       
       const cost = getUpgradeCost(COST_DICT, archKey, attr, s.base, s.pointsAdded);
       if (cost <= remainingAP && cost < lowestCost) {
@@ -388,7 +530,8 @@ export function runMathEngine(
 
     if (cheapestAttr) {
       const effectiveCap = getEffectiveCap(cheapestAttr, 99);
-      const success = upgradeOne(cheapestAttr, effectiveCap);
+      const success = upgradeOne(cheapestAttr, 
+effectiveCap);
       if (success) microProgress = true;
     }
   }
@@ -408,7 +551,8 @@ export function runMathEngine(
 
   const starLevel = (key: string): number | undefined => {
     const n = starNames.find(a => normAttr(a) === key);
-    return n ? stats[n].current : undefined;
+    return n ? stats[n].current : 
+undefined;
   };
 
   const investedPoints: Record<string, number> = {};
@@ -420,6 +564,29 @@ export function runMathEngine(
       investedPoints[uiFriendlyName] = s.pointsAdded;
     }
   });
+
+  let priorityReport: PriorityReportRow[] | undefined;
+  if (hasPriorities) {
+    priorityReport = attrNames
+      .filter(a => userWeights[a] !== undefined || userMin[a] !== undefined || userMax[a] !== undefined || excluded.has(a))
+      .map(a => {
+        const s = stats[a];
+        const boost = normalizedBoosts[normAttr(a)] || 0;
+        const inGame = s.current + boost;
+        return {
+          attribute: STANDARD_ATTRS.find(std => 
+normAttr(std) === normAttr(a)) || a,
+          weight: userWeights[a] ?? null,
+          min: userMin[a] ?? null,
+          max: userMax[a] ?? null,
+          excluded: excluded.has(a),
+          final: inGame,
+          minMet: userMin[a] === undefined ? null : inGame >= userMin[a],
+          pointsAdded: s.pointsAdded,
+          apSpent: s.apSpent,
+        };
+      });
+  }
 
   return {
     stats: statResults,
@@ -433,8 +600,10 @@ export function runMathEngine(
     equippedPlaystyles,
     skippedPlaystyles,
     skillMovesLevel: starLevel('skillmoves'),
-    weakFootLevel: starLevel('weakfoot'),
-    starApSpent
+    weakFootLevel: 
+starLevel('weakfoot'),
+    starApSpent,
+    priorityReport,
   };
 }
 
