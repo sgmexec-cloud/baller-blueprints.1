@@ -165,7 +165,7 @@ export function runMathEngine(
   customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
   foundationBoosts: Record<string, number> = {},
-  options: { starsPrepaid?: boolean; priorities?: AttributePriorities } = {}
+  options: { starsPrepaid?: boolean; priorities?: AttributePriorities; signatureUpgrades?: number } = {}
 ): MathEngineResult {
   const ALL_ARCHETYPES = getAllArchetypes("FC27");
   const COST_DICT = getCostDict("FC27");
@@ -368,7 +368,15 @@ export function runMathEngine(
     }
   }
 
-  if (blueprint.specialisationMinAttrs) {
+  // Only go out of the way to unlock a specialisation when its PlayStyle+ would really be USED on this build
+  // (the AI wants it for this player, and it beats the Signature it would replace). A specialisation that is
+  // reached by chance, because the build's priority attributes happen to cover it, is still unlocked afterwards.
+  const specWorthIt =
+    !!blueprint.specialisationPlaystylePlus &&
+    options.signatureUpgrades !== undefined &&
+    pickSpecialisationSwap(blueprint.archetype, options.signatureUpgrades, blueprint.specialisationPlaystylePlus, buildPlaystyleFit(blueprint)) >= 0;
+
+  if (blueprint.specialisationMinAttrs && specWorthIt) {
     // Specialisation requirements also need the build's own points (boosts don't count)
     const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val, false), 0);
     if (totalSpecCost <= remainingAP) {
@@ -608,6 +616,22 @@ export function runMathEngine(
   };
 }
 
+/**
+ * How well a PlayStyle matches this player (higher = better), from the AI's blueprint:
+ * its own PlayStyle+ picks count most (in order), then its ranked list.
+ */
+export function buildPlaystyleFit(bp: { playstylePlus?: string[]; playstyles?: Array<{ name: string }> }): (name: string) => number {
+  const key = (x: string) => String(x).replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  return (name: string): number => {
+    const k = key(name);
+    const plusIdx = (bp.playstylePlus ?? []).findIndex(p => key(p) === k);
+    const rank = (bp.playstyles ?? []).findIndex(p => key(p.name) === k);
+    const a = plusIdx >= 0 ? 200 - 25 * plusIdx : 0;
+    const b = rank >= 0 ? Math.max(0, 120 - 6 * rank) : 0;
+    return Math.max(a, b);
+  };
+}
+
 const plainName = (x: string) => String(x).replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
 
 /**
@@ -629,17 +653,30 @@ export function pickSpecialisationSwap(
   if (base.length === 0 || !specialisationBonusPlus) return -1;
   const score = (n: string) => (fit ? fit(n) : 0);
 
-  const same = base.findIndex((ps: string) => plainName(ps) === plainName(specialisationBonusPlus));
-  if (same >= 0) return same;
-
   const weakestOf = (indices: number[]): number =>
     indices.reduce((best, i) => (score(base[i]) < score(base[best]) || (score(base[i]) === score(base[best]) && i > best) ? i : best), indices[0]);
 
-  const plain = base.map((_: string, i: number) => i).filter((i: number) => i >= signatureUpgrades);
-  if (plain.length > 0) return weakestOf(plain);
+  const same = base.findIndex((ps: string) => plainName(ps) === plainName(specialisationBonusPlus));
+  let chosen: number;
+  if (same >= 0) {
+    chosen = same;
+  } else {
+    const plain = base.map((_: string, i: number) => i).filter((i: number) => i >= signatureUpgrades);
+    if (plain.length > 0) {
+      chosen = weakestOf(plain);
+    } else {
+      const weakest = weakestOf(base.map((_: string, i: number) => i));
+      chosen = score(specialisationBonusPlus) < score(base[weakest]) ? -1 : weakest;
+    }
+  }
 
-  const weakest = weakestOf(base.map((_: string, i: number) => i));
-  return score(specialisationBonusPlus) < score(base[weakest]) ? -1 : weakest;
+  // Realism guard (only when the player's fit scores are known): the specialisation's PlayStyle+ is used only if the
+  // AI actually wants it for this player, and at least as much as the Signature it would replace.
+  if (fit && chosen >= 0) {
+    if (score(specialisationBonusPlus) <= 0) return -1;
+    if (same < 0 && score(specialisationBonusPlus) < score(base[chosen])) return -1;
+  }
+  return chosen;
 }
 
 /**
