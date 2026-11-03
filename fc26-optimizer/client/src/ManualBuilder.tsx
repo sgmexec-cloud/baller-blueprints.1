@@ -75,6 +75,7 @@ export default function ManualBuilder() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, specPlaystyle, sig1, sig2, activePsPlus, basePsPlus,
     psPlusChoice, setPsPlusMode, handleUnlockPlaystyle,
+    signatureNames, specSwapIndex, setSpecSwapIndex,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
@@ -559,6 +560,11 @@ export default function ManualBuilder() {
         archetype={archetype}
         serverArchetypes={serverArchetypes}
         addedPoints={addedPoints}
+        sig1={sig1}
+        sig2={sig2}
+        signatureNames={signatureNames}
+        specSwapIndex={specSwapIndex}
+        setSpecSwapIndex={setSpecSwapIndex}
       />
 
       {activeModal === 'specializations' && (
