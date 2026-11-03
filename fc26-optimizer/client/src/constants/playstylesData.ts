@@ -1,28 +1,25 @@
 import type { StatReq } from '@/types/builder';
 
-export const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<string, number> }> = {
-  'Shot Stopper': { l10: { 'GK Positioning': 1, 'GK Reflexes': 1 }, l30: { 'GK Reflexes': 1 } },
-  'Sweeper Keeper': { l10: { 'GK Handling': 1, 'GK Diving': 1 }, l30: { 'GK Diving': 1 } },
-  'Progressor': { l10: { 'Long Passing': 1, 'Standing Tackle': 1 }, l30: { 'Standing Tackle': 1 } },
-  'Boss': { l10: { 'Aggression': 1, 'Strength': 1 }, l30: { 'Strength': 1 } },
-  'Disruptor': { l10: { 'Stamina': 1, 'Interceptions': 1 }, l30: { 'Interceptions': 1 } },
-  'Marauder': { l10: { 'Sliding Tackle': 1, 'Sprint Speed': 1 }, l30: { 'Sprint Speed': 1 } },
-  'Recycler': { l10: { 'Def Awareness': 1, 'Short Passing': 1 }, l30: { 'Short Passing': 1 } },
-  'Maestro': { l10: { 'Reactions': 1, 'Ball Control': 1 }, l30: { 'Ball Control': 1 } },
-  'Creator': { l10: { 'FK Accuracy': 1, 'Vision': 1 }, l30: { 'Vision': 1 } },
-  'Spark': { l10: { 'Crossing': 1, 'Dribbling': 1 }, l30: { 'Dribbling': 1 } },
-  'Magician': { l10: { 'Curve': 1, 'Acceleration': 1 }, l30: { 'Acceleration': 1 } },
-  'Finisher': { l10: { 'Finishing': 1, 'Composure': 1 }, l30: { 'Finishing': 1 } }, 
-  'Target': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } },
-  'Target Forward': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 } }
+// Masteries are permanent and apply to every build.
+// Level 10: +1 to both attributes. Level 30: +1 more to the second. Level 55: +1 more to the first (both end on +2).
+export const MASTERIES: Record<string, { l10: Record<string, number>, l30: Record<string, number>, l55: Record<string, number> }> = {
+  'Shot Stopper': { l10: { 'GK Positioning': 1, 'GK Reflexes': 1 }, l30: { 'GK Reflexes': 1 }, l55: { 'GK Positioning': 1 } },
+  'Sweeper Keeper': { l10: { 'GK Handling': 1, 'GK Diving': 1 }, l30: { 'GK Diving': 1 }, l55: { 'GK Handling': 1 } },
+  'Progressor': { l10: { 'Long Passing': 1, 'Standing Tackle': 1 }, l30: { 'Standing Tackle': 1 }, l55: { 'Long Passing': 1 } },
+  'Boss': { l10: { 'Aggression': 1, 'Strength': 1 }, l30: { 'Strength': 1 }, l55: { 'Aggression': 1 } },
+  'Disruptor': { l10: { 'Stamina': 1, 'Interceptions': 1 }, l30: { 'Interceptions': 1 }, l55: { 'Stamina': 1 } },
+  'Marauder': { l10: { 'Sliding Tackle': 1, 'Sprint Speed': 1 }, l30: { 'Sprint Speed': 1 }, l55: { 'Sliding Tackle': 1 } },
+  'Recycler': { l10: { 'Def Awareness': 1, 'Short Passing': 1 }, l30: { 'Short Passing': 1 }, l55: { 'Def Awareness': 1 } },
+  'Maestro': { l10: { 'Reactions': 1, 'Ball Control': 1 }, l30: { 'Ball Control': 1 }, l55: { 'Reactions': 1 } },
+  'Creator': { l10: { 'FK Accuracy': 1, 'Vision': 1 }, l30: { 'Vision': 1 }, l55: { 'FK Accuracy': 1 } },
+  'Spark': { l10: { 'Crossing': 1, 'Dribbling': 1 }, l30: { 'Dribbling': 1 }, l55: { 'Crossing': 1 } },
+  'Magician': { l10: { 'Curve': 1, 'Acceleration': 1 }, l30: { 'Acceleration': 1 }, l55: { 'Curve': 1 } },
+  'Finisher': { l10: { 'Finishing': 1, 'Composure': 1 }, l30: { 'Finishing': 1 }, l55: { 'Composure': 1 } },
+  'Target': { l10: { 'Balance': 1, 'Jumping': 1 }, l30: { 'Jumping': 1 }, l55: { 'Balance': 1 } }
 };
 
 export const SIGNATURE_PERKS_DATA: Record<string, { name: string; level: number; desc: string }[]> = {
   "Target": [
-    { name: "No Look Finisher", level: 10, desc: "Shoot with your back to the goal in the box to gain a short boost to Shot Power, Finishing, and Balance." },
-    { name: "Physical Shooter", level: 45, desc: "Shield off an opponent, then shoot in the box for a short boost to Strength, Shot Power, and Balance." }
-  ],
-  "Target Forward": [ 
     { name: "No Look Finisher", level: 10, desc: "Shoot with your back to the goal in the box to gain a short boost to Shot Power, Finishing, and Balance." },
     { name: "Physical Shooter", level: 45, desc: "Shield off an opponent, then shoot in the box for a short boost to Strength, Shot Power, and Balance." }
   ],
@@ -182,8 +179,7 @@ export const FIXED_PLAYSTYLE_PLUS: Record<string, string> = {
   'Spark': 'Trickster',
   'Magician': 'Technical',
   'Finisher': 'Low Driven Shot',
-  'Target': 'Precision Header',
-  'Target Forward': 'Precision Header'
+  'Target': 'Precision Header'
 };
 
 export const PLAYSTYLES_DATA: { name: string; category: string; reqs: StatReq[] }[] = [
