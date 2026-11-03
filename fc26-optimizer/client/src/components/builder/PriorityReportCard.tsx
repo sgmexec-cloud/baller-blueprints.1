@@ -23,8 +23,7 @@ export const PriorityReportCard: React.FC<Props> = ({ report, onDismiss }) => {
   return (
     <div className="rounded-xl border border-[#26334A] bg-[#0D1220] p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[9px] font-bold text-[#8E9AAF] uppercase 
-tracking-widest">Priority Results</span>
+        <span className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest">Priority Results</span>
         {onDismiss && (
           <button onClick={onDismiss} className="text-[#8E9AAF] text-xs" aria-label="Dismiss">✕</button>
         )}
@@ -33,8 +32,7 @@ tracking-widest">Priority Results</span>
         {report.map(r => (
           <div key={r.attribute} className="flex items-center justify-between text-[10px]">
             <span className="text-[#F4F7FB] font-semibold truncate pr-2">{r.attribute}</span>
-            <span className="flex 
-items-center gap-2 shrink-0">
+            <span className="flex items-center gap-2 shrink-0">
               {r.minMet !== null && (
                 <span className={r.minMet ? 'text-[#21E6A4] font-bold' : 'text-[#ff8a8a] font-bold'}>
                   {r.minMet ? `✓ min ${r.min}` : `✗ min ${r.min}`}
@@ -42,8 +40,7 @@ items-center gap-2 shrink-0">
               )}
               {r.max !== null && <span className="text-[#8E9AAF]">max {r.max}</span>}
               {r.excluded && <span className="text-[#8E9AAF]">skipped{r.pointsAdded > 0 ? ' (used last)' : ''}</span>}
-              <span 
-className="text-[#facc15] font-black w-6 text-right">{r.final}</span>
+              <span className="text-[#facc15] font-black w-6 text-right">{r.final}</span>
             </span>
           </div>
         ))}
