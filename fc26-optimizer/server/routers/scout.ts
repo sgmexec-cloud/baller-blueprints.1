@@ -7,7 +7,7 @@ import {
   getSpecialisations, 
   getAllArchetypes 
 } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles, pickSpecialisationSwap } from "../mathEngine27";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles, pickSpecialisationSwap, buildPlaystyleFit } from "../mathEngine27";
 import { rolesToPositions } from "../positionMap";
 import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
 import { PREVIEW_COOKIE } from "../tierPreview";
@@ -485,7 +485,7 @@ ${filterRules.join("\n")}
         customSlots, 
         input.preferredAttributes || [], 
         input.foundationBoosts,
-        { starsPrepaid: input.starsPrepaid, priorities }
+        { starsPrepaid: input.starsPrepaid, priorities, signatureUpgrades }
       );
 
       let earnedSpecPlaystyle: string | undefined = undefined;
@@ -506,16 +506,8 @@ ${filterRules.join("\n")}
         }
       }
 
-      // How well a PlayStyle matches this player: the AI's own PlayStyle+ picks count most, then its ranked list
-      const fitKey = (x: string) => String(x).replace(/\+/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-      const playstyleFit = (name: string): number => {
-        const key = fitKey(name);
-        const plusIdx = input.blueprint.playstylePlus.findIndex(p => fitKey(p) === key);
-        const rank = input.blueprint.playstyles.findIndex(p => fitKey(p.name) === key);
-        const a = plusIdx >= 0 ? 200 - 25 * plusIdx : 0;
-        const b = rank >= 0 ? Math.max(0, 120 - 6 * rank) : 0;
-        return Math.max(a, b);
-      };
+      // How well each PlayStyle matches this player (the AI's own picks and ranking)
+      const playstyleFit = buildPlaystyleFit(input.blueprint);
 
       // The specialisation's PlayStyle+ replaces ONE Signature: the one that is not PlayStyle+ yet, or, when both
       // are, the weakest of the three for this player (-1 = the specialisation's PlayStyle+ is the one left out)
