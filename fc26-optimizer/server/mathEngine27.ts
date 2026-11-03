@@ -142,6 +142,13 @@ function getUpgradeCost(costDict: any, archKey: string, attrKey: string, rawBase
   return archDict[dictAttrKey]?.[nextLevel] ?? 999999;
 }
 
+// The archetype's Signature PlayStyles (always equipped, they take no slot)
+function getSignatureNames(archetypeName: string): string[] {
+  const arch = getArchetypeProfiles("FC27").find((a: any) => normAttr(a.Archetype) === normAttr(archetypeName));
+  if (!arch || !arch.Signature_PlayStyles) return [];
+  return String(arch.Signature_PlayStyles).split(/[\/,]/).map((x: string) => x.trim()).filter(Boolean);
+}
+
 // Playstyle conflict utility directly in the engine to filter AI hallucinations
 function isPlaystyleConflict(targetStyle: string, equippedPlusStyles: string[]): boolean {
   const normalize = (s: string) => s.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
@@ -303,7 +310,10 @@ export function runMathEngine(
   }
   const starApSpent = apBeforeStars - remainingAP;
 
-  const allEquippedPlus = [...blueprint.playstylePlus]; 
+  // A standard PlayStyle can't duplicate one that is already equipped: the Signatures, or the specialisation's PlayStyle+.
+  // (The AI's own "playstylePlus" list is NOT used here: those styles are not equipped in the current system,
+  //  so blocking them would only throw away the AI's top-ranked picks.)
+  const allEquippedPlus = getSignatureNames(blueprint.archetype);
   if (blueprint.specialisationPlaystylePlus) {
     allEquippedPlus.push(blueprint.specialisationPlaystylePlus);
   }
@@ -578,12 +588,22 @@ export function runMathEngine(
   };
 }
 
+/**
+ * The archetype's Signature PlayStyles as they appear on the build.
+ * Signatures upgrade to PlayStyle+ one by one (signatureUpgrades). A specialisation's PlayStyle+ does NOT add a new
+ * entry: it replaces one Signature (the first one, which is what the builder screen shows). If it is the same
+ * PlayStyle as a Signature, that Signature is simply shown as PlayStyle+.
+ */
 export function resolveSignaturePlaystyles(archetypeName: string, signatureUpgrades: number, specialisationBonusPlus?: string): string[] {
-  const ALL_PROFILES = getArchetypeProfiles("FC27");
-  const arch = ALL_PROFILES.find((a: any) => normAttr(a.Archetype) === normAttr(archetypeName));
-  if (!arch) return [];
-  const baseSignatures = arch.Signature_PlayStyles.split(",").map((s: string) => s.trim());
-  const upgradedSignatures = baseSignatures.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
-  if (specialisationBonusPlus) upgradedSignatures[3] = specialisationBonusPlus.includes('+') ? specialisationBonusPlus : `${specialisationBonusPlus}+`;
-  return upgradedSignatures.slice(0, 4);
+  const base = getSignatureNames(archetypeName).slice(0, 4);
+  if (base.length === 0) return [];
+  const signatures = base.map((ps: string, index: number) => index < signatureUpgrades ? `${ps}+` : ps);
+  if (specialisationBonusPlus) {
+    const norm = (x: string) => x.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    const specName = specialisationBonusPlus.replace(/\+/g, '').trim();
+    const same = base.findIndex((ps: string) => norm(ps) === norm(specName));
+    if (same >= 0) signatures[same] = `${base[same]}+`;
+    else signatures[0] = `${specName}+`;
+  }
+  return signatures;
 }
