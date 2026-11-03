@@ -1,8 +1,8 @@
 import type { MasteryState } from '@/types/buildSnapshot';
 
-/** Masteries complete at archetype level 10 and level 30. */
+/** Masteries complete at archetype level 10, level 30 and level 55. */
 export function masteryFromLevel(level: number): MasteryState {
-  return { l10: level >= 10, l30: level >= 30 };
+  return { l10: level >= 10, l30: level >= 30, l55: level >= 55 };
 }
 
 /**
