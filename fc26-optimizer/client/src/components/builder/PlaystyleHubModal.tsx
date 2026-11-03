@@ -5,14 +5,25 @@ import type { PlaystyleHubModalProps, StatReq } from '@/types/builder';
 
 type Notice = { type: 'success' | 'error'; text: string };
 
+type SigSlot = { name: string; type: string };
+
+// The two Signature PlayStyles (and where the specialisation's PlayStyle+ sits)
+type HubProps = PlaystyleHubModalProps & {
+  sig1?: SigSlot;
+  sig2?: SigSlot;
+  /** The archetype's own Signature names, in order (before any specialisation swap) */
+  signatureNames?: string[];
+  /** 0 or 1 = the Signature the specialisation's PlayStyle+ replaces, -1 = none */
+  specSwapIndex?: number;
+  setSpecSwapIndex?: (index: number) => void;
+};
+
 const stripPlus = (s: string) => (s || '').replace(/\+/g, '').trim();
 
-export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
+export const PlaystyleHubModal: React.FC<HubProps> = ({
   isOpen,
   setIsOpen,
   availableAp,
-  activePsPlus,
-  isPsPlusUnlocked,
   equippedSpecialization,
   equippedPlaystyles,
   selectedPsView,
@@ -23,11 +34,13 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
   archetype,
   serverArchetypes,
   addedPoints,
-  basePsPlus,
   specPlaystyle,
-  psPlusChoice,
-  setPsPlusMode,
   handleUnlockPlaystyle,
+  sig1,
+  sig2,
+  signatureNames = [],
+  specSwapIndex = -1,
+  setSpecSwapIndex,
 }) => {
   const [notice, setNotice] = useState<Notice | null>(null);
 
@@ -40,6 +53,8 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
   if (isOpen !== 'playstyles') return null;
 
   const hasSpec = !!equippedSpecialization && !!specPlaystyle;
+  // The specialisation's PlayStyle+ can be the very same PlayStyle as a Signature: then nothing is replaced
+  const specSameAsSignature = hasSpec && signatureNames.some(sn => stripPlus(sn) === stripPlus(specPlaystyle as string));
 
   const tryUnlock = (name: string, reqs: StatReq[]) => {
     const data = getUpgradeData(reqs);
@@ -60,7 +75,7 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
 
   const handleTileClick = (name: string, reqs: StatReq[], isBlocked: boolean) => {
     if (isBlocked) {
-      setNotice({ type: 'error', text: `${name} is blocked because you already have the Plus variant equipped.` });
+      setNotice({ type: 'error', text: `${name} is blocked because you already have it equipped as a Signature or PlayStyle+.` });
       return;
     }
     const isEquipped = equippedPlaystyles.includes(name);
@@ -71,19 +86,17 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
     setSelectedPsView(name);
   };
 
-  const goldOptions: { key: 'signature' | 'spec'; label: string; name: string; active: boolean }[] = [];
-  if (basePsPlus && basePsPlus !== 'None') {
-    goldOptions.push({ key: 'signature', label: 'Signature', name: basePsPlus, active: !hasSpec || psPlusChoice === 'signature' });
-  }
-  if (hasSpec) {
-    goldOptions.push({ key: 'spec', label: 'Specialisation', name: specPlaystyle as string, active: psPlusChoice === 'spec' });
-  }
+  // The Signature slots as they stand now (a slot can hold the specialisation's PlayStyle+)
+  const signatureSlots = [sig1, sig2];
 
-  // 👉 NEW: Collect all currently equipped Playstyle+ names to check for conflicts
-  const allEquippedPlus = [
-    ...(basePsPlus && basePsPlus !== 'None' ? [basePsPlus] : []),
-    ...(hasSpec && specPlaystyle ? [specPlaystyle] : [])
-  ];
+  // Everything equipped for free (both Signatures, or the specialisation's PlayStyle+ in place of one)
+  // can't be picked again as a regular PlayStyle
+  const allEquippedPlus = signatureSlots.map(s => s?.name || '').filter(Boolean);
+
+  const choiceOptions: { label: string; index: number }[] = [];
+  if (signatureNames[0]) choiceOptions.push({ label: signatureNames[0], index: 0 });
+  if (signatureNames[1]) choiceOptions.push({ label: signatureNames[1], index: 1 });
+  choiceOptions.push({ label: 'Neither', index: -1 });
 
   return (
     <div className="fixed inset-0 z-50 flex justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
@@ -116,38 +129,68 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
             <div className="flex items-center justify-between gap-2 mb-3 border-b border-[#26334A] pb-2">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#facc15]" />
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#facc15]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>PlayStyle+ (Gold)</span>
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-[#facc15]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>Signature PlayStyles</span>
               </div>
-              {hasSpec && <span className="text-[8px] font-bold uppercase tracking-widest text-[#59657A]">Only one can be equipped</span>}
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[#59657A]">Always equipped</span>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              {goldOptions.map(opt => (
-                <button
-                  key={opt.key}
-                  onClick={() => { if (hasSpec) setPsPlusMode(opt.key); }}
-                  className={`rounded-xl p-3.5 flex flex-row items-center gap-3 relative overflow-hidden text-left transition-all duration-200 border ${
-                    opt.active
-                      ? 'bg-[#131A2A] border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)]'
-                      : 'bg-[#0D1220] border-[#26334A] opacity-40 hover:opacity-70 cursor-pointer'
-                  } ${!hasSpec ? 'cursor-default' : ''}`}
-                >
-                  <div className="w-1/2 flex items-center justify-center">
-                    <img src={getPlaystyleIconPath(opt.name, true)} alt={opt.name} className={`w-14 h-14 object-contain ${opt.active ? 'drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'grayscale'}`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
-                  </div>
-                  <div className="w-1/2 flex flex-col justify-center">
-                    <div className="text-[8px] text-[#8E9AAF] font-bold uppercase tracking-widest mb-0.5">{opt.label}</div>
-                    <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider leading-tight">{opt.name}</div>
-                    <div className="text-[8px] text-[#facc15] font-bold uppercase mt-1 tracking-widest">
-                      {opt.active ? (isPsPlusUnlocked ? 'Equipped' : 'Locked') : 'Tap to switch'}
+              {signatureSlots.map((sig, i) => {
+                if (!sig || !sig.name) return null;
+                const isGold = sig.type === 'gold';
+                const fromSpec = hasSpec && !specSameAsSignature && specSwapIndex === i;
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-xl p-3.5 flex flex-row items-center gap-3 relative overflow-hidden text-left border ${
+                      isGold
+                        ? 'bg-[#131A2A] border-[#facc15] shadow-[0_0_15px_rgba(250,204,21,0.15)]'
+                        : 'bg-[#0D1220] border-[#26334A]'
+                    }`}
+                  >
+                    <div className="w-1/2 flex items-center justify-center">
+                      <img src={getPlaystyleIconPath(sig.name, isGold)} alt={sig.name} className={`w-14 h-14 object-contain ${isGold ? 'drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : ''}`} onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                    </div>
+                    <div className="w-1/2 flex flex-col justify-center">
+                      <div className="text-[8px] text-[#8E9AAF] font-bold uppercase tracking-widest mb-0.5">{fromSpec ? 'Specialisation' : `Signature ${i + 1}`}</div>
+                      <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider leading-tight">{stripPlus(sig.name)}</div>
+                      <div className={`text-[8px] font-bold uppercase mt-1 tracking-widest ${isGold ? 'text-[#facc15]' : 'text-[#59657A]'}`}>
+                        {isGold ? 'PlayStyle+' : 'Plain'}
+                      </div>
                     </div>
                   </div>
-                </button>
-              ))}
+                );
+              })}
             </div>
+
+            {hasSpec && !specSameAsSignature && setSpecSwapIndex && (
+              <div className="mt-3 rounded-xl border border-[#26334A] bg-[#0D1220] p-3">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-2">
+                  {stripPlus(specPlaystyle as string)}+ takes the place of
+                </div>
+                <div className={`grid gap-2 ${choiceOptions.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                  {choiceOptions.map(opt => (
+                    <button
+                      key={opt.index}
+                      onClick={() => setSpecSwapIndex(opt.index)}
+                      className={`py-2 px-1 rounded-lg border text-[9px] font-black uppercase tracking-wider leading-tight transition-colors ${
+                        specSwapIndex === opt.index
+                          ? 'bg-[#facc15]/15 border-[#facc15] text-[#facc15]'
+                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[10px] text-[#8E9AAF] leading-relaxed">
+                  A specialisation's PlayStyle+ replaces one Signature. It never adds a slot.
+                </p>
+              </div>
+            )}
           </div>
 
           {PLAYSTYLE_CATEGORIES.map(category => {
-             const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && ps.name !== stripPlus(activePsPlus));
+             const categoryStyles = PLAYSTYLES_DATA.filter(ps => ps.category === category.id && !allEquippedPlus.some(n => stripPlus(n) === ps.name));
              if (categoryStyles.length === 0) return null;
              return (
                <div key={category.id}>
@@ -162,7 +205,7 @@ export const PlaystyleHubModal: React.FC<PlaystyleHubModalProps> = ({
                       const { canEquip, cost, reason } = getUpgradeData(ps.reqs);
                       const isUnlocked = canEquip && cost === 0;
                       
-                      // 👉 NEW: Check if this standard style conflicts with an equipped PS+
+                      // Blocked if this style is already equipped as a Signature / PlayStyle+
                       const isBlockedByPlus = isPlaystyleConflict(ps.name, allEquippedPlus);
                       
                       // A blocked style is technically "locked" but we style it specifically below
