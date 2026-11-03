@@ -5,8 +5,7 @@ export interface AttributePriorities {
   weights: Record<string, number>; // 1-5 (Premium and above)
   min: Record<string, number>;     // target floor (Premium+ and above)
   max: Record<string, number>;     // hard ceiling (Premium+ and above)
-  exclude: string[];               // skipped unless nothing else can use the AP 
-(VIP)
+  exclude: string[];               // skipped unless nothing else can use the AP (VIP)
 }
 
 export const EMPTY_PRIORITIES: AttributePriorities = { weights: {}, min: {}, max: {}, exclude: [] };
@@ -15,8 +14,7 @@ const PRIORITY_ATTRS = [
   "Acceleration", "Sprint Speed", "Attack Positioning", "Finishing", "Shot Power",
   "Long Shots", "Volleys", "Penalties", "Vision", "Crossing", "FK Accuracy",
   "Short Passing", "Long Passing", "Curve", "Agility", "Balance", "Reactions",
-  "Ball Control", "Dribbling", "Composure", "Interceptions", 
-"Heading Accuracy",
+  "Ball Control", "Dribbling", "Composure", "Interceptions", "Heading Accuracy",
   "Def Awareness", "Standing Tackle", "Sliding Tackle", "Jumping", "Stamina",
   "Strength", "Aggression",
 ];
@@ -52,8 +50,7 @@ export interface AiGeneratorModalProps {
   clubLevel?: number;
   clubBudget?: number;
   keptFacilityCount?: number;
-  /** The plan in effect ("free" | 
-"premium" | "premium_plus" | "vip" | "owner") */
+  /** The plan in effect ("free" | "premium" | "premium_plus" | "vip" | "owner") */
   tier?: string;
   attributePriorities?: AttributePriorities;
   setAttributePriorities?: React.Dispatch<React.SetStateAction<AttributePriorities>>;
@@ -146,15 +143,13 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="w-full 
-max-w-md max-h-[92vh] overflow-y-auto bg-[#080B14] border border-[#4D8DFF]/40 rounded-2xl p-5 shadow-2xl relative">
+      <div className="w-full max-w-md max-h-[92vh] overflow-y-auto bg-[#080B14] border border-[#4D8DFF]/40 rounded-2xl p-5 shadow-2xl relative">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest" style={{ fontFamily: "'Orbitron', sans-serif" }}>AI Player Creator</h3>
           <button 
             onClick={handleClose} 
             disabled={isGeneratingAi}
-            className="text-[#8E9AAF] 
-hover:text-white transition-colors"
+            className="text-[#8E9AAF] hover:text-white transition-colors"
           >✕</button>
         </div>
         
@@ -193,8 +188,7 @@ hover:text-white transition-colors"
               <div className="flex items-center justify-between mb-4 bg-[#0D1220] border border-[#26334A]/60 rounded-lg px-3 py-2">
                 <span className="text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF]">AI builds this month</span>
                 <span className={`text-xs font-black ${outOfBuilds ? 'text-[#ff4d4d]' : 'text-[#21E6A4]'}`}>
-                  {quota.limit === null ? 
-'Unlimited' : `${quota.remaining} of ${quota.limit} left`}
+                  {quota.limit === null ? 'Unlimited' : `${quota.remaining} of ${quota.limit} left`}
                 </span>
               </div>
             )}
@@ -204,15 +198,13 @@ hover:text-white transition-colors"
               onChange={(e) => setAiPrompt(e.target.value)}
               placeholder="Enter player description..."
               disabled={isGeneratingAi}
-              className="w-full bg-[#131A2A] border border-[#26334A] rounded-xl p-3 text-xs text-[#F4F7FB] focus:outline-none 
-focus:border-[#4D8DFF] h-28 resize-none mb-4 disabled:opacity-50 transition-colors"
+              className="w-full bg-[#131A2A] border border-[#26334A] rounded-xl p-3 text-xs text-[#F4F7FB] focus:outline-none focus:border-[#4D8DFF] h-28 resize-none mb-4 disabled:opacity-50 transition-colors"
             />
 
             <button
               onClick={handleGenerateBlueprint}
               disabled={isGeneratingAi || !aiPrompt.trim() || outOfBuilds}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(77,141,255,0.4)] disabled:opacity-50 transition-all 
-flex items-center justify-center gap-2"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#8B5CF6] text-white font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(77,141,255,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
             >
               {isGeneratingAi ? (
                 <>
@@ -232,8 +224,7 @@ flex items-center justify-center gap-2"
                 {onUpgrade && (
                   <button
                     onClick={onUpgrade}
-                    className="px-4 py-2 rounded-lg bg-[#facc15] 
-text-[#080B14] text-[10px] font-black uppercase tracking-widest"
+                    className="px-4 py-2 rounded-lg bg-[#facc15] text-[#080B14] text-[10px] font-black uppercase tracking-widest"
                   >
                     See plans
                   </button>
@@ -253,14 +244,12 @@ text-[#080B14] text-[10px] font-black uppercase tracking-widest"
                  <img 
                    src={`/archetypes/${aiBlueprint.archetype.replace(/\s+/g, '-').toLowerCase()}.png`} 
                    alt={aiBlueprint.archetype} 
-                   className="w-12 h-12 
-object-contain brightness-0 invert opacity-90 drop-shadow-md" 
+                   className="w-12 h-12 object-contain brightness-0 invert opacity-90 drop-shadow-md" 
                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
                  />
                  <div>
                    <h4 className="text-[#21E6A4] font-black text-[10px] tracking-wider uppercase mb-0.5">{aiArchetypeLock !== 'AUTO' ? 'Your Pick' : 'AI Recommended'}</h4>
-                   <p className="text-[#F4F7FB] font-bold text-lg leading-none">{aiBlueprint.archetype}</
-p>
+                   <p className="text-[#F4F7FB] font-bold text-lg leading-none">{aiBlueprint.archetype}</p>
                  </div>
                </div>
                {aiArchetypeLock !== 'AUTO' && (
@@ -268,8 +257,7 @@ p>
                    This is a {aiBlueprint.archetype} interpretation of the player: points, PlayStyles and costs follow the {aiBlueprint.archetype} archetype, even where their real-life style differs.
                  </p>
                )}
-               <p className="text-[10px] 
-text-[#8E9AAF] leading-relaxed italic border-l-2 border-[#4D8DFF] pl-2 mb-4">"{aiBlueprint.scoutSummary}"</p>
+               <p className="text-[10px] text-[#8E9AAF] leading-relaxed italic border-l-2 border-[#4D8DFF] pl-2 mb-4">"{aiBlueprint.scoutSummary}"</p>
                
                <div className="flex items-center justify-between bg-[#0D1220] p-3 rounded-lg border border-[#26334A]/60">
                   <div>
@@ -318,8 +306,7 @@ text-[#8E9AAF] leading-relaxed italic border-l-2 border-[#4D8DFF] pl-2 mb-4">"{a
                      ? `Picks the facilities that save you the most AP within your Club level ${clubLevel} budget (${(clubBudget / 1_000_000).toFixed(1)}M). This replaces the facilities you have set.`
                      : keptFacilityCount > 0
                        ? `Uses the ${keptFacilityCount} facilit${keptFacilityCount === 1 ? 'y' : 'ies'} you've already set.`
-                       : `You haven't set any 
-facilities, so none will be used.`}
+                       : `You haven't set any facilities, so none will be used.`}
                  </p>
                </div>
              )}
@@ -336,8 +323,7 @@ facilities, so none will be used.`}
                      {rank === 0 && <span className="ml-2 text-[#facc15]">🔒 Premium</span>}
                      {rank > 0 && activeCount > 0 && <span className="ml-2 text-[#21E6A4]">{activeCount} set</span>}
                    </span>
-                   <span className="text-[#8E9AAF] text-xs">{prioOpen ? '▲' : '▼'}</
-span>
+                   <span className="text-[#8E9AAF] text-xs">{prioOpen ? '▲' : '▼'}</span>
                  </button>
 
                  {prioOpen && (
@@ -345,8 +331,7 @@ span>
                      {rank === 0 ? (
                        <p className="mt-2 text-[10px] text-[#8E9AAF] leading-relaxed">
                          Tell the engine which attributes matter most to you. Included in the paid plans.{' '}
-                         {onUpgrade && <button onClick={onUpgrade} className="text-[#4D8DFF] font-bold underline">See plans</
-button>}
+                         {onUpgrade && <button onClick={onUpgrade} className="text-[#4D8DFF] font-bold underline">See plans</button>}
                        </p>
                      ) : (
                        <>
@@ -400,8 +385,7 @@ button>}
                                      onChange={(e) => setLimit('max', attr, e.target.value)}
                                      placeholder="–"
                                      disabled={isGeneratingAi}
-                                     className="w-11 h-7 rounded-md bg-[#131A2A] border border-[#26334A] text-center text-[11px] text-[#F4F7FB] font-bold outline-none 
-focus:border-[#4D8DFF]"
+                                     className="w-11 h-7 rounded-md bg-[#131A2A] border border-[#26334A] text-center text-[11px] text-[#F4F7FB] font-bold outline-none focus:border-[#4D8DFF]"
                                    />
                                  )}
                                  {canExclude && (
@@ -430,8 +414,7 @@ focus:border-[#4D8DFF]"
                            <p className="mt-2 text-[10px] text-[#8E9AAF] leading-relaxed">
                              {!canMinMax && <span>🔒 Min / Max targets: Premium+. </span>}
                              {!canExclude && <span>🔒 Skip attributes: VIP. </span>}
-                             {onUpgrade && <button onClick={onUpgrade} className="text-[#4D8DFF] font-bold underline">See plans</
-button>}
+                             {onUpgrade && <button onClick={onUpgrade} className="text-[#4D8DFF] font-bold underline">See plans</button>}
                            </p>
                          )}
 
@@ -453,15 +436,13 @@ button>}
 
              <div className="flex items-center gap-2 mb-4 bg-[#4caf50]/10 border border-[#4caf50]/30 p-2.5 rounded-lg">
                <span className="text-[#4caf50] text-sm leading-none">⚡</span>
-               <span className="text-[9px] text-[#4caf50] font-bold uppercase tracking-widest 
-leading-tight">Applying active foundation boosts to AP Math (Height, Weight, Facilities & Masteries)</span>
+               <span className="text-[9px] text-[#4caf50] font-bold uppercase tracking-widest leading-tight">Applying active foundation boosts to AP Math (Height, Weight, Facilities & Masteries)</span>
              </div>
 
              <button
                onClick={handleFinalizeBuild}
                disabled={isGeneratingAi}
-               className="w-full py-3 rounded-xl bg-gradient-to-r from-[#21E6A4] to-[#10b981] text-[#080B14] font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(33,230,164,0.4)] disabled:opacity-50 transition-all flex items-center justify-center 
-gap-2"
+               className="w-full py-3 rounded-xl bg-gradient-to-r from-[#21E6A4] to-[#10b981] text-[#080B14] font-black uppercase tracking-widest text-xs shadow-[0_0_15px_rgba(33,230,164,0.4)] disabled:opacity-50 transition-all flex items-center justify-center gap-2"
              >
                {isGeneratingAi ? (
                  <>
