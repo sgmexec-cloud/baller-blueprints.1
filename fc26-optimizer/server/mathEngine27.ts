@@ -9,8 +9,7 @@ export const ATTR_CATEGORIES: Record<string, string[]> = {
   Pace: ["Acceleration", "SprintSpeed"],
   Shooting: ["AttackPositioning", "Finishing", "ShotPower", "LongShots", "Volleys", "Penalties"],
   Passing: ["Vision", "Crossing", "FKAccuracy", "ShortPassing", "LongPassing", "Curve"],
-  Dribbling: ["Agility", "Balance", 
-"Reactions", "BallControl", "Dribbling", "Composure"],
+  Dribbling: ["Agility", "Balance", "Reactions", "BallControl", "Dribbling", "Composure"],
   Defending: ["Interceptions", "HeadingAccuracy", "DefAwareness", "StandingTackle", "SlidingTackle"],
   Physicality: ["Jumping", "Stamina", "Strength", "Aggression"],
   "Skill Moves": ["SkillMoves"],
@@ -49,8 +48,7 @@ const STAR_KEYS = new Set(['skillmoves', 'weakfoot']);
  * Attribute Priorities (tier-gated on the server).
  * All attribute values are IN-GAME values (they include height/weight, facility and mastery boosts).
  *  - weights: 1-5, how much the user wants an attribute (Premium and above)
- *  - min / max: target floor / hard 
-ceiling (Premium+ and above)
+ *  - min / max: target floor / hard ceiling (Premium+ and above)
  *  - exclude: skipped unless nothing else can use the AP (VIP, soft)
  */
 export interface AttributePriorities {
@@ -114,15 +112,13 @@ export interface ScoutingBlueprint {
 
 function normAttr(s: string): string { 
   let n = s.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(); 
-  if (n.startsWith('att') && n.includes('pos')) return 
-'attackpositioning';
+  if (n.startsWith('att') && n.includes('pos')) return 'attackpositioning';
   if (n.includes('fk') && n.includes('acc')) return 'fkaccuracy';
   if (n.startsWith('def') && n.includes('awar')) return 'defawareness';
   if (n.includes('stand') && n.includes('tack')) return 'standingtackle';
   if (n.includes('slid') && n.includes('tack')) return 'slidingtackle';
   if (n.startsWith('short') && n.includes('pass')) return 'shortpassing';
-  if (n.startsWith('long') && n.includes('pass')) return 
-'longpassing';
+  if (n.startsWith('long') && n.includes('pass')) return 'longpassing';
   if (n.includes('head') && n.includes('acc')) return 'headingaccuracy';
   if (n.includes('sprint')) return 'sprintspeed';
   return n;
@@ -149,8 +145,7 @@ function getUpgradeCost(costDict: any, archKey: string, attrKey: string, rawBase
 // Playstyle conflict utility directly in the engine to filter AI hallucinations
 function isPlaystyleConflict(targetStyle: string, equippedPlusStyles: string[]): boolean {
   const normalize = (s: string) => s.replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-  const targetBase = 
-normalize(targetStyle);
+  const targetBase = normalize(targetStyle);
   return equippedPlusStyles.some(plusStyle => normalize(plusStyle) === targetBase);
 }
 
@@ -160,8 +155,7 @@ const WEIGHT_CAPS: Record<number, number> = { 1: 85, 2: 87, 3: 90, 4: 93, 5: 95 
 export function runMathEngine(
   blueprint: ScoutingBlueprint, 
   apBudget: number, 
-  customSlots: number = 
-blueprint.playstyles.length,
+  customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
   foundationBoosts: Record<string, number> = {},
   options: { starsPrepaid?: boolean; priorities?: AttributePriorities } = {}
@@ -171,8 +165,7 @@ blueprint.playstyles.length,
   const PLAYSTYLES = getPlaystyles("FC27");
 
   const archKey = blueprint.archetype;
-  const archetypeRows = ALL_ARCHETYPES.filter((r: any) 
-=> normAttr(r.Archetype) === normAttr(archKey));
+  const archetypeRows = ALL_ARCHETYPES.filter((r: any) => normAttr(r.Archetype) === normAttr(archKey));
 
   if (archetypeRows.length === 0) throw new Error(`Archetype "${blueprint.archetype}" not found.`);
 
@@ -182,8 +175,7 @@ blueprint.playstyles.length,
 
   for (const row of archetypeRows) {
     const attr = row.Attribute.trim();
-    const b = parseInt(row["Base 
-Value"], 10);
+    const b = parseInt(row["Base Value"], 10);
     const baseVal = Number.isNaN(b) ? 70 : b;
     const m = parseInt(row["Max Value"], 10);
     const maxVal = Number.isNaN(m) ? 99 : m;
@@ -203,8 +195,7 @@ Value"], 10);
 
   // ── ATTRIBUTE PRIORITIES (all optional; with none given the engine behaves exactly as before) ──
   const pr = options.priorities ?? {};
-  const toMap = (rec?: 
-Record<string, number>): Record<string, number> => {
+  const toMap = (rec?: Record<string, number>): Record<string, number> => {
     const out: Record<string, number> = {};
     for (const [k, v] of Object.entries(rec ?? {})) {
       const m = matchAttr(k, attrNames);
@@ -215,8 +206,7 @@ Record<string, number>): Record<string, number> => {
   const userWeights = toMap(pr.weights);
   const userMin = toMap(pr.min);
   const userMax = toMap(pr.max);
-  const excluded = new 
-Set<string>();
+  const excluded = new Set<string>();
   for (const e of pr.exclude ?? []) {
     const m = matchAttr(e, attrNames);
     if (m) excluded.add(m);
@@ -226,8 +216,7 @@ Set<string>();
     if (userMax[k] !== undefined && userMin[k] > userMax[k]) delete userMin[k];
   }
   const hasPriorities =
-    Object.keys(userWeights).length > 0 || Object.keys(userMin).length > 
-0 ||
+    Object.keys(userWeights).length > 0 || Object.keys(userMin).length > 0 ||
     Object.keys(userMax).length > 0 || excluded.size > 0;
 
   // The AI's own picks act as soft priors: core 3, secondary 2, tertiary 1
@@ -244,8 +233,7 @@ Set<string>();
 
   function getHardCap(attrName: string, defaultCap: number): number {
     const isPreferred = preferredAttributes.some(p => normAttr(p) === normAttr(attrName));
-    return isPreferred ? 99 : 
-defaultCap;
+    return isPreferred ? 99 : defaultCap;
   }
   
   function getEffectiveCap(attrName: string, absoluteCap: number): number {
@@ -266,8 +254,7 @@ defaultCap;
     
     if (s.current >= Math.min(s.max, hardCap, userCeiling(matched))) return false;
     
-    const cost = getUpgradeCost(COST_DICT, 
-archKey, matched, s.base, s.pointsAdded);
+    const cost = getUpgradeCost(COST_DICT, archKey, matched, s.base, s.pointsAdded);
     if (cost > remainingAP) return false;
     
     s.current += 1;
@@ -290,8 +277,7 @@ archKey, matched, s.base, s.pointsAdded);
     const m = matchAttr(attr, allNames);
     if (!m) return Infinity;
     const s = stats[m];
-    const t = getEffectiveCap(m, 
-target);
+    const t = getEffectiveCap(m, target);
     if (t > s.max) return Infinity;
     if (t > userCeiling(m)) return Infinity; // the user's ceiling blocks this requirement
     
@@ -312,8 +298,7 @@ target);
 
   const apBeforeStars = remainingAP;
   if (!options.starsPrepaid) {
-    if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", 
-blueprint.skillMoves);
+    if (blueprint.skillMoves !== undefined) upgradeToMin("SkillMoves", blueprint.skillMoves);
     if (blueprint.weakFoot !== undefined) upgradeToMin("WeakFoot", blueprint.weakFoot);
   }
   const starApSpent = apBeforeStars - remainingAP;
@@ -344,8 +329,7 @@ blueprint.skillMoves);
       .filter(([a, v]) => a && v)
       .map(([a, v]) => ({ attr: a as string, val: parseInt(v as string, 10) }));
       
-    const totalCost = reqs.reduce((sum, r) => sum + 
-costToReach(r.attr, r.val), 0);
+    const totalCost = reqs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
     
     if (totalCost <= remainingAP) {
       reqs.forEach(r => upgradeToMin(r.attr, r.val));
@@ -356,8 +340,7 @@ costToReach(r.attr, r.val), 0);
   }
 
   if (blueprint.specialisationMinAttrs) {
-    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, 
-r.val), 0);
+    const totalSpecCost = blueprint.specialisationMinAttrs.reduce((sum, r) => sum + costToReach(r.attr, r.val), 0);
     if (totalSpecCost <= remainingAP) {
        blueprint.specialisationMinAttrs.forEach(req => upgradeToMin(req.attr, req.val));
     }
@@ -367,8 +350,7 @@ r.val), 0);
   if (hasPriorities) {
     const mins = Object.entries(userMin)
       .map(([a, t]) => ({ a, t, cost: costToReach(a, t) }))
-      .filter(x => 
-Number.isFinite(x.cost))
+      .filter(x => Number.isFinite(x.cost))
       .sort((x, y) => x.cost - y.cost);
     for (const m of mins) upgradeToMin(m.a, m.t);
   }
@@ -387,8 +369,7 @@ Number.isFinite(x.cost))
         
       for (const matched of candidates) {
         const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
-        if (focusSpent + cost <= focusBudget && remainingAP >= 
-cost) {
+        if (focusSpent + cost <= focusBudget && remainingAP >= cost) {
           const success = upgradeOne(matched!, getEffectiveCap(matched!, 99));
           if (success) {
             focusSpent += cost;
@@ -402,8 +383,7 @@ cost) {
 
   const postTaxAP = remainingAP;
   const primaryBudget = postTaxAP * 0.55;
-  const secondaryBudget = 
-postTaxAP * 0.30;
+  const secondaryBudget = postTaxAP * 0.30;
   
   function fillBucket(attrs: string[], budgetLimit: number, baseHardCap: number) {
     let bucketSpent = 0;
@@ -415,8 +395,7 @@ postTaxAP * 0.30;
         .filter(m => {
           if (!m) return false;
           const dynamicCap = getHardCap(m, baseHardCap);
-          const effectiveCap = 
-getEffectiveCap(m, dynamicCap);
+          const effectiveCap = getEffectiveCap(m, dynamicCap);
           return stats[m].current < Math.min(effectiveCap, stats[m].max);
         })
         .sort((a, b) => stats[a!].current - stats[b!].current);
@@ -424,8 +403,7 @@ getEffectiveCap(m, dynamicCap);
       for (const matched of candidates) {
         const dynamicCap = getHardCap(matched!, baseHardCap);
         const effectiveCap = getEffectiveCap(matched!, dynamicCap);
-        const cost = getUpgradeCost(COST_DICT, 
-archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
+        const cost = getUpgradeCost(COST_DICT, archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         
         if (bucketSpent + cost <= budgetLimit && remainingAP >= cost) {
           const success = upgradeOne(matched!, effectiveCap);
@@ -459,8 +437,7 @@ archKey, matched!, stats[matched!].base, stats[matched!].pointsAdded);
         if (s.current >= limit) continue;
         const cost = getUpgradeCost(COST_DICT, archKey, a, s.base, s.pointsAdded);
         if (cost >= 999999 || cost > remainingAP) continue;
-        const score = (w * w) / 
-Math.max(cost, 1);
+        const score = (w * w) / Math.max(cost, 1);
         if (score > bestScore) { bestScore = score; best = a; }
       }
       if (best && upgradeOne(best, 99)) progress = true;
@@ -481,8 +458,7 @@ Math.max(cost, 1);
   const sortedAttrs = [...attrNames]
     .filter(a => !(hasPriorities && excluded.has(a))) // excluded attributes wait for the last-resort sweep
     .sort((a, b) => {
-      const costA = getUpgradeCost(COST_DICT, archKey, a, stats[a].base, 
-stats[a].pointsAdded);
+      const costA = getUpgradeCost(COST_DICT, archKey, a, stats[a].base, stats[a].pointsAdded);
       const costB = getUpgradeCost(COST_DICT, archKey, b, stats[b].base, stats[b].pointsAdded);
       return costA - costB;
     });
@@ -518,8 +494,7 @@ stats[a].pointsAdded);
 
     for (const attr of attrNames) {
       const s = stats[attr];
-      if (s.current >= Math.min(s.max, 
-userCeiling(attr))) continue;
+      if (s.current >= Math.min(s.max, userCeiling(attr))) continue;
       
       const cost = getUpgradeCost(COST_DICT, archKey, attr, s.base, s.pointsAdded);
       if (cost <= remainingAP && cost < lowestCost) {
@@ -530,8 +505,7 @@ userCeiling(attr))) continue;
 
     if (cheapestAttr) {
       const effectiveCap = getEffectiveCap(cheapestAttr, 99);
-      const success = upgradeOne(cheapestAttr, 
-effectiveCap);
+      const success = upgradeOne(cheapestAttr, effectiveCap);
       if (success) microProgress = true;
     }
   }
@@ -551,8 +525,7 @@ effectiveCap);
 
   const starLevel = (key: string): number | undefined => {
     const n = starNames.find(a => normAttr(a) === key);
-    return n ? stats[n].current : 
-undefined;
+    return n ? stats[n].current : undefined;
   };
 
   const investedPoints: Record<string, number> = {};
@@ -574,8 +547,7 @@ undefined;
         const boost = normalizedBoosts[normAttr(a)] || 0;
         const inGame = s.current + boost;
         return {
-          attribute: STANDARD_ATTRS.find(std => 
-normAttr(std) === normAttr(a)) || a,
+          attribute: STANDARD_ATTRS.find(std => normAttr(std) === normAttr(a)) || a,
           weight: userWeights[a] ?? null,
           min: userMin[a] ?? null,
           max: userMax[a] ?? null,
@@ -600,8 +572,7 @@ normAttr(std) === normAttr(a)) || a,
     equippedPlaystyles,
     skippedPlaystyles,
     skillMovesLevel: starLevel('skillmoves'),
-    weakFootLevel: 
-starLevel('weakfoot'),
+    weakFootLevel: starLevel('weakfoot'),
     starApSpent,
     priorityReport,
   };
