@@ -781,6 +781,12 @@ export function useBuilderLogic() {
   const sig1 = sigSlot(0);
   const sig2 = sigSlot(1);
 
+  // Lets the PlayStyle Hub choose which Signature the specialisation's PlayStyle+ replaces (-1 = none)
+  const setSpecSwapIndex = (index: number) => {
+    if (!equippedSpecialization) return;
+    setSpecSwap({ spec: equippedSpecialization, index });
+  };
+
   const unlockedSlotIndexes = unlockedSlotsAt(level);
   const hasEmptySlot = unlockedSlotIndexes.some(i => equippedPlaystyles[i] === '');
 
@@ -834,6 +840,7 @@ export function useBuilderLogic() {
     masteryProgressPct, activeMasteriesCount, activeFacilitiesCount,
     isPsPlusUnlocked, specPlaystyle, sig1, sig2,
     activePsPlus: sig1.name, basePsPlus: signatureNames[0] || 'None',
+    signatureNames, specSwapIndex: swapIndex, setSpecSwapIndex,
     psPlusChoice: 'signature' as any, setPsPlusMode: (() => {}) as any,
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
