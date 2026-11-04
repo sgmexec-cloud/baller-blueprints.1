@@ -81,7 +81,7 @@ export default function ManualBuilder() {
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
-    handleGenerateBlueprint, handleFinalizeBuild, handleSelectFacilityView,
+    handleGenerateBlueprint, handleRescoutBlueprint, handleFinalizeBuild, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization,
@@ -450,6 +450,7 @@ export default function ManualBuilder() {
         isGeneratingAi={isGeneratingAi}
         handleGenerateBlueprint={handleGenerateBlueprint}
         handleFinalizeBuild={handleFinalizeBuild}
+        onRescout={handleRescoutBlueprint}
         aiArchetypeLock={aiArchetypeLock}
         setAiArchetypeLock={setAiArchetypeLock}
         aiTargetLevel={aiTargetLevel}
