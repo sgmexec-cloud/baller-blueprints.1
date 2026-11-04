@@ -64,6 +64,8 @@ export default function ManualBuilder() {
     aiFacilityPlan, setAiFacilityPlan,
     attributePriorities, setAttributePriorities,
     aiPriorityReport, setAiPriorityReport,
+    buildStyle, setBuildStyle,
+    aiFloorReport, setAiFloorReport,
     aiError,
     serverArchetypes,
     progressionData,
@@ -359,10 +361,14 @@ export default function ManualBuilder() {
           >✨ AI AUTO-BUILD</button>
         </div>
 
-        {/* PRIORITY RESULTS (shown after an AI build that used Attribute Priorities) */}
-        {aiPriorityReport && aiPriorityReport.length > 0 && (
+        {/* BUILD NOTES (usability floors and attribute priorities after an AI build) */}
+        {((aiPriorityReport && aiPriorityReport.length > 0) || (aiFloorReport && aiFloorReport.length > 0)) && (
           <div className="mb-6">
-            <PriorityReportCard report={aiPriorityReport} onDismiss={() => setAiPriorityReport(null)} />
+            <PriorityReportCard
+              report={aiPriorityReport}
+              floors={aiFloorReport}
+              onDismiss={() => { setAiPriorityReport(null); setAiFloorReport(null); }}
+            />
           </div>
         )}
 
@@ -464,6 +470,8 @@ export default function ManualBuilder() {
         tier={accountUser?.tier ?? 'free'}
         attributePriorities={attributePriorities}
         setAttributePriorities={setAttributePriorities}
+        buildStyle={buildStyle}
+        setBuildStyle={setBuildStyle}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
