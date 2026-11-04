@@ -57,6 +57,8 @@ export interface AiGeneratorModalProps {
   /** Balanced tops up Stamina / pace to a playable level; Authentic keeps the build exactly as scouted */
   buildStyle?: 'balanced' | 'authentic';
   setBuildStyle?: (style: 'balanced' | 'authentic') => void;
+  /** Ask the AI again instead of using the saved result for this player (uses one AI build) */
+  onRescout?: () => void;
 }
 
 export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
@@ -89,6 +91,7 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
   setAttributePriorities,
   buildStyle = 'balanced',
   setBuildStyle,
+  onRescout,
 }) => {
   const [prioOpen, setPrioOpen] = useState(false);
 
@@ -284,6 +287,22 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                   </div>
                </div>
              </div>
+
+             {aiBlueprint.fromCache && onRescout && (
+               <div className="flex items-center justify-between gap-3 mb-4 bg-[#0D1220] border border-[#26334A]/60 rounded-lg px-3 py-2">
+                 <span className="text-[10px] text-[#8E9AAF] leading-snug">Saved result for this player, so repeat builds stay consistent.</span>
+                 <button
+                   onClick={onRescout}
+                   disabled={isGeneratingAi || outOfBuilds}
+                   className="shrink-0 text-[10px] font-black uppercase tracking-widest text-[#4D8DFF] underline disabled:opacity-40"
+                 >
+                   Re-scout (1 build)
+                 </button>
+               </div>
+             )}
+             {aiError && (
+               <p className="mb-3 text-[10px] text-[#ff8a8a] font-bold text-center leading-relaxed">{aiError}</p>
+             )}
 
              {setFacilityMode && (
                <div className="mb-4">
