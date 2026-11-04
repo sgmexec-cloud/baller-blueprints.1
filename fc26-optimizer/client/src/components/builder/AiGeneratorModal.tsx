@@ -54,6 +54,9 @@ export interface AiGeneratorModalProps {
   tier?: string;
   attributePriorities?: AttributePriorities;
   setAttributePriorities?: React.Dispatch<React.SetStateAction<AttributePriorities>>;
+  /** Balanced tops up Stamina / pace to a playable level; Authentic keeps the build exactly as scouted */
+  buildStyle?: 'balanced' | 'authentic';
+  setBuildStyle?: (style: 'balanced' | 'authentic') => void;
 }
 
 export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
@@ -84,6 +87,8 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
   tier = 'free',
   attributePriorities = EMPTY_PRIORITIES,
   setAttributePriorities,
+  buildStyle = 'balanced',
+  setBuildStyle,
 }) => {
   const [prioOpen, setPrioOpen] = useState(false);
 
@@ -307,6 +312,36 @@ export const AiGeneratorModal: React.FC<AiGeneratorModalProps> = ({
                      : keptFacilityCount > 0
                        ? `Uses the ${keptFacilityCount} facilit${keptFacilityCount === 1 ? 'y' : 'ies'} you've already set.`
                        : `You haven't set any facilities, so none will be used.`}
+                 </p>
+               </div>
+             )}
+
+             {setBuildStyle && (
+               <div className="mb-4">
+                 <div className="text-[9px] font-bold text-[#8E9AAF] uppercase tracking-widest mb-1.5">Build Style</div>
+                 <div className="grid grid-cols-2 gap-2">
+                   {([
+                     ['balanced', 'Balanced'],
+                     ['authentic', 'Authentic'],
+                   ] as const).map(([id, label]) => (
+                     <button
+                       key={id}
+                       onClick={() => setBuildStyle(id)}
+                       disabled={isGeneratingAi}
+                       className={`py-2.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-colors ${
+                         buildStyle === id
+                           ? 'bg-[#4D8DFF]/15 border-[#4D8DFF] text-[#4D8DFF]'
+                           : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF] hover:text-[#F4F7FB]'
+                       }`}
+                     >
+                       {label}
+                     </button>
+                   ))}
+                 </div>
+                 <p className="mt-1.5 text-[10px] text-[#8E9AAF] leading-relaxed">
+                   {buildStyle === 'balanced'
+                     ? 'Keeps the player true to life, but lifts Stamina to at least 75 and Acceleration and Sprint Speed to at least 70 (boosts count) so the build stays playable. Uses at most 15% of your AP.'
+                     : 'No changes: the build is exactly as the scout report reads, even if that means low Stamina or pace.'}
                  </p>
                </div>
              )}
