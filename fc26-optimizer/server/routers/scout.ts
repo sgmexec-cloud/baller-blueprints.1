@@ -12,6 +12,8 @@ import { rolesToPositions } from "../positionMap";
 import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
 import { PREVIEW_COOKIE } from "../tierPreview";
 import { buildsRouter } from "../builds";
+import { makeScoutCacheKey, getCachedBlueprint, saveCachedBlueprint } from "../scoutCache";
+import { pickArchetypeByScores } from "../archetypePick";
 import { TRPCError } from "@trpc/server";
 import fs from "fs/promises";
 import path from "path";
@@ -230,7 +232,9 @@ export const scoutRouter = router({
       customWeight: z.string().optional(),
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
-      customPlaystyles: z.array(z.string()).optional()
+      customPlaystyles: z.array(z.string()).optional(),
+      // true = ignore the saved result for this player and ask the AI again (uses one AI build)
+      rescout: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = Number((ctx.user as any).id);
@@ -253,6 +257,22 @@ export const scoutRouter = router({
         if (!forcedArchetype) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown archetype." });
         }
+      }
+
+      // Same player + same options = the same saved result: consistent picks and no AI cost, so it does not use a build.
+      // "Re-scout" skips this and asks the AI again.
+      const cacheKey = makeScoutCacheKey({
+        playerIdentity: input.playerIdentity,
+        forcedArchetype,
+        customHeight: input.customHeight,
+        customWeight: input.customWeight,
+        customSkillMoves: input.customSkillMoves,
+        customWeakFoot: input.customWeakFoot,
+        customPlaystyles: input.customPlaystyles,
+      });
+      if (!input.rescout) {
+        const cached = BlueprintSchema.safeParse(await getCachedBlueprint(cacheKey));
+        if (cached.success) return { ...cached.data, fromCache: true as const };
       }
 
       // Reserve ONE build atomically BEFORE spending any AI money.
@@ -280,9 +300,17 @@ export const scoutRouter = router({
         if (!hiddenScoutReport) throw new Error("Stage 1 LLM returned empty response");
 
         const context = getScoutingContext("FC27");
+
+        // The archetype comes from SCORING every archetype (3 small AI answers, averaged) instead of one free pick,
+        // so a close call is decided by the numbers and not by one lucky answer. If the user chose an archetype, that wins.
+        // If scoring fails for any reason, the AI picks freely as before.
+        const scoredArchetype = forcedArchetype
+          ? null
+          : await pickArchetypeByScores(hiddenScoutReport, aiModel, (resp) => logUsage("archetype", quota.tier, aiModel, resp));
+        const lockedArchetype = forcedArchetype ?? scoredArchetype;
         
         const filterRules: string[] = [];
-        if (forcedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: The "archetype" field MUST be exactly "${forcedArchetype}". Do NOT choose any other archetype. Pick the playstyles, attributes and specialisation that belong to "${forcedArchetype}".`);
+        if (lockedArchetype) filterRules.push(`- ARCHETYPE: CRITICAL OVERRIDE: The "archetype" field MUST be exactly "${lockedArchetype}". Do NOT choose any other archetype. Pick the playstyles, attributes and specialisation that belong to "${lockedArchetype}".`);
         else filterRules.push(`- ARCHETYPE: Choose the most accurate archetype from the context.`);
         
         if (input.customHeight) filterRules.push(`- HEIGHT: You MUST use the exact height "${input.customHeight}".`);
@@ -351,7 +379,7 @@ ${filterRules.join("\n")}
 
         // Guarantee: if the user picked an archetype, that is what they get, whatever the AI answered.
         // (The specialisation check below runs against this archetype, so a mismatched spec is dropped.)
-        if (forcedArchetype) parsed.archetype = forcedArchetype;
+        if (lockedArchetype) parsed.archetype = lockedArchetype;
 
         if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
           parsed.specialisationMinAttrs = parsed.specialisationMinAttrs.map((item: any) => {
@@ -411,7 +439,9 @@ ${filterRules.join("\n")}
         }
 
         // The build was already reserved up front; if anything above throws, it is refunded below.
-        return BlueprintSchema.parse(parsed);
+        const finalBlueprint = BlueprintSchema.parse(parsed);
+        await saveCachedBlueprint(cacheKey, finalBlueprint);
+        return finalBlueprint;
       } catch (err) {
         if (quota.metered) await refundBuild(userId);
         throw err;
