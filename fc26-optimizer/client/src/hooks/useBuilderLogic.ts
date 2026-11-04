@@ -160,7 +160,7 @@ export function useBuilderLogic() {
     setUnlockedMasteries(prev => ({ ...prev, [arch]: masteryFromLevel(clean) }));
   };
 
-  const handleGenerateBlueprint = async () => {
+  const runGenerate = async (rescout: boolean) => {
     if (!aiPrompt.trim()) return;
     setIsGeneratingAi(true);
     setAiError(null);
@@ -172,6 +172,7 @@ export function useBuilderLogic() {
       const blueprint = await generateReportMutation.mutateAsync({
         playerIdentity: aiPrompt,
         forcedArchetype,
+        rescout,
         gameVersion: gameVersion
       });
       setAiBlueprint(blueprint);
@@ -186,6 +187,10 @@ export function useBuilderLogic() {
       utils.scout.getQuota.invalidate();
     }
   };
+
+  const handleGenerateBlueprint = () => runGenerate(false);
+  // Ask the AI again instead of using the saved result for this player (uses one AI build)
+  const handleRescoutBlueprint = () => runGenerate(true);
 
   const handleFinalizeBuild = async () => {
     if (!aiBlueprint) return;
@@ -853,7 +858,7 @@ export function useBuilderLogic() {
     getSnapshot, applySnapshot, getProfileSnapshot,
     archetypeLevels, setArchetypeLevel,
     fac1, fac2, hasEmptySlot, remainingBudget,
-    handleGenerateBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
+    handleGenerateBlueprint, handleRescoutBlueprint, handleFinalizeBuild, openFacilitiesModal, handleSelectFacilityView,
     handleEquipFacilityTier, handleRemoveFacility, handleFacTouchStart,
     handleFacTouchMove, handleFacTouchEnd, toggleMasteryUnlock,
     getUpgradeData, handleActionPlaystyle, handleActionSpecialization, handleUnlockPlaystyle,
