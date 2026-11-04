@@ -63,6 +63,9 @@ export function useBuilderLogic() {
   const [aiPriorityReport, setAiPriorityReport] = useState<any[] | null>(null);
   // Which Signature the specialisation's PlayStyle+ replaced in the last AI build (only valid for that specialisation)
   const [specSwap, setSpecSwap] = useState<{ spec: string; index: number } | null>(null);
+  // 'balanced' tops up Stamina / pace to a playable level, 'authentic' keeps the build exactly as scouted
+  const [buildStyle, setBuildStyle] = useState<'balanced' | 'authentic'>('balanced');
+  const [aiFloorReport, setAiFloorReport] = useState<any[] | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -271,6 +274,7 @@ export function useBuilderLogic() {
           foundationBoosts: baseBoosts,
           signatureSlots: signatureSlotsCount,
           attributePriorities: attributePrioritiesToSend,
+        buildStyle: buildStyle,
           starsPrepaid: true
         });
 
@@ -321,11 +325,13 @@ export function useBuilderLogic() {
         foundationBoosts: foundationBoosts,
         signatureSlots: signatureSlotsCount,
         attributePriorities: attributePrioritiesToSend,
+        buildStyle: buildStyle,
         starsPrepaid: true 
       });
 
       setLevel(aiTargetLevel);
       setAiPriorityReport((mathResult as any)?.priorityReport ?? null);
+      setAiFloorReport((mathResult as any)?.floorReport ?? null);
       if (facilityMode === 'ai') {
         setEquippedFacilities(facilitiesForBuild);
         setAiFacilityPlan(facilityPlan);
@@ -830,6 +836,8 @@ export function useBuilderLogic() {
     aiFacilityPlan, setAiFacilityPlan,
     attributePriorities, setAttributePriorities,
     aiPriorityReport, setAiPriorityReport,
+    buildStyle, setBuildStyle,
+    aiFloorReport, setAiFloorReport,
     aiError,
     serverArchetypes,
     progressionData,
