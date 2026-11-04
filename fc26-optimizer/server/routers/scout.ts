@@ -7,7 +7,7 @@ import {
   getSpecialisations, 
   getAllArchetypes 
 } from "../csvLoader";
-import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles, pickSpecialisationSwap, buildPlaystyleFit } from "../mathEngine27";
+import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles, pickSpecialisationSwap, buildPlaystyleFit, USABILITY_FLOORS } from "../mathEngine27";
 import { rolesToPositions } from "../positionMap";
 import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
 import { PREVIEW_COOKIE } from "../tierPreview";
@@ -428,7 +428,9 @@ ${filterRules.join("\n")}
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
       // true when the caller has already deducted the Skill Moves / Weak Foot cost from apBudget
       starsPrepaid: z.boolean().optional(),
-      attributePriorities: AttributePrioritiesSchema.optional()
+      attributePriorities: AttributePrioritiesSchema.optional(),
+      // 'balanced' (default) tops up Stamina / pace to a playable level; 'authentic' leaves the build exactly as scouted
+      buildStyle: z.enum(["balanced", "authentic"]).optional()
     }))
     .mutation(async ({ ctx, input }) => {
       // Attribute Priorities are gated by the plan in effect (the server decides, never the client)
@@ -485,7 +487,7 @@ ${filterRules.join("\n")}
         customSlots, 
         input.preferredAttributes || [], 
         input.foundationBoosts,
-        { starsPrepaid: input.starsPrepaid, priorities, signatureUpgrades }
+        { starsPrepaid: input.starsPrepaid, priorities, signatureUpgrades, floors: input.buildStyle === "authentic" ? undefined : USABILITY_FLOORS }
       );
 
       let earnedSpecPlaystyle: string | undefined = undefined;
