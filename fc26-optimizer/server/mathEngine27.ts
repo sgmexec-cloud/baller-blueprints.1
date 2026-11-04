@@ -70,6 +70,27 @@ export interface PriorityReportRow {
   apSpent: number;
 }
 
+/**
+ * Usability floors: attributes that should not be left painfully low, whatever the player's real-life profile.
+ * Values are IN-GAME values (height/weight, facility and mastery boosts count towards them).
+ */
+export const USABILITY_FLOORS: Record<string, number> = {
+  'Stamina': 75,
+  'Acceleration': 70,
+  'Sprint Speed': 70,
+};
+// At most this share of the AP budget may be spent topping up floors
+const FLOOR_BUDGET_SHARE = 0.15;
+
+export interface FloorReportRow {
+  attribute: string;
+  floor: number;
+  before: number; // in-game value before the top-up
+  after: number;  // in-game value after the top-up
+  apSpent: number;
+  met: boolean;
+}
+
 export interface StatResult {
   attribute: string;
   base: number;
@@ -93,6 +114,8 @@ export interface MathEngineResult {
   starApSpent?: number;
   /** Only present when attribute priorities were used */
   priorityReport?: PriorityReportRow[];
+  /** Only present when a usability floor had to be topped up */
+  floorReport?: FloorReportRow[];
 }
 
 export interface ScoutingBlueprint {
@@ -165,7 +188,7 @@ export function runMathEngine(
   customSlots: number = blueprint.playstyles.length,
   preferredAttributes: string[] = [], 
   foundationBoosts: Record<string, number> = {},
-  options: { starsPrepaid?: boolean; priorities?: AttributePriorities; signatureUpgrades?: number } = {}
+  options: { starsPrepaid?: boolean; priorities?: AttributePriorities; signatureUpgrades?: number; floors?: Record<string, number> } = {}
 ): MathEngineResult {
   const ALL_ARCHETYPES = getAllArchetypes("FC27");
   const COST_DICT = getCostDict("FC27");
@@ -393,6 +416,51 @@ export function runMathEngine(
     for (const m of mins) upgradeToMin(m.a, m.t);
   }
   
+  // USABILITY FLOORS: lift Stamina / pace (see USABILITY_FLOORS) to a playable level, after the PlayStyle and
+  // specialisation requirements (which often raise the same attributes) and the user's own minimums.
+  // Boosts count, the user's ceilings and "skip" choices are respected, goalkeepers are left alone, and at most
+  // FLOOR_BUDGET_SHARE of the budget is spent: the attribute furthest below its floor is helped first.
+  let floorReport: FloorReportRow[] | undefined;
+  const isGoalkeeper = attrNames.some(a => normAttr(a).startsWith('gk'));
+  const floorEntries = Object.entries(options.floors ?? {})
+    .map(([name, target]) => ({ attr: matchAttr(name, attrNames), target }))
+    .filter((e): e is { attr: string; target: number } => !!e.attr && !excluded.has(e.attr!));
+  if (!isGoalkeeper && floorEntries.length > 0) {
+    const inGame = (a: string) => stats[a].current + (normalizedBoosts[normAttr(a)] || 0);
+    const before: Record<string, number> = {};
+    const spentBefore: Record<string, number> = {};
+    floorEntries.forEach(e => { before[e.attr] = inGame(e.attr); spentBefore[e.attr] = stats[e.attr].apSpent; });
+
+    const floorBudget = Math.floor(apBudget * FLOOR_BUDGET_SHARE);
+    let floorSpent = 0;
+    while (floorSpent < floorBudget && remainingAP > 0) {
+      let best: { attr: string; deficit: number; cost: number } | null = null;
+      for (const e of floorEntries) {
+        const st = stats[e.attr];
+        const deficit = e.target - inGame(e.attr);
+        if (deficit <= 0) continue;
+        if (st.current >= Math.min(st.max, userCeiling(e.attr))) continue;
+        const cost = getUpgradeCost(COST_DICT, archKey, e.attr, st.base, st.pointsAdded);
+        if (cost >= 999999 || cost > remainingAP || floorSpent + cost > floorBudget) continue;
+        if (!best || deficit > best.deficit) best = { attr: e.attr, deficit, cost };
+      }
+      if (!best || !upgradeOne(best.attr, 99)) break;
+      floorSpent += best.cost;
+    }
+
+    const rows: FloorReportRow[] = floorEntries
+      .filter(e => before[e.attr] < e.target)
+      .map(e => ({
+        attribute: STANDARD_ATTRS.find(std => normAttr(std) === normAttr(e.attr)) || e.attr,
+        floor: e.target,
+        before: before[e.attr],
+        after: inGame(e.attr),
+        apSpent: stats[e.attr].apSpent - spentBefore[e.attr],
+        met: inGame(e.attr) >= e.target,
+      }));
+    if (rows.length > 0) floorReport = rows;
+  }
+
   if (preferredAttributes.length > 0) {
     const focusBudget = remainingAP * 0.25;
     let focusSpent = 0;
@@ -613,6 +681,7 @@ export function runMathEngine(
     weakFootLevel: starLevel('weakfoot'),
     starApSpent,
     priorityReport,
+    floorReport,
   };
 }
 
