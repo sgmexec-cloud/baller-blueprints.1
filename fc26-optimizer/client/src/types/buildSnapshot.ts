@@ -4,6 +4,8 @@
 export interface MasteryState {
   l10: boolean;
   l30: boolean;
+  /** Level 55 mastery (optional so older saved builds still fit) */
+  l55?: boolean;
 }
 
 /** Account-wide settings, applied automatically to every new build. */
@@ -12,7 +14,7 @@ export interface ProfileSnapshot {
   equippedFacilities: Record<string, number>;
   /** Masteries set by hand (for archetypes without a level below) */
   unlockedMasteries: Record<string, MasteryState>;
-  /** The level you've reached on each archetype, 1-40. Masteries complete at 10 and 30. */
+  /** The level you've reached on each archetype, 1-55. Masteries complete at 10, 30 and 55. */
   archetypeLevels: Record<string, number>;
 }
 
@@ -31,7 +33,8 @@ export interface BuildSnapshot {
   wfLevel: number;
   equippedPlaystyles: string[];
   equippedSpecialization: string | null;
-  psPlusMode: 'auto' | 'signature' | 'spec';
+  /** Older saved builds have it; new builds no longer need it */
+  psPlusMode?: 'auto' | 'signature' | 'spec';
   clubLevel: number;
   equippedFacilities: Record<string, number>;
   unlockedMasteries: Record<string, MasteryState>;
