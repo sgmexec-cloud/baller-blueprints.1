@@ -20,6 +20,7 @@ const toView = (r: any): BatchItemView => ({
   error: r.error ?? null,
   blueprint: r.blueprint ?? null,
   build: r.build ?? null,
+  social: r.social ?? null,
   selected: !!r.selected,
 });
 
@@ -52,6 +53,7 @@ export default function BatchPage() {
   const removeItemM = trpc.scout.batches.removeItem.useMutation();
   const addItemsM = trpc.scout.batches.addItems.useMutation();
   const setAllSelectedM = trpc.scout.batches.setAllSelected.useMutation();
+  const generateSocialM = trpc.scout.batches.generateSocial.useMutation();
   const generateM = trpc.scout.generateReport.useMutation();
   const statsM = trpc.scout.calculateStats.useMutation();
 
@@ -75,11 +77,13 @@ export default function BatchPage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [addText, setAddText] = useState('');
+  const [socialBusy, setSocialBusy] = useState<number[]>([]);
   const stopRef = useRef(false);
   const runningRef = useRef(false);
 
   const keptFacilities: Record<string, number> = profile?.equippedFacilities ?? {};
   const summary = useMemo(() => summarise(items), [items]);
+  const missingCopy = useMemo(() => items.filter(i => i.status === 'done' && !i.social).length, [items]);
 
   // Leaving the page mid-run would stop the builds
   useEffect(() => {
@@ -108,6 +112,17 @@ export default function BatchPage() {
     buildStyle: s.buildStyle,
   });
 
+  /** Write (or rewrite) the social copy for one finished player. Throws if it fails. */
+  const writeCopy = async (item: BatchItemView) => {
+    setSocialBusy(b => (b.includes(item.id) ? b : [...b, item.id]));
+    try {
+      const social = await generateSocialM.mutateAsync({ id: item.id, useAI: true } as any);
+      patchItem(item.id, { social });
+    } finally {
+      setSocialBusy(b => b.filter(x => x !== item.id));
+    }
+  };
+
   /** One player, start to finish: scout, build, save. Throws if anything fails. */
   const processItem = async (item: BatchItemView, s: BatchSettingsView, rescout: boolean) => {
     if (!serverArchetypes || !progression) throw new Error('Game data is still loading. Try again in a moment.');
@@ -134,7 +149,10 @@ export default function BatchPage() {
     } catch (e) {
       throw new Error(`Built, but could not be saved: ${friendlyError(e)}`);
     }
-    patchItem(item.id, { status: 'done', error: null, blueprint, build });
+    patchItem(item.id, { status: 'done', error: null, blueprint, build, social: null });
+
+    // The copy is written from the saved build. If it fails the build is still good: use "Write social copy" later.
+    try { await writeCopy(item); } catch { /* can be written later */ }
   };
 
   const runItems = async (list: BatchItemView[], s: BatchSettingsView, rescout: boolean) => {
@@ -270,6 +288,36 @@ export default function BatchPage() {
     }
   };
 
+  const regenerateCopy = async (item: BatchItemView) => {
+    try {
+      await writeCopy(item);
+    } catch (e) {
+      setNotice(`Could not write the copy for ${item.playerName}: ${friendlyError(e)}`);
+    }
+  };
+
+  const writeMissingCopy = async () => {
+    const todo = items.filter(i => i.status === 'done' && !i.social);
+    if (todo.length === 0) return;
+    let failed = 0;
+    await runQueue(todo, {
+      concurrency: 2,
+      isStopped: () => false,
+      run: it => writeCopy(it),
+      onFail: () => { failed++; },
+    });
+    setNotice(failed > 0 ? `Copy written, but ${failed} could not be written. Press the button again to retry.` : 'Social copy written for every finished player.');
+  };
+
+  const saveSocial = async (item: BatchItemView, social: any) => {
+    try {
+      await save(item.id, { social });
+      patchItem(item.id, { social });
+    } catch (e) {
+      setNotice(`Could not save your changes for ${item.playerName}: ${friendlyError(e)}`);
+    }
+  };
+
   const toggleSelect = (item: BatchItemView) => {
     patchItem(item.id, { selected: !item.selected });
     save(item.id, { selected: !item.selected }).catch(() => patchItem(item.id, { selected: item.selected }));
@@ -368,6 +416,11 @@ export default function BatchPage() {
           onToggleSelect={toggleSelect}
           onClose={closeBatch}
           onDeleteBatch={deleteOpen}
+          socialBusy={socialBusy}
+          missingCopy={missingCopy}
+          onWriteMissingCopy={writeMissingCopy}
+          onSaveSocial={saveSocial}
+          onRegenerateSocial={regenerateCopy}
         />
       )}
     </Shell>
