@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import type { ItemStatus } from '@/utils/batchRunner';
+import { buildCaption, parseHashtagInput, LIMITS } from '@/utils/socialCopy';
 
 // ───────────────────────── shared bits ─────────────────────────
 
@@ -12,6 +13,8 @@ export interface BatchItemView {
   error: string | null;
   blueprint: any;
   build: any;
+  /** Title, description, caption, hashtags, highlights and scout report (see utils/socialCopy.ts) */
+  social: any;
   selected: boolean;
 }
 
@@ -204,6 +207,139 @@ export const SavedBatches: React.FC<{
   </div>
 );
 
+// ───────────────────────── social copy editor ─────────────────────────
+
+const inputCls = 'w-full bg-[#080B14] border border-[#26334A] rounded-lg p-2 text-[11px] text-[#F4F7FB] outline-none focus:border-[#4D8DFF]';
+
+const SocialEditor: React.FC<{
+  item: BatchItemView;
+  busy: boolean;
+  onSave: (social: any) => void;
+  onRegenerate: () => void;
+}> = ({ item, busy, onSave, onRegenerate }) => {
+  const social = item.social;
+  const stats: Record<string, number> = item.build?.view?.boostedStats ?? {};
+  const statNames = Object.keys(stats).sort((a, b) => stats[b] - stats[a] || a.localeCompare(b));
+
+  const [title, setTitle] = useState<string>(social?.title ?? '');
+  const [description, setDescription] = useState<string>(social?.description ?? '');
+  const [caption, setCaption] = useState<string>(social?.caption ?? '');
+  const [tags, setTags] = useState<string>((social?.hashtags ?? []).join(' '));
+  const [report, setReport] = useState<string>(social?.scoutReport ?? '');
+  const [highlights, setHighlights] = useState<{ attribute: string; value: number }[]>(social?.highlights ?? []);
+
+  // A new set of copy (for example after Regenerate) replaces what is in the boxes
+  useEffect(() => {
+    setTitle(social?.title ?? '');
+    setDescription(social?.description ?? '');
+    setCaption(social?.caption ?? '');
+    setTags((social?.hashtags ?? []).join(' '));
+    setReport(social?.scoutReport ?? '');
+    setHighlights(social?.highlights ?? []);
+  }, [social?.generatedAt]);
+
+  if (!social) {
+    return (
+      <div className="rounded-lg border border-[#26334A] bg-[#0D1220] p-3">
+        <p className="text-[10px] text-[#8E9AAF] mb-2">No social copy yet.</p>
+        <button onClick={onRegenerate} disabled={busy} className="text-[10px] font-black uppercase tracking-widest text-[#4D8DFF] disabled:opacity-40">
+          {busy ? 'Writing…' : 'Write copy'}
+        </button>
+      </div>
+    );
+  }
+
+  const hashtags = parseHashtagInput(tags);
+  const dirty =
+    title !== social.title ||
+    description !== social.description ||
+    caption !== social.caption ||
+    hashtags.join(' ') !== (social.hashtags ?? []).join(' ') ||
+    report !== (social.scoutReport ?? '') ||
+    JSON.stringify(highlights) !== JSON.stringify(social.highlights ?? []);
+
+  const save = () =>
+    onSave({
+      ...social,
+      title: title.trim(),
+      description: description.trim(),
+      caption,
+      hashtags,
+      scoutReport: report.trim(),
+      highlights,
+      edited: true,
+    });
+
+  const setHighlight = (i: number, attribute: string) =>
+    setHighlights(prev => prev.map((h, k) => (k === i ? { attribute, value: stats[attribute] ?? h.value } : h)));
+
+  return (
+    <div className="rounded-lg border border-[#26334A] bg-[#0D1220] p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-black uppercase tracking-widest text-[#facc15]">Social copy</span>
+        <span className="text-[9px] text-[#59657A] uppercase tracking-widest">{social.source === 'ai' ? 'AI worded' : 'Template'}{social.edited ? ' · edited' : ''}</span>
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1"><span>TikTok title</span><span>{title.length}/{LIMITS.titleMax}</span></div>
+        <input value={title} onChange={e => setTitle(e.target.value)} maxLength={LIMITS.titleMax} className={inputCls} />
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1"><span>Build description</span><span>{description.length}/{LIMITS.descMax}</span></div>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={LIMITS.descMax} rows={3} className={`${inputCls} resize-none`} />
+      </div>
+
+      <div>
+        <div className="text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1">Standout attributes</div>
+        <div className="grid grid-cols-3 gap-2">
+          {[0, 1, 2].map(i => (
+            <select
+              key={i}
+              value={highlights[i]?.attribute ?? ''}
+              onChange={e => setHighlight(i, e.target.value)}
+              disabled={highlights.length <= i}
+              className={`${inputCls} p-1.5`}
+            >
+              {highlights[i] && !statNames.includes(highlights[i].attribute) && <option value={highlights[i].attribute}>{highlights[i].attribute} {highlights[i].value}</option>}
+              {statNames.map(n => <option key={n} value={n}>{n} {stats[n]}</option>)}
+            </select>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <div className="text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1">Hashtags (max {LIMITS.hashtags})</div>
+        <input value={tags} onChange={e => setTags(e.target.value)} className={inputCls} />
+        <div className="mt-1 text-[10px] text-[#59657A]">{hashtags.join(' ') || 'none'}</div>
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1">
+          <span>Caption</span>
+          <button onClick={() => setCaption(buildCaption(title, description, hashtags))} className="text-[#4D8DFF] font-black">Rebuild from title, description and tags</button>
+        </div>
+        <textarea value={caption} onChange={e => setCaption(e.target.value)} rows={6} className={`${inputCls} resize-none`} />
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-[#8E9AAF] mb-1"><span>Scout report</span><span>{report.length}/{LIMITS.scoutReport}</span></div>
+        <textarea value={report} onChange={e => setReport(e.target.value)} maxLength={LIMITS.scoutReport} rows={4} className={`${inputCls} resize-none`} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={save} disabled={!dirty || busy} className="py-2 rounded-lg bg-[#21E6A4] text-[#080B14] text-[10px] font-black uppercase tracking-widest disabled:opacity-30">
+          Save changes
+        </button>
+        <button onClick={onRegenerate} disabled={busy} className="py-2 rounded-lg border border-[#26334A] bg-[#131A2A] text-[#F4F7FB] text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+          {busy ? 'Writing…' : 'Rewrite copy'}
+        </button>
+      </div>
+      {dirty && <p className="text-[10px] text-[#facc15]">You have unsaved changes. Rewriting replaces them.</p>}
+    </div>
+  );
+};
+
 // ───────────────────────── one open batch ─────────────────────────
 
 const fmt = (n: unknown) => (typeof n === 'number' ? String(n) : '–');
@@ -217,7 +353,10 @@ const ItemRow: React.FC<{
   onRegenerate: () => void;
   onRemove: () => void;
   onToggleSelect: () => void;
-}> = ({ item, expanded, locked, onExpand, onRetry, onRegenerate, onRemove, onToggleSelect }) => {
+  socialBusy: boolean;
+  onSaveSocial: (social: any) => void;
+  onRegenerateSocial: () => void;
+}> = ({ item, expanded, locked, onExpand, onRetry, onRegenerate, onRemove, onToggleSelect, socialBusy, onSaveSocial, onRegenerateSocial }) => {
   const b = item.build;
   const v = b?.view;
   const f = v?.faceStats;
@@ -250,6 +389,9 @@ const ItemRow: React.FC<{
               <div className="text-[10px] text-[#8E9AAF] truncate">
                 {spec ? `${spec} · ` : ''}{slots.length > 0 ? slots.join(', ') : 'No standard PlayStyles'}
               </div>
+              <div className="text-[10px] italic truncate text-[#4D8DFF]">
+                {socialBusy ? 'Writing copy…' : item.social?.title ? `“${item.social.title}”` : <span className="text-[#59657A] not-italic">No social copy yet</span>}
+              </div>
             </div>
           )}
           {item.status === 'failed' && item.error && <div className="mt-1 text-[10px] text-[#ff8a8a] leading-snug">{item.error}</div>}
@@ -280,6 +422,7 @@ const ItemRow: React.FC<{
             <p><span className="text-[#F4F7FB] font-bold">Playability floors:</span> {b.floorReport.map((r: any) => `${r.attribute} ${r.before}→${r.after}`).join(', ')}</p>
           )}
           {(b.notes ?? []).length > 0 && <p className="text-[#facc15]">{(b.notes as string[]).join(' ')}</p>}
+          <SocialEditor item={item} busy={socialBusy} onSave={onSaveSocial} onRegenerate={onRegenerateSocial} />
         </div>
       )}
     </div>
@@ -308,6 +451,13 @@ export interface BatchViewProps {
   onToggleSelect: (item: BatchItemView) => void;
   onClose: () => void;
   onDeleteBatch: () => void;
+  /** Players whose social copy is being written right now */
+  socialBusy: number[];
+  /** Finished players that have no social copy yet */
+  missingCopy: number;
+  onWriteMissingCopy: () => void;
+  onSaveSocial: (item: BatchItemView, social: any) => void;
+  onRegenerateSocial: (item: BatchItemView) => void;
 }
 
 export const BatchView: React.FC<BatchViewProps> = p => {
@@ -357,6 +507,11 @@ export const BatchView: React.FC<BatchViewProps> = p => {
             Retry failed ({s.failed})
           </button>
         </div>
+        {p.missingCopy > 0 && !p.running && (
+          <button onClick={p.onWriteMissingCopy} disabled={p.socialBusy.length > 0} className="mt-2 w-full py-2.5 rounded-lg border border-[#4D8DFF]/40 bg-[#192235] text-[#4D8DFF] text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+            {p.socialBusy.length > 0 ? 'Writing copy…' : `Write social copy (${p.missingCopy} without)`}
+          </button>
+        )}
         {p.running && <p className="mt-2 text-[10px] text-[#8E9AAF]">Keep this page open while it builds. Finished players are saved as they complete.</p>}
       </div>
 
@@ -380,6 +535,9 @@ export const BatchView: React.FC<BatchViewProps> = p => {
             onRegenerate={() => p.onRegenerate(item)}
             onRemove={() => p.onRemove(item)}
             onToggleSelect={() => p.onToggleSelect(item)}
+            socialBusy={p.socialBusy.includes(item.id)}
+            onSaveSocial={social => p.onSaveSocial(item, social)}
+            onRegenerateSocial={() => p.onRegenerateSocial(item)}
           />
         ))}
       </div>
@@ -405,7 +563,7 @@ export const BatchView: React.FC<BatchViewProps> = p => {
 
       <div className="text-center">
         <button onClick={p.onDeleteBatch} disabled={p.running} className="text-[10px] font-bold uppercase tracking-widest text-[#59657A] hover:text-[#ff8a8a] disabled:opacity-40">Delete this batch</button>
-        <p className="mt-2 text-[10px] text-[#59657A]">Social copy, the editor and the Canva export come in the next steps.</p>
+        <p className="mt-2 text-[10px] text-[#59657A]">The Canva export comes in the next step.</p>
       </div>
     </div>
   );
