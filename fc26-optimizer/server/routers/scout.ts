@@ -12,6 +12,7 @@ import { rolesToPositions } from "../positionMap";
 import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
 import { PREVIEW_COOKIE } from "../tierPreview";
 import { buildsRouter } from "../builds";
+import { batchesRouter } from "../batches";
 import { makeScoutCacheKey, getCachedBlueprint, saveCachedBlueprint } from "../scoutCache";
 import { pickArchetypeByScores } from "../archetypePick";
 import { TRPCError } from "@trpc/server";
@@ -94,6 +95,9 @@ Explicitly identify the player's 'Signature Weapon'—their most iconic, tradema
 export const scoutRouter = router({
   // Saved builds + global profile (trpc.scout.builds.*)
   builds: buildsRouter,
+
+  // Batch Build Generator: saved batches of AI builds (owner only) (trpc.scout.batches.*)
+  batches: batchesRouter,
 
   // ---------- PUBLIC: everything the Manual Builder needs (no account required) ----------
   getArchetypes: publicProcedure
