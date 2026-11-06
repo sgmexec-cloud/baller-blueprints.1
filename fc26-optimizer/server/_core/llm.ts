@@ -73,6 +73,23 @@ const assertApiKey = () => {
   if (!ENV.forgeApiKey) throw new Error("OPENAI_API_KEY is not configured");
 };
 
+// ── Reliability: a busy or hiccuping API should not fail a build (or one player of a batch) ──
+// Retried: rate limits (429), temporary server errors (500/502/503/504) and network failures.
+// NOT retried: bad requests, wrong keys and the like (the answer would be the same).
+const MAX_ATTEMPTS = 3;
+const REQUEST_TIMEOUT_MS = 90_000;
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+
+const sleep = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
+
+/** Wait before retry number `attempt` (1, 2 ...): 0.8s, 1.6s ... plus a little jitter. Honours Retry-After (max 15s). */
+function retryDelayMs(attempt: number, retryAfter: string | null): number {
+  const base = Number(process.env.LLM_RETRY_BASE_MS ?? 800);
+  const seconds = retryAfter ? Number(retryAfter) : NaN;
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.min(seconds * 1000, 15_000);
+  return base * 2 ** (attempt - 1) + Math.floor(Math.random() * base * 0.25);
+}
+
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   assertApiKey();
   const { messages, tools, toolChoice, tool_choice } = params;
@@ -89,19 +106,45 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
 
   payload.max_tokens = 32768;
 
-  const response = await fetch(resolveApiUrl(), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  const body = JSON.stringify(payload);
+  let lastError: Error = new Error("LLM invoke failed");
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let retryAfter: string | null = null;
+    let retryable = false;
+
+    try {
+      const response = await fetch(resolveApiUrl(), {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${ENV.forgeApiKey}`,
+        },
+        body,
+        signal: controller.signal,
+      });
+
+      if (response.ok) return (await response.json()) as InvokeResult;
+
+      const errorText = await response.text();
+      lastError = new Error(`LLM invoke failed: ${response.status} ${response.statusText} – ${errorText}`);
+      retryable = RETRYABLE_STATUS.has(response.status);
+      retryAfter = response.headers?.get?.("retry-after") ?? null;
+    } catch (err: any) {
+      // network failure or our own timeout
+      lastError = new Error(`LLM invoke failed: ${err?.name === "AbortError" ? "request timed out" : err?.message ?? err}`);
+      retryable = true;
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (!retryable || attempt === MAX_ATTEMPTS) break;
+    const wait = retryDelayMs(attempt, retryAfter);
+    console.warn(`[LLM] attempt ${attempt}/${MAX_ATTEMPTS} failed (${lastError.message.slice(0, 120)}); retrying in ${wait}ms`);
+    await sleep(wait);
   }
 
-  return (await response.json()) as InvokeResult;
+  throw lastError;
 }
