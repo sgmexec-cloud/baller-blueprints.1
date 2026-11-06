@@ -3,6 +3,9 @@ import { sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "./_core/trpc";
 import { getDb } from "./db";
+import { invokeLLM } from "./_core/llm";
+import { factsFromItem } from "../client/src/utils/socialCopy";
+import { generateSocialRecord } from "./socialAI";
 
 /**
  * Batch Build Generator: saved batches of AI builds (for social content). Owner only for now.
@@ -314,6 +317,42 @@ export const batchesRouter = router({
       });
       if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Player not found." });
       return { success: true };
+    }),
+
+  /**
+   * Write the social copy (title, description, caption, hashtags, highlights, scout report) for a FINISHED player.
+   * Everything is built from the saved build; the AI only words the title and description from those facts, and a
+   * template is used if its answer fails the checks. Replaces any copy the player already has.
+   */
+  generateSocial: protectedProcedure
+    .input(z.object({ id: z.number().int(), useAI: z.boolean().default(true) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ownerOf(ctx);
+      const db = await requireDb();
+      const row = rowsOf(
+        await db.execute(sql`
+          SELECT i.id, i.player_name, i.note, i.status, i.blueprint, i.build
+          FROM batch_items i JOIN batches b ON b.id = i.batch_id
+          WHERE i.id = ${input.id} AND b.user_id = ${userId} LIMIT 1
+        `)
+      )[0];
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Player not found." });
+      if (row.status !== "done" || !row.build) throw new TRPCError({ code: "BAD_REQUEST", message: "Build this player first." });
+
+      const facts = factsFromItem({
+        playerName: String(row.player_name),
+        note: row.note ? String(row.note) : null,
+        blueprint: asJson(row.blueprint),
+        build: asJson(row.build),
+      });
+      if (!facts) throw new TRPCError({ code: "BAD_REQUEST", message: "This build is missing data. Regenerate the player." });
+
+      const social = await generateSocialRecord(facts, input.useAI ? invokeLLM : null, resp => {
+        const u = resp?.usage;
+        console.log(`[AI usage] social in=${u?.prompt_tokens ?? u?.input_tokens ?? "?"} out=${u?.completion_tokens ?? u?.output_tokens ?? "?"}`);
+      });
+      await db.execute(sql`UPDATE batch_items SET social = ${JSON.stringify(social)}::jsonb, updated_at = now() WHERE id = ${input.id}`);
+      return social;
     }),
 
   /** After reopening a batch: anything left "running" by a closed tab goes back in the queue */
