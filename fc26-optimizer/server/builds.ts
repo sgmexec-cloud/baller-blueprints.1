@@ -30,8 +30,9 @@ const limitFor = (tier: string) => SAVE_LIMITS[tier] ?? SAVE_LIMITS.free;
 const rowsOf = (res: any): any[] => res?.rows ?? (Array.isArray(res) ? res : []);
 
 // ── Validation: never trust what the client sends ──
+// l55 is the level-55 mastery (optional, so builds and profiles saved before it existed still load)
 const masteriesSchema = z
-  .record(z.string().max(64), z.object({ l10: z.boolean(), l30: z.boolean() }))
+  .record(z.string().max(64), z.object({ l10: z.boolean(), l30: z.boolean(), l55: z.boolean().optional() }))
   .refine(v => Object.keys(v).length <= 40, "Too many masteries");
 const facilitiesSchema = z
   .record(z.string().max(60), z.number().int().min(1).max(3))
@@ -41,9 +42,9 @@ const ProfileSchema = z.object({
   clubLevel: z.number().int().min(1).max(60),
   equippedFacilities: facilitiesSchema,
   unlockedMasteries: masteriesSchema,
-  // The level reached on each archetype. Masteries complete at 10 and 30 (worked out on the client).
+  // The level reached on each archetype (1-55). Masteries complete at 10, 30 and 55 (worked out on the client).
   archetypeLevels: z
-    .record(z.string().max(64), z.number().int().min(1).max(40))
+    .record(z.string().max(64), z.number().int().min(1).max(55))
     .refine(v => Object.keys(v).length <= 40, "Too many archetypes")
     .optional()
     .default({}),
@@ -52,7 +53,7 @@ const ProfileSchema = z.object({
 const SnapshotSchema = z.object({
   v: z.literal(1),
   archetype: z.string().min(1).max(64),
-  level: z.number().int().min(1).max(40),
+  level: z.number().int().min(1).max(55),
   height: z.number().min(140).max(220),
   weight: z.number().min(40).max(140),
   addedPoints: z
@@ -60,9 +61,11 @@ const SnapshotSchema = z.object({
     .refine(v => Object.keys(v).length <= 40, "Too many attributes"),
   smLevel: z.number().int().min(1).max(5),
   wfLevel: z.number().int().min(1).max(5),
-  equippedPlaystyles: z.array(z.string().max(60)).max(3),
+  // 4 PlayStyle slots at level 55
+  equippedPlaystyles: z.array(z.string().max(60)).max(4),
   equippedSpecialization: z.string().max(80).nullable(),
-  psPlusMode: z.enum(["auto", "signature", "spec"]),
+  // Older builds carry it; new builds don't need it
+  psPlusMode: z.enum(["auto", "signature", "spec"]).optional(),
   clubLevel: z.number().int().min(1).max(60),
   equippedFacilities: facilitiesSchema,
   unlockedMasteries: masteriesSchema,
