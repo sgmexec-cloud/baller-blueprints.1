@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import type { ItemStatus } from '@/utils/batchRunner';
 import { buildCaption, parseHashtagInput, LIMITS } from '@/utils/socialCopy';
+import { EXPORT_KINDS, type ExportKind } from '@/utils/batchExport';
 
 // ───────────────────────── shared bits ─────────────────────────
 
@@ -458,6 +459,11 @@ export interface BatchViewProps {
   onWriteMissingCopy: () => void;
   onSaveSocial: (item: BatchItemView, social: any) => void;
   onRegenerateSocial: (item: BatchItemView) => void;
+  /** What an export would contain right now (selected, finished players) */
+  exportInfo: { ready: number; usingTemplate: number; skipped: number };
+  exportNotice: string | null;
+  onExport: (kind: ExportKind) => void;
+  onExportAll: () => void;
 }
 
 export const BatchView: React.FC<BatchViewProps> = p => {
@@ -542,6 +548,35 @@ export const BatchView: React.FC<BatchViewProps> = p => {
         ))}
       </div>
 
+      <div className="rounded-2xl border border-[#26334A] bg-[#0D1220] p-4 space-y-3">
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#facc15]">Export for Canva</div>
+        <p className="text-[10px] text-[#8E9AAF] leading-relaxed">
+          {p.exportInfo.ready} of {s.done} finished player{s.done === 1 ? '' : 's'} will be exported (the ones ticked above).
+          {p.exportInfo.usingTemplate > 0 && ` ${p.exportInfo.usingTemplate} ${p.exportInfo.usingTemplate === 1 ? 'has' : 'have'} no saved copy, so template wording is used.`}
+          {p.exportInfo.skipped > 0 && ` ${p.exportInfo.skipped} skipped: incomplete build, regenerate ${p.exportInfo.skipped === 1 ? 'it' : 'them'}.`}
+        </p>
+        <div className="space-y-2">
+          {EXPORT_KINDS.map(k => (
+            <button
+              key={k.id}
+              onClick={() => p.onExport(k.id)}
+              disabled={p.exportInfo.ready === 0}
+              className="w-full text-left rounded-lg border border-[#26334A] bg-[#131A2A] p-3 hover:border-[#4D8DFF]/50 disabled:opacity-40 transition-colors"
+            >
+              <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">Download {k.label} CSV</div>
+              <div className="text-[10px] text-[#8E9AAF] mt-0.5 leading-snug">{k.help}</div>
+            </button>
+          ))}
+        </div>
+        <button onClick={p.onExportAll} disabled={p.exportInfo.ready === 0} className="w-full py-2.5 rounded-lg bg-[#4D8DFF] text-[#080B14] text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+          Download all three
+        </button>
+        {p.exportNotice && <p className="text-[10px] text-[#21E6A4] leading-relaxed">{p.exportNotice}</p>}
+        <p className="text-[10px] text-[#59657A] leading-relaxed">
+          Player images are not in the files. Upload them to Canva and match each one by the player_name column.
+        </p>
+      </div>
+
       <div className="rounded-2xl border border-[#26334A] bg-[#0D1220] p-4">
         <button onClick={() => p.setAddOpen(!p.addOpen)} disabled={p.running} className="text-[10px] font-black uppercase tracking-widest text-[#4D8DFF] disabled:opacity-40">
           {p.addOpen ? '− Hide' : '+ Add more players'}
@@ -563,7 +598,6 @@ export const BatchView: React.FC<BatchViewProps> = p => {
 
       <div className="text-center">
         <button onClick={p.onDeleteBatch} disabled={p.running} className="text-[10px] font-bold uppercase tracking-widest text-[#59657A] hover:text-[#ff8a8a] disabled:opacity-40">Delete this batch</button>
-        <p className="mt-2 text-[10px] text-[#59657A]">The Canva export comes in the next step.</p>
       </div>
     </div>
   );
