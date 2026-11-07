@@ -4,6 +4,7 @@ import { useAccount } from '@/hooks/useAccount';
 import { runAiBuildPipeline, allMasteriesUnlocked, type BatchBuildSettings } from '@/utils/aiBuildPipeline';
 import { computeBuildView } from '@/utils/buildView';
 import { mergeMasteries } from '@/utils/masteryFromLevel';
+import { buildExport, downloadCsv, EXPORT_KINDS, type ExportKind } from '@/utils/batchExport';
 import { parsePlayerList, playerIdentity, friendlyError, runQueue, composeBuildRecord, summarise } from '@/utils/batchRunner';
 import { NewBatchForm, SavedBatches, BatchView, type BatchItemView, type BatchSettingsView } from '@/components/batch/BatchPanels';
 
@@ -78,11 +79,17 @@ export default function BatchPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addText, setAddText] = useState('');
   const [socialBusy, setSocialBusy] = useState<number[]>([]);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
   const stopRef = useRef(false);
   const runningRef = useRef(false);
 
   const keptFacilities: Record<string, number> = profile?.equippedFacilities ?? {};
   const summary = useMemo(() => summarise(items), [items]);
+  // What an export would hold right now (selected, finished players)
+  const exportInfo = useMemo(() => {
+    const r = buildExport('titles', items, open?.name ?? 'batch');
+    return { ready: r.rowCount, usingTemplate: r.usedTemplate.length, skipped: r.skipped.length };
+  }, [items, open]);
   const missingCopy = useMemo(() => items.filter(i => i.status === 'done' && !i.social).length, [items]);
 
   // Leaving the page mid-run would stop the builds
@@ -318,6 +325,23 @@ export default function BatchPage() {
     }
   };
 
+  const doExport = (kind: ExportKind) => {
+    if (!open) return;
+    const r = buildExport(kind, items, open.name);
+    if (r.rowCount === 0) { setExportNotice('Tick at least one finished player first.'); return; }
+    downloadCsv(r.filename, r.csv);
+    setExportNotice(
+      `Downloaded ${r.filename} (${r.rowCount} row${r.rowCount === 1 ? '' : 's'}).` +
+        (r.usedTemplate.length > 0 ? ` Template wording used for ${r.usedTemplate.length}.` : '') +
+        (r.skipped.length > 0 ? ` Skipped (incomplete build): ${r.skipped.join(', ')}.` : '')
+    );
+  };
+
+  const exportAll = () => {
+    // Staggered so the browser treats them as separate downloads (it may ask to allow multiple downloads)
+    EXPORT_KINDS.forEach((k, i) => setTimeout(() => doExport(k.id), i * 600));
+  };
+
   const toggleSelect = (item: BatchItemView) => {
     patchItem(item.id, { selected: !item.selected });
     save(item.id, { selected: !item.selected }).catch(() => patchItem(item.id, { selected: item.selected }));
@@ -421,6 +445,10 @@ export default function BatchPage() {
           onWriteMissingCopy={writeMissingCopy}
           onSaveSocial={saveSocial}
           onRegenerateSocial={regenerateCopy}
+          exportInfo={exportInfo}
+          exportNotice={exportNotice}
+          onExport={doExport}
+          onExportAll={exportAll}
         />
       )}
     </Shell>
