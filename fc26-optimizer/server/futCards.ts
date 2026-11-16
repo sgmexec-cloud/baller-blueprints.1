@@ -11,6 +11,13 @@ async function getDatabase() {
   throw new Error("Database connection unavailable");
 }
 
+function extractRows(res: any): any[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.rows)) return res.rows;
+  return [];
+}
+
 export interface FutCard {
   id: string;
   eaAssetId: string | null;
@@ -379,8 +386,8 @@ export async function searchFutCards(params: {
 }): Promise<FutCard[]> {
   await ensureFutCardsSchema();
   const db = await getDatabase();
-  const countRes = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`);
-  if (Number((countRes.rows?.[0] as any)?.cnt ?? 0) === 0) {
+  const countRows = extractRows(await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`));
+  if (Number(countRows[0]?.cnt ?? 0) === 0) {
     await upsertFutCards(BUILTIN_FC27_CARDS);
   }
 
@@ -400,36 +407,35 @@ export async function searchFutCards(params: {
   }
 
   const whereClause = sql.join(conditions, sql` AND `);
-  let result = await db.execute(sql`
+  let rows = extractRows(await db.execute(sql`
     SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
-  `);
+  `));
 
-  if ((result.rows ?? []).length === 0 && params.query && params.query.trim().length >= 3) {
+  if (rows.length === 0 && params.query && params.query.trim().length >= 3) {
     const liveHits = await fetchUpstreamCards(params.query.trim());
     if (liveHits.length > 0) {
       await upsertFutCards(liveHits);
-      result = await db.execute(sql`
+      rows = extractRows(await db.execute(sql`
         SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
-      `);
+      `));
     }
   }
 
-  return (result.rows ?? []).map(rowToFutCard);
+  return rows.map(rowToFutCard);
 }
 
 export async function getFutCardById(id: string): Promise<FutCard | null> {
   await ensureFutCardsSchema();
   const db = await getDatabase();
-  const res = await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`);
-  const row = res.rows?.[0];
-  return row ? rowToFutCard(row) : null;
+  const rows = extractRows(await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`));
+  return rows[0] ? rowToFutCard(rows[0]) : null;
 }
 
 export async function getAvailableRarities(): Promise<string[]> {
   await ensureFutCardsSchema();
   const db = await getDatabase();
-  const res = await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`);
-  return (res.rows ?? []).map((r: any) => String(r.rarity));
+  const rows = extractRows(await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`));
+  return rows.map((r: any) => String(r.rarity));
 }
 
 export const getDistinctRarities = getAvailableRarities;
