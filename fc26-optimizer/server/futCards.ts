@@ -51,6 +51,8 @@ export interface FutCard {
   avatarUrl: string | null;
 }
 
+const FUTMIND_BASE_URL = "https://futmind.com/api/beta/players";
+
 const STAT_KEY_MAP: Record<string, string> = {
   acceleration: "Acceleration",
   movementacceleration: "Acceleration",
@@ -58,6 +60,7 @@ const STAT_KEY_MAP: Record<string, string> = {
   movementsprintspeed: "Sprint Speed",
   positioning: "Att. Position",
   attposition: "Att. Position",
+  attackpositioning: "Att. Position",
   mentalitypositioning: "Att. Position",
   finishing: "Finishing",
   attackingfinishing: "Finishing",
@@ -74,6 +77,7 @@ const STAT_KEY_MAP: Record<string, string> = {
   crossing: "Crossing",
   attackingcrossing: "Crossing",
   freekickaccuracy: "FK Acc.",
+  freekick: "FK Acc.",
   fkacc: "FK Acc.",
   skillfkaccuracy: "FK Acc.",
   shortpassing: "Short Pass",
@@ -99,6 +103,7 @@ const STAT_KEY_MAP: Record<string, string> = {
   interceptions: "Interceptions",
   mentalityinterceptions: "Interceptions",
   headingaccuracy: "Heading Acc.",
+  heading: "Heading Acc.",
   headingacc: "Heading Acc.",
   attackingheadingaccuracy: "Heading Acc.",
   defensiveawareness: "Def. Awareness",
@@ -125,64 +130,208 @@ function normalizeStatKey(raw: string): string | null {
   return STAT_KEY_MAP[raw.toLowerCase().replace(/[^a-z]/g, "")] ?? null;
 }
 
-const FULL_FC27_CSV_SOURCES = [
-  "https://raw.githubusercontent.com/LakshmiKanth11/EA_FC_ANALYSIS/main/EA_FC_PLAYERS_DATASET_AND_DASHBOARD/data/players.csv",
-  "https://raw.githubusercontent.com/LakshmiKanth11/EA_FC_ANALYSIS/main/data/players.csv",
-];
+function inferDefaultRarity(overall: number): string {
+  if (overall >= 75) return "Gold Rare";
+  if (overall >= 65) return "Silver";
+  return "Bronze";
+}
 
-// Authentic FC 27 starter cards (used immediately while full CSV catalog imports)
-type SeedTuple = [
-  string, string, string, number, string, string[], string, string, string,
-  number, number, number, number, "Right" | "Left",
-  [number, number, number, number, number, number],
-  string[], string[], Record<string, number>?
-];
+function parseNumberOrNull(raw: unknown): number | null {
+  if (raw == null) return null;
+  if (typeof raw === "number") return Number.isFinite(raw) ? Math.round(raw) : null;
+  if (typeof raw === "object" && raw !== null && "value" in (raw as any)) {
+    return parseNumberOrNull((raw as any).value);
+  }
+  const m = String(raw).match(/-?\d+(\.\d+)?/);
+  if (!m) return null;
+  const n = Math.round(Number(m[0]));
+  return Number.isFinite(n) ? n : null;
+}
 
-const SEED_DATA: SeedTuple[] = [
-  ["fc27-kane-90", "Harry Kane", "Gold Rare", 90, "ST", ["CAM"], "FC Bayern München", "Bundesliga", "England", 188, 86, 3, 4, "Right", [62, 94, 83, 82, 49, 83], ["Finesse Shot"], ["First Touch", "Gamechanger", "Long Ball Pass", "Low Driven Shot", "Precision Header", "Press Proven"], { Acceleration: 63, "Sprint Speed": 62, "Att. Position": 96, Finishing: 96, "Shot Power": 92, "Long Shots": 91, Volleys: 91, Penalties: 93, Vision: 86, "Short Pass": 86, "Long Pass": 82, Agility: 67, Balance: 72, Reactions: 94, "Ball Control": 87, Dribbling: 80, Composure: 92, "Heading Acc.": 89, Jumping: 87, Stamina: 76, Strength: 87, Aggression: 82 }],
-  ["fc27-mbappe-91", "Kylian Mbappé", "Gold Rare", 91, "ST", ["LW"], "Real Madrid", "LALIGA EA SPORTS", "France", 182, 75, 5, 4, "Right", [97, 90, 80, 92, 36, 78], ["Quick Step"], ["Finesse Shot", "Rapid", "Flair", "Trivela", "Acrobatic"], { Acceleration: 97, "Sprint Speed": 97, "Att. Position": 93, Finishing: 94, "Shot Power": 90, "Short Pass": 86, Agility: 93, Balance: 82, Reactions: 93, "Ball Control": 92, Dribbling: 93, Composure: 88, Strength: 77 }],
-  ["fc27-haaland-91", "Erling Haaland", "Gold Rare", 91, "ST", [], "Manchester City", "Premier League", "Norway", 195, 94, 3, 3, "Left", [88, 92, 70, 81, 45, 88], ["Acrobatic"], ["Power Shot", "Precision Header", "Quick Step", "Bruiser"], { Acceleration: 81, "Sprint Speed": 94, "Att. Position": 95, Finishing: 96, "Shot Power": 94, Agility: 76, Balance: 72, Reactions: 94, Strength: 93, Jumping: 92 }],
-  ["fc27-vini-91", "Vinícius Jr.", "Gold Rare", 91, "LW", ["ST"], "Real Madrid", "LALIGA EA SPORTS", "Brazil", 176, 73, 5, 4, "Right", [95, 85, 81, 92, 29, 69], ["Quick Step"], ["Finesse Shot", "Rapid", "Flair", "First Touch", "Trickster"], { Acceleration: 95, "Sprint Speed": 95, Finishing: 88, Agility: 94, Dribbling: 94, "Ball Control": 91 }],
-  ["fc27-salah-90", "Mohamed Salah", "Gold Rare", 90, "RW", ["RM"], "Liverpool", "Premier League", "Egypt", 175, 71, 4, 3, "Left", [89, 88, 83, 89, 45, 75], ["Finesse Shot"], ["Chip Shot", "Rapid", "First Touch", "Trivela"], { "Att. Position": 92, Finishing: 92, Balance: 91, Reactions: 92, Composure: 91 }],
-  ["fc27-bellingham-90", "Jude Bellingham", "Gold Rare", 90, "CAM", ["CM"], "Real Madrid", "LALIGA EA SPORTS", "England", 186, 75, 4, 4, "Right", [81, 87, 83, 88, 78, 83], ["Relentless"], ["Incisive Pass", "Technical", "Flair", "Slide Tackle", "Intercept"], { "Att. Position": 91, Finishing: 90, Vision: 88, "Short Pass": 89, Reactions: 91, "Ball Control": 89, Interceptions: 82, Stamina: 93 }],
-  ["fc27-bonmati-91", "Aitana Bonmatí", "Gold Rare", 91, "CM", ["CAM"], "FC Barcelona", "Liga F", "Spain", 162, 53, 4, 5, "Right", [85, 86, 87, 92, 77, 75], ["Technical"], ["Finesse Shot", "Incisive Pass", "First Touch", "Relentless", "Trivela"], { Agility: 94, Balance: 93, Reactions: 92, "Ball Control": 92, Dribbling: 92, Stamina: 92 }],
-  ["fc27-rodri-91", "Rodri", "Gold Rare", 91, "CDM", ["CM"], "Manchester City", "Premier League", "Spain", 191, 82, 3, 4, "Right", [66, 80, 86, 84, 87, 85], ["Tiki Taka"], ["Power Shot", "Long Ball Pass", "Bruiser", "Aerial Fortress", "Intercept"], { "Short Pass": 92, "Long Pass": 91, Reactions: 92, Composure: 93, Interceptions: 88, "Def. Awareness": 88, "Stand Tackle": 88 }],
-  ["fc27-vandijk-90", "Virgil van Dijk", "Gold Rare", 90, "CB", [], "Liverpool", "Premier League", "Netherlands", 193, 92, 2, 3, "Right", [78, 60, 72, 72, 90, 86], ["Aerial Fortress"], ["Long Ball Pass", "Jockey", "Block", "Intercept", "Anticipate", "Bruiser"], { "Sprint Speed": 86, Reactions: 89, Composure: 90, Interceptions: 90, "Heading Acc.": 89, "Def. Awareness": 91, "Stand Tackle": 91, Strength: 93 }],
-];
+function extractLabel(val: unknown): string | null {
+  if (!val) return null;
+  if (typeof val === "string") return val.trim() || null;
+  if (typeof val === "object") {
+    const obj = val as Record<string, any>;
+    const candidate = obj.name ?? obj.label ?? obj.title ?? obj.shortLabel ?? obj.displayName;
+    if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
+  }
+  return null;
+}
 
-const BUILTIN_FC27_CARDS: FutCard[] = SEED_DATA.map(
-  ([id, name, rarity, overall, position, altPositions, club, league, nation, heightCm, weightKg, skillMoves, weakFoot, preferredFoot, [pace, shooting, passing, dribbling, defending, physical], playstylePlus, playstyles, overrides]) => ({
+// ── Parse FUTMind / EA / Generic Card JSON Object ───────────────────────────
+function parseCardObject(item: Record<string, any>): FutCard | null {
+  if (!item || typeof item !== "object") return null;
+
+  const fullName =
+    extractLabel(item.commonName) ||
+    extractLabel(item.common_name) ||
+    [item.firstName, item.lastName].filter(Boolean).join(" ").trim() ||
+    extractLabel(item.name) ||
+    extractLabel(item.fullName) ||
+    extractLabel(item.playerName);
+
+  const overall = parseNumberOrNull(
+    item.overall ?? item.overallRating ?? item.overall_rating ?? item.rating ?? item.ovr
+  );
+  if (!fullName || !overall || overall < 40 || overall > 99) return null;
+
+  const rawPos =
+    extractLabel(item.position) ||
+    extractLabel(item.mainPosition) ||
+    extractLabel(item.preferredPosition) ||
+    "";
+  const posTokens = rawPos
+    .split(/[,/|;\s]+/)
+    .map((p) => p.trim().toUpperCase())
+    .filter(Boolean);
+  const position = posTokens[0] || "ST";
+  if (position === "GK") return null;
+
+  const rawAlt =
+    item.altPositions ?? item.alt_positions ?? item.alternativePositions ?? item.alternatePositions ?? [];
+  const extraAlts = Array.isArray(rawAlt)
+    ? rawAlt.map((p) => (extractLabel(p) || "").toUpperCase()).filter(Boolean)
+    : typeof rawAlt === "string"
+      ? rawAlt.split(/[,/|;\s]+/).map((p) => p.trim().toUpperCase()).filter(Boolean)
+      : [];
+  const altPositions = Array.from(new Set([...posTokens.slice(1), ...extraAlts])).filter(
+    (p) => p !== position && p !== "GK"
+  );
+
+  const rarity =
+    extractLabel(item.rarity) ||
+    extractLabel(item.rarityName) ||
+    extractLabel(item.cardType) ||
+    extractLabel(item.version) ||
+    inferDefaultRarity(overall);
+
+  const rawId = String(
+    item.id ?? item.cardId ?? item.playerId ?? item.assetId ?? item.eaId ?? ""
+  ).trim();
+  const slug = fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const raritySlug = rarity.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const id = rawId ? `fm27-${rawId}` : `fm27-${slug}-${overall}-${raritySlug}`;
+
+  const faceObj = item.faceStats ?? item.stats ?? item;
+  const pace = parseNumberOrNull(faceObj.pace ?? faceObj.pac) ?? 70;
+  const shooting = parseNumberOrNull(faceObj.shooting ?? faceObj.sho) ?? 70;
+  const passing = parseNumberOrNull(faceObj.passing ?? faceObj.pas) ?? 70;
+  const dribbling = parseNumberOrNull(faceObj.dribbling ?? faceObj.dri) ?? 70;
+  const defending = parseNumberOrNull(faceObj.defending ?? faceObj.def) ?? 50;
+  const physical = parseNumberOrNull(faceObj.physical ?? faceObj.physicality ?? faceObj.phy) ?? 70;
+
+  // Collect in-game attributes from nested objects or top-level keys
+  const attributes: Record<string, number> = {};
+  const statSources = [
+    item.attributes,
+    item.inGameStats,
+    item.ingameStats,
+    item.stats,
+    item.detailedStats,
+    item,
+  ].filter((src) => src && typeof src === "object");
+
+  for (const src of statSources) {
+    for (const [k, v] of Object.entries(src)) {
+      // If grouped by category (e.g. { pace: { acceleration: 63, sprintSpeed: 62 } })
+      if (v && typeof v === "object" && !Array.isArray(v) && !("value" in (v as any))) {
+        for (const [subK, subV] of Object.entries(v as Record<string, any>)) {
+          const mappedSub = normalizeStatKey(subK);
+          const numSub = parseNumberOrNull(subV);
+          if (mappedSub && numSub !== null && numSub >= 1 && numSub <= 99) {
+            attributes[mappedSub] = numSub;
+          }
+        }
+        continue;
+      }
+      const mapped = normalizeStatKey(k);
+      const num = parseNumberOrNull(v);
+      if (mapped && num !== null && num >= 1 && num <= 99) {
+        attributes[mapped] = num;
+      }
+    }
+  }
+
+  // Extract PlayStyles and PlayStyle+
+  const playstylePlus: string[] = [];
+  const playstyles: string[] = [];
+
+  const pushStyle = (rawName: string, isPlus = false) => {
+    const trimmed = rawName.trim();
+    if (!trimmed) return;
+    if (isPlus || trimmed.endsWith("+")) {
+      const clean = trimmed.replace(/\+$/, "").trim();
+      if (clean && !playstylePlus.includes(clean)) playstylePlus.push(clean);
+    } else if (!playstyles.includes(trimmed)) {
+      playstyles.push(trimmed);
+    }
+  };
+
+  for (const field of [item.playstylePlus, item.playStylePlus, item.playstylesPlus, item.playStylesPlus]) {
+    if (Array.isArray(field)) {
+      for (const ps of field) {
+        const label = extractLabel(ps);
+        if (label) pushStyle(label, true);
+      }
+    }
+  }
+
+  for (const field of [item.playstyles, item.playStyles, item.playerAbilities, item.abilities]) {
+    if (Array.isArray(field)) {
+      for (const ps of field) {
+        if (typeof ps === "string") {
+          pushStyle(ps);
+        } else if (ps && typeof ps === "object") {
+          const label = extractLabel(ps);
+          const isPlus = Boolean(
+            ps.plus || ps.isPlus || ps.is_plus || ps.type?.id === "playStylePlus" || ps.tier === "plus"
+          );
+          if (label) pushStyle(label, isPlus);
+        }
+      }
+    } else if (typeof field === "string") {
+      for (const token of field.split(/[,|;]+/)) pushStyle(token);
+    }
+  }
+
+  const footRaw = String(item.preferredFoot ?? item.preferred_foot ?? item.foot ?? "Right");
+  const preferredFoot =
+    footRaw === "2" || footRaw.toLowerCase().startsWith("l") ? "Left" : "Right";
+
+  const avatarUrl =
+    extractLabel(item.avatarUrl) ||
+    extractLabel(item.avatar_url) ||
+    extractLabel(item.imageUrl) ||
+    extractLabel(item.image) ||
+    extractLabel(item.headshotUrl) ||
+    extractLabel(item.playerImage) ||
+    null;
+
+  return {
     id,
-    eaAssetId: id,
-    name,
-    commonName: name,
+    eaAssetId: String(item.assetId ?? item.eaAssetId ?? rawId ?? "") || null,
+    name: fullName,
+    commonName: extractLabel(item.commonName ?? item.common_name),
     rarity,
     overall,
     position,
     altPositions,
-    club,
-    league,
-    nation,
-    heightCm,
-    weightKg,
-    skillMoves,
-    weakFoot,
+    club: extractLabel(item.club ?? item.team ?? item.clubName),
+    league: extractLabel(item.league ?? item.leagueName),
+    nation: extractLabel(item.nation ?? item.nationality ?? item.nationName),
+    heightCm: parseNumberOrNull(item.heightCm ?? item.height_cm ?? item.height),
+    weightKg: parseNumberOrNull(item.weightKg ?? item.weight_kg ?? item.weight),
+    skillMoves: Math.min(5, Math.max(1, parseNumberOrNull(item.skillMoves ?? item.skill_moves ?? item.skills) ?? 3)),
+    weakFoot: Math.min(5, Math.max(1, parseNumberOrNull(item.weakFoot ?? item.weak_foot ?? item.weakFootAbility) ?? 3)),
     preferredFoot,
     faceStats: { pace, shooting, passing, dribbling, defending, physical },
-    attributes: {
-      Acceleration: pace, "Sprint Speed": pace,
-      "Att. Position": shooting, Finishing: shooting, "Shot Power": shooting, "Long Shots": shooting, Volleys: Math.max(40, shooting - 2), Penalties: Math.max(40, shooting - 2),
-      Vision: passing, Crossing: Math.max(40, passing - 2), "FK Acc.": Math.max(40, passing - 4), "Short Pass": passing, "Long Pass": Math.max(40, passing - 1), Curve: Math.max(40, passing - 2),
-      Agility: dribbling, Balance: Math.max(40, dribbling - 2), Reactions: dribbling, "Ball Control": dribbling, Dribbling: dribbling, Composure: dribbling,
-      Interceptions: defending, "Heading Acc.": defending, "Def. Awareness": defending, "Stand Tackle": defending, "Slide Tackle": Math.max(40, defending - 2),
-      Jumping: physical, Stamina: physical, Strength: physical, Aggression: Math.max(40, physical - 2),
-      ...(overrides ?? {}),
-    },
+    attributes,
     playstylePlus,
     playstyles,
-    avatarUrl: null,
-  })
-);
+    avatarUrl,
+  };
+}
 
 // ── RFC-4180 Compliant CSV Parser ───────────────────────────────────────────
 function parseCsvRows(text: string): Record<string, string>[] {
@@ -238,206 +387,10 @@ function parseCsvRows(text: string): Record<string, string>[] {
   return out;
 }
 
-function inferDefaultRarity(overall: number): string {
-  if (overall >= 75) return "Gold Rare";
-  if (overall >= 65) return "Silver";
-  return "Bronze";
-}
-
-function parseNumberOrNull(raw: string | undefined): number | null {
-  if (!raw) return null;
-  const m = raw.match(/-?\d+(\.\d+)?/);
-  if (!m) return null;
-  const n = Math.round(Number(m[0]));
-  return Number.isFinite(n) ? n : null;
-}
-
-function parseCsvRecordToCard(rec: Record<string, string>): FutCard | null {
-  const get = (...keys: string[]): string => {
-    for (const k of keys) {
-      if (rec[k] !== undefined && rec[k] !== "") return rec[k];
-      const lower = k.toLowerCase();
-      for (const rk of Object.keys(rec)) {
-        if (rk.toLowerCase() === lower && rec[rk] !== "") return rec[rk];
-      }
-    }
-    return "";
-  };
-
-  const name = get("name", "long_name", "player_name", "full_name", "short_name");
-  const commonName = get("common_name", "short_name") || null;
-  const overall = parseNumberOrNull(get("overall", "overall_rating", "ovr", "rating"));
-  if (!name || !overall || overall < 40 || overall > 99) return null;
-
-  const rawPos = get("position", "player_positions", "preferred_position", "pos");
-  const posTokens = rawPos
-    .split(/[,/|;\s]+/)
-    .map((p) => p.trim().toUpperCase())
-    .filter(Boolean);
-  const position = posTokens[0] || "ST";
-  if (position === "GK") return null;
-  const altPositions = Array.from(new Set(posTokens.slice(1))).filter((p) => p !== position && p !== "GK");
-
-  const rarity = get("rarity", "rarity_name", "card_type", "version") || inferDefaultRarity(overall);
-  const rawId = get("id", "player_id", "asset_id", "ea_id", "sofifa_id");
-  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const raritySlug = rarity.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const id = rawId ? `fc27-${rawId}-${raritySlug}` : `fc27-${slug}-${overall}-${raritySlug}`;
-
-  const pace = parseNumberOrNull(get("pace", "pac")) ?? 70;
-  const shooting = parseNumberOrNull(get("shooting", "sho")) ?? 70;
-  const passing = parseNumberOrNull(get("passing", "pas")) ?? 70;
-  const dribbling = parseNumberOrNull(get("dribbling", "dri")) ?? 70;
-  const defending = parseNumberOrNull(get("defending", "def")) ?? 50;
-  const physical = parseNumberOrNull(get("physicality", "physical", "phy")) ?? 70;
-
-  const attributes: Record<string, number> = {};
-  for (const [k, v] of Object.entries(rec)) {
-    const mapped = normalizeStatKey(k);
-    if (!mapped) continue;
-    const num = parseNumberOrNull(v);
-    if (num !== null && num >= 1 && num <= 99) {
-      attributes[mapped] = num;
-    }
-  }
-
-  // Ensure every outfield attribute has a valid fallback from its face stat
-  const defaults: Record<string, number> = {
-    Acceleration: pace, "Sprint Speed": pace,
-    "Att. Position": shooting, Finishing: shooting, "Shot Power": shooting, "Long Shots": shooting,
-    Volleys: Math.max(35, shooting - 2), Penalties: Math.max(35, shooting - 2),
-    Vision: passing, Crossing: Math.max(35, passing - 2), "FK Acc.": Math.max(35, passing - 4),
-    "Short Pass": passing, "Long Pass": Math.max(35, passing - 1), Curve: Math.max(35, passing - 2),
-    Agility: dribbling, Balance: Math.max(35, dribbling - 2), Reactions: dribbling,
-    "Ball Control": dribbling, Dribbling: dribbling, Composure: dribbling,
-    Interceptions: defending, "Heading Acc.": defending, "Def. Awareness": defending,
-    "Stand Tackle": defending, "Slide Tackle": Math.max(35, defending - 2),
-    Jumping: physical, Stamina: physical, Strength: physical, Aggression: Math.max(35, physical - 2),
-  };
-  for (const [stat, val] of Object.entries(defaults)) {
-    if (attributes[stat] === undefined) attributes[stat] = val;
-  }
-
-  const playstylePlus: string[] = [];
-  const playstyles: string[] = [];
-  const rawPs = get("playstyles", "play_styles", "traits");
-  if (rawPs) {
-    for (const token of rawPs.split(/[,|;]+/)) {
-      const clean = token.trim();
-      if (!clean) continue;
-      if (clean.endsWith("+")) {
-        playstylePlus.push(clean.slice(0, -1).trim());
-      } else {
-        playstyles.push(clean);
-      }
-    }
-  }
-  const rawPsPlus = get("playstyles_plus", "playstyle_plus");
-  if (rawPsPlus) {
-    for (const token of rawPsPlus.split(/[,|;]+/)) {
-      const clean = token.replace(/\+$/, "").trim();
-      if (clean && !playstylePlus.includes(clean)) playstylePlus.push(clean);
-    }
-  }
-
-  const footRaw = get("preferred_foot", "foot");
-  const preferredFoot = footRaw.toLowerCase().startsWith("l") ? "Left" : "Right";
-
-  return {
-    id,
-    eaAssetId: rawId || null,
-    name,
-    commonName,
-    rarity,
-    overall,
-    position,
-    altPositions,
-    club: get("club", "club_name", "team") || null,
-    league: get("league", "league_name") || null,
-    nation: get("nation", "nationality", "nationality_name") || null,
-    heightCm: parseNumberOrNull(get("height_cm", "height")),
-    weightKg: parseNumberOrNull(get("weight_kg", "weight")),
-    skillMoves: Math.min(5, Math.max(1, parseNumberOrNull(get("skill_moves", "skills")) ?? 3)),
-    weakFoot: Math.min(5, Math.max(1, parseNumberOrNull(get("weak_foot", "weakfoot")) ?? 3)),
-    preferredFoot,
-    faceStats: { pace, shooting, passing, dribbling, defending, physical },
-    attributes,
-    playstylePlus,
-    playstyles,
-    avatarUrl: get("avatar_url", "player_face_url", "headshot_url", "image_url") || null,
-  };
-}
-
-function parseEaItem(item: any): FutCard | null {
-  const fullName = item.commonName || [item.firstName, item.lastName].filter(Boolean).join(" ").trim() || item.name;
-  if (!fullName || !item.overallRating) return null;
-
-  const rawStats = item.stats ?? {};
-  const attrs: Record<string, number> = {};
-  for (const [k, v] of Object.entries(rawStats)) {
-    const val = typeof v === "object" && v !== null ? Number((v as any).value) : Number(v);
-    const mapped = normalizeStatKey(k);
-    if (Number.isFinite(val) && mapped) attrs[mapped] = val;
-  }
-
-  const faceStats = {
-    pace: Number(rawStats.pac?.value ?? rawStats.pace ?? 75),
-    shooting: Number(rawStats.sho?.value ?? rawStats.shooting ?? 75),
-    passing: Number(rawStats.pas?.value ?? rawStats.passing ?? 75),
-    dribbling: Number(rawStats.dri?.value ?? rawStats.dribbling ?? 75),
-    defending: Number(rawStats.def?.value ?? rawStats.defending ?? 50),
-    physical: Number(rawStats.phy?.value ?? rawStats.physical ?? 75),
-  };
-
-  const psPlus: string[] = [];
-  const psStd: string[] = [];
-  for (const ab of item.playerAbilities ?? item.playStyles ?? []) {
-    const label = typeof ab === "string" ? ab : ab?.label || ab?.name;
-    if (!label) continue;
-    const isPlus = typeof ab === "object" && (ab?.type?.id === "playStylePlus" || ab?.isPlus || String(label).endsWith("+"));
-    const clean = String(label).replace(/\+$/, "").trim();
-    if (isPlus) psPlus.push(clean);
-    else psStd.push(clean);
-  }
-
-  const position = typeof item.position === "string" ? item.position : item.position?.shortLabel || "ST";
-  if (position === "GK") return null;
-
-  const assetId = String(item.id ?? item.assetId ?? `${fullName}-${item.overallRating}`);
-  const rarity = item.rarity?.label || item.rarityName || inferDefaultRarity(Number(item.overallRating));
-
-  return {
-    id: `ea-${assetId}-${String(rarity).toLowerCase().replace(/[^a-z0-9]/g, "")}`,
-    eaAssetId: assetId,
-    name: fullName,
-    commonName: item.commonName ?? null,
-    rarity,
-    overall: Number(item.overallRating),
-    position,
-    altPositions: Array.isArray(item.alternatePositions)
-      ? item.alternatePositions.map((p: any) => (typeof p === "string" ? p : p?.shortLabel)).filter(Boolean)
-      : [],
-    club: item.team?.label ?? null,
-    league: item.league?.label ?? null,
-    nation: item.nationality?.label ?? null,
-    heightCm: item.height != null ? Number(item.height) : null,
-    weightKg: item.weight != null ? Number(item.weight) : null,
-    skillMoves: Number(item.skillMoves ?? 3),
-    weakFoot: Number(item.weakFootAbility ?? item.weakFoot ?? 3),
-    preferredFoot: item.preferredFoot === 2 || item.preferredFoot === "Left" ? "Left" : "Right",
-    faceStats,
-    attributes: attrs,
-    playstylePlus: psPlus,
-    playstyles: psStd,
-    avatarUrl: item.avatarUrl ?? null,
-  };
-}
-
 // ── Fast Multi-Row PostgreSQL Batch Upsert ──────────────────────────────────
 async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): Promise<number> {
   if (!cards.length) return 0;
 
-  // Deduplicate by id within the payload so ON CONFLICT never hits the same key twice in one batch
   const deduped = new Map<string, FutCard>();
   for (const c of cards) {
     if (c.position !== "GK") deduped.set(c.id, c);
@@ -482,7 +435,11 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
         weak_foot = EXCLUDED.weak_foot,
         preferred_foot = EXCLUDED.preferred_foot,
         face_stats = EXCLUDED.face_stats,
-        attributes = EXCLUDED.attributes,
+        attributes = CASE
+          WHEN jsonb_object_length(EXCLUDED.attributes) >= jsonb_object_length(fut_cards.attributes)
+          THEN EXCLUDED.attributes
+          ELSE fut_cards.attributes
+        END,
         playstyle_plus = EXCLUDED.playstyle_plus,
         playstyles = EXCLUDED.playstyles,
         avatar_url = COALESCE(EXCLUDED.avatar_url, fut_cards.avatar_url),
@@ -493,9 +450,98 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
   return uniqueCards.length;
 }
 
+// ── Live FUTMind 2027 API Client ────────────────────────────────────────────
+async function fetchFutMindPage(params: {
+  page?: number;
+  query?: string;
+  position?: string;
+  rarity?: string;
+  timeoutMs?: number;
+}): Promise<{ cards: FutCard[]; lastPage: number; total: number }> {
+  const url = new URL(FUTMIND_BASE_URL);
+  url.searchParams.set("year", "2027");
+  url.searchParams.set("page", String(params.page ?? 1));
+  if (params.query && params.query.trim()) {
+    url.searchParams.set("q", params.query.trim());
+  }
+  if (params.position && params.position !== "ALL") {
+    url.searchParams.set("position", params.position.toUpperCase());
+  }
+  if (params.rarity && params.rarity !== "ALL") {
+    url.searchParams.set("rarity", params.rarity);
+  }
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), params.timeoutMs ?? 6000);
+  try {
+    const res = await fetch(url.toString(), {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*",
+        Referer: "https://futmind.com/",
+      },
+    });
+    if (!res.ok) return { cards: [], lastPage: 1, total: 0 };
+    const data = await res.json();
+    const rawItems = Array.isArray(data?.items)
+      ? data.items
+      : Array.isArray(data?.players)
+        ? data.players
+        : Array.isArray(data?.data)
+          ? data.data
+          : Array.isArray(data)
+            ? data
+            : [];
+
+    const cards = rawItems
+      .map((item: any) => parseCardObject(item))
+      .filter((c: FutCard | null): c is FutCard => c !== null);
+
+    return {
+      cards,
+      lastPage: Number(data?.lastPage ?? data?.meta?.last_page ?? 1),
+      total: Number(data?.total ?? data?.meta?.total ?? cards.length),
+    };
+  } catch (err) {
+    console.warn("[FUTMind 2027] Fetch warning:", (err as Error)?.message);
+    return { cards: [], lastPage: 1, total: 0 };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function enrichCardDetailIfNeeded(card: FutCard): Promise<FutCard> {
+  if (Object.keys(card.attributes).length >= 15 || !card.eaAssetId) return card;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4500);
+  try {
+    const res = await fetch(`${FUTMIND_BASE_URL}/${encodeURIComponent(card.eaAssetId)}?year=2027`, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*",
+        Referer: "https://futmind.com/",
+      },
+    });
+    if (!res.ok) return card;
+    const data = await res.json();
+    const parsed = parseCardObject(data?.player ?? data?.item ?? data?.data ?? data);
+    if (parsed && Object.keys(parsed.attributes).length >= 15) {
+      return { ...card, ...parsed, id: card.id };
+    }
+  } catch {
+    // ignore detail lookup failure
+  } finally {
+    clearTimeout(timer);
+  }
+  return card;
+}
+
 export async function importFutCardsFromCsv(csvText: string): Promise<{ imported: number }> {
   const records = parseCsvRows(csvText);
-  const cards = records.map(parseCsvRecordToCard).filter((c): c is FutCard => c !== null);
+  const cards = records.map(parseCardObject).filter((c): c is FutCard => c !== null);
   if (cards.length === 0) return { imported: 0 };
 
   await ensureFutCardsSchema();
@@ -503,7 +549,7 @@ export async function importFutCardsFromCsv(csvText: string): Promise<{ imported
   if (!db) return { imported: 0 };
 
   const imported = await upsertFutCardsBatch(db, cards);
-  console.log(`[FC27 FUT IMPORTER] Imported ${imported} outfield cards from CSV.`);
+  console.log(`[FC27 FUT IMPORTER] Imported ${imported} cards from CSV.`);
   return { imported };
 }
 
@@ -512,12 +558,14 @@ export async function importFutCardsFromJson(payload: any): Promise<{ imported: 
     ? payload.items
     : Array.isArray(payload?.players)
       ? payload.players
-      : Array.isArray(payload)
-        ? payload
-        : [];
+      : Array.isArray(payload?.cards)
+        ? payload.cards
+        : Array.isArray(payload)
+          ? payload
+          : [];
 
   const cards = rawItems
-    .map((item: any) => (item?.overallRating ? parseEaItem(item) : parseCsvRecordToCard(item)))
+    .map((item: any) => parseCardObject(item))
     .filter((c: FutCard | null): c is FutCard => c !== null);
 
   if (cards.length === 0) return { imported: 0 };
@@ -527,46 +575,16 @@ export async function importFutCardsFromJson(payload: any): Promise<{ imported: 
   if (!db) return { imported: 0 };
 
   const imported = await upsertFutCardsBatch(db, cards);
-  console.log(`[FC27 FUT IMPORTER] Imported ${imported} outfield cards from JSON.`);
+  console.log(`[FC27 FUT IMPORTER] Imported ${imported} cards from JSON.`);
   return { imported };
 }
 
-export async function importFutCardsFromUrl(url: string, timeoutMs = 15000): Promise<{ imported: number }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; ClubsDNA-Importer/1.0)",
-        Accept: "text/csv, application/json, text/plain, */*",
-      },
-    });
-    if (!res.ok) return { imported: 0 };
-    const text = await res.text();
-    const trimmed = text.trim();
-    if (!trimmed) return { imported: 0 };
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-      return await importFutCardsFromJson(JSON.parse(trimmed));
-    }
-    return await importFutCardsFromCsv(trimmed);
-  } catch (err) {
-    console.warn(`[FC27 FUT IMPORTER] Fetch failed for ${url}:`, (err as Error)?.message);
-    return { imported: 0 };
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-let dbReady = false;
-let fullCatalogStarted = false;
-
-function findLocalPlayersCsv(): string | null {
+function findLocalDataFile(): string | null {
   const candidates = [
-    path.resolve(process.cwd(), "data", "FC27_PLAYERS.csv"),
-    path.resolve(process.cwd(), "data", "players.csv"),
-    path.resolve(process.cwd(), "dist", "data", "FC27_PLAYERS.csv"),
-    path.resolve(process.cwd(), "dist", "data", "players.csv"),
+    path.resolve(process.cwd(), "data", "FC27_FUT_CARDS.json"),
+    path.resolve(process.cwd(), "data", "FC27_FUT_CARDS.csv"),
+    path.resolve(process.cwd(), "dist", "data", "FC27_FUT_CARDS.json"),
+    path.resolve(process.cwd(), "dist", "data", "FC27_FUT_CARDS.csv"),
   ];
   for (const filePath of candidates) {
     if (fs.existsSync(filePath)) return filePath;
@@ -574,31 +592,23 @@ function findLocalPlayersCsv(): string | null {
   return null;
 }
 
-async function runFullCatalogImportInBackground(db: any): Promise<void> {
-  if (fullCatalogStarted) return;
-  fullCatalogStarted = true;
+let dbReady = false;
+let initialWarmupStarted = false;
 
+async function warmTopPagesFromFutMind(db: any): Promise<void> {
+  if (initialWarmupStarted) return;
+  initialWarmupStarted = true;
   try {
-    const countRows = extractRows(await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`));
-    const currentCount = Number(countRows[0]?.cnt ?? 0);
-    // Already have the full FC 27 catalog imported
-    if (currentCount >= 1000) return;
-
-    // 1. Check for a bundled local CSV first
-    const localCsv = findLocalPlayersCsv();
-    if (localCsv) {
-      const csvText = fs.readFileSync(localCsv, "utf-8");
-      const { imported } = await importFutCardsFromCsv(csvText);
-      if (imported > 0) return;
-    }
-
-    // 2. Otherwise pull the full 19,789-player FC 27 dataset from GitHub
-    for (const url of FULL_FC27_CSV_SOURCES) {
-      const { imported } = await importFutCardsFromUrl(url, 20000);
-      if (imported > 0) return;
+    // Warm top-rated pages from FUTMind 2027 so default browse view & rarities populate immediately
+    for (let page = 1; page <= 5; page++) {
+      const { cards, lastPage } = await fetchFutMindPage({ page, timeoutMs: 7000 });
+      if (cards.length > 0) {
+        await upsertFutCardsBatch(db, cards);
+      }
+      if (page >= lastPage) break;
     }
   } catch (err) {
-    console.error("[FC27 FUT IMPORTER] Background catalog import error:", err);
+    console.warn("[FUTMind 2027] Warmup error:", (err as Error)?.message);
   }
 }
 
@@ -647,19 +657,21 @@ export async function ensureFutCardsSchema(): Promise<void> {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_search ON fut_cards (LOWER(name), position, rarity)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_overall ON fut_cards (overall DESC)`);
 
-  // Clean out old placeholder rows & non-existent Kane promo cards
-  await db.execute(sql`
-    DELETE FROM fut_cards
-    WHERE rarity = 'Base Gold'
-       OR id IN ('fc27-kane-92', 'fc27-kane-95', 'fc27-ginola-89')
-  `);
-
-  // Ensure starter cards (with exact FC 27 Harry Kane 90 Gold Rare) are immediately present
-  await upsertFutCardsBatch(db, BUILTIN_FC27_CARDS);
+  // Purge all old guessed/fabricated rows
+  await db.execute(sql`DELETE FROM fut_cards WHERE id LIKE 'fc27-%' OR rarity = 'Base Gold'`);
   dbReady = true;
 
-  // Trigger the full ~17,585 outfield FC 27 catalog import asynchronously
-  void runFullCatalogImportInBackground(db);
+  const localFile = findLocalDataFile();
+  if (localFile) {
+    const raw = fs.readFileSync(localFile, "utf-8");
+    if (localFile.endsWith(".json")) {
+      await importFutCardsFromJson(JSON.parse(raw));
+    } else {
+      await importFutCardsFromCsv(raw);
+    }
+  } else {
+    void warmTopPagesFromFutMind(db);
+  }
 }
 
 function rowToFutCard(row: any): FutCard {
@@ -708,42 +720,27 @@ export async function upsertFutCards(cards: FutCard[]): Promise<number> {
   }
 }
 
-export async function syncFutCards(): Promise<{ synced: number }> {
+export async function syncFutCards(maxPages = 25): Promise<{ synced: number }> {
   try {
     await ensureFutCardsSchema();
     const db = await getDatabase();
-    if (db) {
-      fullCatalogStarted = false;
-      await runFullCatalogImportInBackground(db);
-      const countRows = extractRows(await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`));
-      return { synced: Number(countRows[0]?.cnt ?? BUILTIN_FC27_CARDS.length) };
+    if (!db) return { synced: 0 };
+
+    let totalSynced = 0;
+    for (let page = 1; page <= maxPages; page++) {
+      const { cards, lastPage } = await fetchFutMindPage({ page, timeoutMs: 8000 });
+      if (cards.length > 0) {
+        totalSynced += await upsertFutCardsBatch(db, cards);
+      }
+      if (page >= lastPage) break;
     }
+
+    const countRows = extractRows(await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`));
+    return { synced: Number(countRows[0]?.cnt ?? totalSynced) };
   } catch (err) {
     console.error("[futCards] sync error:", err);
+    return { synced: 0 };
   }
-  return { synced: BUILTIN_FC27_CARDS.length };
-}
-
-function filterInMemoryCards(params: {
-  query?: string;
-  position?: string;
-  rarity?: string;
-  limit?: number;
-}): FutCard[] {
-  const limit = Math.min(50, Math.max(1, params.limit ?? 25));
-  const q = params.query?.trim().toLowerCase() ?? "";
-  const pos = params.position && params.position !== "ALL" ? params.position.toUpperCase() : "";
-  const rar = params.rarity && params.rarity !== "ALL" ? params.rarity : "";
-
-  return BUILTIN_FC27_CARDS.filter((c) => {
-    if (c.position === "GK") return false;
-    if (q && !c.name.toLowerCase().includes(q) && !(c.commonName ?? "").toLowerCase().includes(q)) return false;
-    if (pos && c.position !== pos && !c.altPositions.includes(pos)) return false;
-    if (rar && c.rarity !== rar) return false;
-    return true;
-  })
-    .sort((a, b) => b.overall - a.overall || a.name.localeCompare(b.name))
-    .slice(0, limit);
 }
 
 export async function searchFutCards(params: {
@@ -752,63 +749,100 @@ export async function searchFutCards(params: {
   rarity?: string;
   limit?: number;
 }): Promise<FutCard[]> {
+  const limit = Math.min(50, Math.max(1, params.limit ?? 25));
+
   try {
     await ensureFutCardsSchema();
     const db = await getDatabase();
-    if (db) {
-      const limit = Math.min(50, Math.max(1, params.limit ?? 25));
-      const conditions: any[] = [sql`position <> 'GK'`];
 
-      if (params.query && params.query.trim()) {
-        const q = `%${params.query.trim().toLowerCase()}%`;
-        conditions.push(sql`(LOWER(name) LIKE ${q} OR LOWER(COALESCE(common_name, '')) LIKE ${q})`);
+    // Always query FUTMind 2027 page=1 live when a search query is entered so all versions appear
+    if (params.query && params.query.trim().length >= 2) {
+      const live = await fetchFutMindPage({
+        page: 1,
+        query: params.query.trim(),
+        position: params.position,
+        rarity: params.rarity,
+        timeoutMs: 5500,
+      });
+      if (live.cards.length > 0) {
+        if (db) await upsertFutCardsBatch(db, live.cards);
+        return live.cards.slice(0, limit);
       }
-      if (params.position && params.position !== "ALL") {
-        const pos = params.position.toUpperCase();
-        conditions.push(sql`(position = ${pos} OR alt_positions @> ${JSON.stringify([pos])}::jsonb)`);
-      }
-      if (params.rarity && params.rarity !== "ALL") {
-        conditions.push(sql`rarity = ${params.rarity}`);
-      }
-
-      const whereClause = sql.join(conditions, sql` AND `);
-      const rows = extractRows(await db.execute(sql`
-        SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
-      `));
-      if (rows.length > 0) return rows.map(rowToFutCard);
     }
+
+    if (!db) return [];
+
+    const conditions: any[] = [sql`position <> 'GK'`];
+    if (params.query && params.query.trim()) {
+      const q = `%${params.query.trim().toLowerCase()}%`;
+      conditions.push(sql`(LOWER(name) LIKE ${q} OR LOWER(COALESCE(common_name, '')) LIKE ${q})`);
+    }
+    if (params.position && params.position !== "ALL") {
+      const pos = params.position.toUpperCase();
+      conditions.push(sql`(position = ${pos} OR alt_positions @> ${JSON.stringify([pos])}::jsonb)`);
+    }
+    if (params.rarity && params.rarity !== "ALL") {
+      conditions.push(sql`rarity = ${params.rarity}`);
+    }
+
+    const whereClause = sql.join(conditions, sql` AND `);
+    let rows = extractRows(await db.execute(sql`
+      SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
+    `));
+
+    if (rows.length === 0) {
+      const liveBrowse = await fetchFutMindPage({
+        page: 1,
+        query: params.query,
+        position: params.position,
+        rarity: params.rarity,
+        timeoutMs: 5500,
+      });
+      if (liveBrowse.cards.length > 0) {
+        await upsertFutCardsBatch(db, liveBrowse.cards);
+        return liveBrowse.cards.slice(0, limit);
+      }
+    }
+
+    return rows.map(rowToFutCard);
   } catch (err) {
-    console.error("[futCards] search DB fallback:", err);
+    console.error("[futCards] search error:", err);
+    return [];
   }
-  return filterInMemoryCards(params);
 }
 
 export async function getFutCardById(id: string): Promise<FutCard | null> {
   try {
     await ensureFutCardsSchema();
     const db = await getDatabase();
-    if (db) {
-      const rows = extractRows(await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`));
-      if (rows[0]) return rowToFutCard(rows[0]);
+    if (!db) return null;
+
+    const rows = extractRows(await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`));
+    if (!rows[0]) return null;
+
+    const card = rowToFutCard(rows[0]);
+    const enriched = await enrichCardDetailIfNeeded(card);
+    if (enriched !== card) {
+      await upsertFutCardsBatch(db, [enriched]);
     }
+    return enriched;
   } catch (err) {
-    console.error("[futCards] getById DB fallback:", err);
+    console.error("[futCards] getById error:", err);
+    return null;
   }
-  return BUILTIN_FC27_CARDS.find((c) => c.id === id) ?? null;
 }
 
 export async function getAvailableRarities(): Promise<string[]> {
   try {
     await ensureFutCardsSchema();
     const db = await getDatabase();
-    if (db) {
-      const rows = extractRows(await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`));
-      if (rows.length > 0) return rows.map((r: any) => String(r.rarity));
-    }
+    if (!db) return [];
+    const rows = extractRows(await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`));
+    return rows.map((r: any) => String(r.rarity));
   } catch (err) {
-    console.error("[futCards] getRarities DB fallback:", err);
+    console.error("[futCards] getRarities error:", err);
+    return [];
   }
-  return Array.from(new Set(BUILTIN_FC27_CARDS.map((c) => c.rarity))).sort();
 }
 
 export const getDistinctRarities = getAvailableRarities;
