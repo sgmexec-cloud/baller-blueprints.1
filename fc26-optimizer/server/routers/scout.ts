@@ -9,12 +9,14 @@ import {
 } from "../csvLoader";
 import { runMathEngine, ScoutingBlueprint, resolveSignaturePlaystyles, pickSpecialisationSwap, buildPlaystyleFit, USABILITY_FLOORS } from "../mathEngine27";
 import { rolesToPositions } from "../positionMap";
-import { reserveBuild, refundBuild, getQuota, resetBuilds } from "../buildQuota";
+import { reserveBuild, refundBuild, getQuota, resetBuilds, reserveCardMatch, refundCardMatch, getCardMatchQuota } from "../buildQuota";
 import { PREVIEW_COOKIE } from "../tierPreview";
 import { buildsRouter } from "../builds";
 import { batchesRouter } from "../batches";
 import { makeScoutCacheKey, getCachedBlueprint, saveCachedBlueprint } from "../scoutCache";
 import { pickArchetypeByScores } from "../archetypePick";
+import { searchFutCards, getFutCardById, getAvailableRarities, upsertFutCards, FutCard } from "../futCards";
+import { matchFutCardToPro } from "../cardMatcher";
 import { TRPCError } from "@trpc/server";
 import fs from "fs/promises";
 import path from "path";
@@ -77,8 +79,6 @@ function normAttr(s: string): string {
   return n;
 }
 
-// Logs the real token usage of every AI call so you can measure the true cost per build:
-// cost = in_tokens x input_price + out_tokens x output_price (add stage1 + stage2 for one build).
 function logUsage(stage: string, tier: string, model: string, resp: any) {
   const u = resp?.usage;
   console.log(
@@ -92,12 +92,106 @@ CRITICAL: You must explicitly define their 'Tactical Role' (e.g. Inverted Winger
 Describe observable football qualities (First Touch, Scanning, Decision Making, etc). Highlight stylistic limitations and weaknesses—what are they notoriously bad at? 
 Explicitly identify the player's 'Signature Weapon'—their most iconic, trademark footballing action or trait. Do NOT mention EA FC, FIFA, or specific attribute values. Describe behaviours so an AI can infer accurate attributes.`;
 
+const cardsRouter = router({
+  /** Public card browser & search (no quota used to browse/preview cards) */
+  search: publicProcedure
+    .input(z.object({
+      query: z.string().max(80).optional(),
+      rarity: z.string().max(60).optional(),
+      position: z.string().max(10).optional(),
+      limit: z.number().int().min(1).max(50).optional(),
+    }))
+    .query(({ input }) => searchFutCards(input)),
+
+  getRarities: publicProcedure
+    .query(() => getAvailableRarities()),
+
+  getMatchQuota: protectedProcedure
+    .query(async ({ ctx }) => {
+      const userId = Number((ctx.user as any).id);
+      if (!Number.isFinite(userId)) throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in." });
+      return getCardMatchQuota(userId, (ctx.user as any).tier);
+    }),
+
+  /** Metered (10 Free / 40 Premium / 100 Premium+ / Unlimited VIP & Owner): convert FUT card to Pro Clubs build */
+  matchCard: protectedProcedure
+    .input(z.object({
+      cardId: z.string().min(1).max(120),
+      forcedArchetype: z.string().optional(),
+      apBudget: z.number().int().min(1).max(999999),
+      signatureSlots: z.number().int().min(0).max(4).default(2),
+      standardSlots: z.number().int().min(0).max(6).default(4),
+      foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
+      starsPrepaid: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = Number((ctx.user as any).id);
+      if (!Number.isFinite(userId)) {
+        throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in to use Card Matcher." });
+      }
+
+      // Resolve optional locked archetype BEFORE reserving quota (Paid feature)
+      let forcedArchetype: string | null = null;
+      if (input.forcedArchetype) {
+        if (((ctx.user as any).tier ?? "free") === "free") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "PAID_FEATURE" });
+        }
+        const validArchetypes = Array.from(
+          new Set(getArchetypeProfiles("FC27").map((r: any) => String(r.Archetype).trim()))
+        ).filter(Boolean) as string[];
+        forcedArchetype = validArchetypes.find(a => normAttr(a) === normAttr(input.forcedArchetype!)) ?? null;
+        if (!forcedArchetype) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown archetype." });
+        }
+      }
+
+      const card = await getFutCardById(input.cardId);
+      if (!card) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Card not found." });
+      }
+
+      const quota = await reserveCardMatch(userId, (ctx.user as any).tier);
+      if (!quota.allowed) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "CARD_MATCH_LIMIT_REACHED" });
+      }
+
+      try {
+        return matchFutCardToPro({
+          card,
+          forcedArchetype,
+          apBudget: input.apBudget,
+          signatureSlots: input.signatureSlots,
+          standardSlots: input.standardSlots,
+          foundationBoosts: input.foundationBoosts,
+          starsPrepaid: input.starsPrepaid,
+        });
+      } catch (err) {
+        if (quota.metered) await refundCardMatch(userId);
+        throw err;
+      }
+    }),
+
+  /** OWNER ONLY: bulk-import promo / Icon / Hero cards into Postgres cache */
+  upsertCards: protectedProcedure
+    .input(z.object({ cards: z.array(z.any()).min(1).max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      if ((ctx.user as any).realTier !== "owner") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Owner only." });
+      }
+      const count = await upsertFutCards(input.cards as FutCard[]);
+      return { saved: count };
+    }),
+});
+
 export const scoutRouter = router({
   // Saved builds + global profile (trpc.scout.builds.*)
   builds: buildsRouter,
 
   // Batch Build Generator: saved batches of AI builds (owner only) (trpc.scout.batches.*)
   batches: batchesRouter,
+
+  // FUT Card Matcher (trpc.scout.cards.*)
+  cards: cardsRouter,
 
   // ---------- PUBLIC: everything the Manual Builder needs (no account required) ----------
   getArchetypes: publicProcedure
@@ -150,7 +244,6 @@ export const scoutRouter = router({
 
           const recPositions = rolesToPositions(row.Recommended_Positions);
           
-          // Parse Signature_PlayStyles into a clean array of strings
           const rawSignatures = row.Signature_PlayStyles || '';
           const signatures = rawSignatures.split('/').map((s: string) => s.trim()).filter(Boolean);
 
@@ -180,7 +273,6 @@ export const scoutRouter = router({
             name: (u.name ?? null) as string | null,
             email: (u.email ?? null) as string | null,
             tier: u.tier as string,
-            // The owner can preview other plans: tier is the plan in effect, realTier is the stored one
             realTier: (u.realTier ?? u.tier) as string,
             previewing: Boolean(u.previewing),
             hasSubscription: Boolean(u.stripeSubscriptionId),
@@ -237,7 +329,6 @@ export const scoutRouter = router({
       customSkillMoves: z.number().int().min(1).max(5).optional(),
       customWeakFoot: z.number().int().min(1).max(5).optional(),
       customPlaystyles: z.array(z.string()).optional(),
-      // true = ignore the saved result for this player and ask the AI again (uses one AI build)
       rescout: z.boolean().optional()
     }))
     .mutation(async ({ ctx, input }) => {
@@ -246,11 +337,8 @@ export const scoutRouter = router({
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Please log in to use AI builds." });
       }
 
-      // Resolve the archetype preference (if any) to its exact name BEFORE reserving a build,
-      // so a bad value never costs the user a build.
       let forcedArchetype: string | null = null;
       if (input.forcedArchetype) {
-        // Archetype Select: Premium and above (checked here, before a build is reserved)
         if (((ctx.user as any).tier ?? "free") === "free") {
           throw new TRPCError({ code: "FORBIDDEN", message: "PAID_FEATURE" });
         }
@@ -263,8 +351,6 @@ export const scoutRouter = router({
         }
       }
 
-      // Same player + same options = the same saved result: consistent picks and no AI cost, so it does not use a build.
-      // "Re-scout" skips this and asks the AI again.
       const cacheKey = makeScoutCacheKey({
         playerIdentity: input.playerIdentity,
         forcedArchetype,
@@ -279,9 +365,6 @@ export const scoutRouter = router({
         if (cached.success) return { ...cached.data, fromCache: true as const };
       }
 
-      // Reserve ONE build atomically BEFORE spending any AI money.
-      // (Free: 5 per calendar month. Paid tiers: see buildQuota.ts. The limit can never be passed,
-      //  even by parallel requests, and nothing here comes from the client.)
       const quota = await reserveBuild(userId, (ctx.user as any).tier);
       if (!quota.allowed) {
         throw new TRPCError({ code: "FORBIDDEN", message: "LIMIT_REACHED" });
@@ -305,9 +388,6 @@ export const scoutRouter = router({
 
         const context = getScoutingContext("FC27");
 
-        // The archetype comes from SCORING every archetype (3 small AI answers, averaged) instead of one free pick,
-        // so a close call is decided by the numbers and not by one lucky answer. If the user chose an archetype, that wins.
-        // If scoring fails for any reason, the AI picks freely as before.
         const scoredArchetype = forcedArchetype
           ? null
           : await pickArchetypeByScores(hiddenScoutReport, aiModel, (resp) => logUsage("archetype", quota.tier, aiModel, resp));
@@ -381,8 +461,6 @@ ${filterRules.join("\n")}
 
         const parsed = JSON.parse(cleanedJson);
 
-        // Guarantee: if the user picked an archetype, that is what they get, whatever the AI answered.
-        // (The specialisation check below runs against this archetype, so a mismatched spec is dropped.)
         if (lockedArchetype) parsed.archetype = lockedArchetype;
 
         if (parsed.specialisationMinAttrs && Array.isArray(parsed.specialisationMinAttrs)) {
@@ -442,7 +520,6 @@ ${filterRules.join("\n")}
           }
         }
 
-        // The build was already reserved up front; if anything above throws, it is refunded below.
         const finalBlueprint = BlueprintSchema.parse(parsed);
         await saveCachedBlueprint(cacheKey, finalBlueprint);
         return finalBlueprint;
@@ -460,14 +537,11 @@ ${filterRules.join("\n")}
       standardSlots: z.number().int().optional(),
       preferredAttributes: z.array(z.string()).optional(),
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
-      // true when the caller has already deducted the Skill Moves / Weak Foot cost from apBudget
       starsPrepaid: z.boolean().optional(),
       attributePriorities: AttributePrioritiesSchema.optional(),
-      // 'balanced' (default) tops up Stamina / pace to a playable level; 'authentic' leaves the build exactly as scouted
       buildStyle: z.enum(["balanced", "authentic"]).optional()
     }))
     .mutation(async ({ ctx, input }) => {
-      // Attribute Priorities are gated by the plan in effect (the server decides, never the client)
       const prio = input.attributePriorities;
       const hasW = !!prio?.weights && Object.keys(prio.weights).length > 0;
       const hasMinMax = (!!prio?.min && Object.keys(prio.min).length > 0) || (!!prio?.max && Object.keys(prio.max).length > 0);
@@ -529,8 +603,6 @@ ${filterRules.join("\n")}
 
       const specReqs = input.blueprint.specialisationMinAttrs ?? [];
       if (input.blueprint.specialisationPlaystylePlus && specReqs.length > 0) {
-        // Boosts (height/weight, facilities, masteries) do NOT count towards unlocking a specialisation:
-        // only the build's own points do, the same rule the manual builder uses
         const earned = specReqs.every(req => {
           const stat = result.stats.find(s => normAttr(s.attribute) === normAttr(req.attr));
           return (stat?.final ?? 0) >= req.val;
@@ -542,11 +614,8 @@ ${filterRules.join("\n")}
         }
       }
 
-      // How well each PlayStyle matches this player (the AI's own picks and ranking)
       const playstyleFit = buildPlaystyleFit(input.blueprint);
 
-      // The specialisation's PlayStyle+ replaces ONE Signature: the one that is not PlayStyle+ yet, or, when both
-      // are, the weakest of the three for this player (-1 = the specialisation's PlayStyle+ is the one left out)
       const specSwapIndex = earnedSpecPlaystyle
         ? pickSpecialisationSwap(input.blueprint.archetype, signatureUpgrades, earnedSpecPlaystyle, playstyleFit)
         : -1;
