@@ -127,6 +127,75 @@ const STAT_KEY_MAP: Record<string, string> = {
   mentalityaggression: "Aggression",
 };
 
+
+// ── FUTMind id -> name lookups (taken from FUTMind's own locale data) ───────
+// baseTraits = PlayStyle ids, iconTraits = PlayStyle+ ids.
+const PLAYSTYLE_NAMES: Record<number, string> = {
+  0: "Finesse Shot", 1: "Chip Shot", 2: "Power Shot", 3: "Dead Ball",
+  4: "Precision Header", 5: "Acrobatic", 6: "Low Driven Shot", 7: "Gamechanger",
+  8: "Incisive Pass", 9: "Pinged Pass", 10: "Long Ball Pass", 11: "Tiki Taka",
+  12: "Whipped Pass", 13: "Inventive", 14: "Jockey", 15: "Block",
+  16: "Intercept", 17: "Anticipate", 18: "Slide Tackle", 19: "Aerial Fortress",
+  20: "Technical", 21: "Rapid", 22: "First Touch", 23: "Trickster",
+  24: "Press Proven", 25: "Quick Step", 26: "Relentless", 27: "Long Throw",
+  28: "Bruiser", 29: "Enforcer",
+};
+
+// rareflag -> rarity name (FUTMind item_raretypeN)
+const RARITY_NAMES: Record<number, string> = {
+  0: "Common", 1: "Rare", 2: "Locked Items", 3: "Team of the Week", 4: "ICON Swaps",
+  5: "Team of the Year", 6: "On This Day Hero", 7: "On This Day Icon", 8: "Star Performer",
+  9: "Base Hall of FUT", 10: "Hall of FUT: Unleashed", 11: "Team of the Season", 12: "Base Icon",
+  13: "Complete Founder Evolution", 14: "Knockout Royalty Hero", 15: "Knockout Royalty ICON",
+  16: "FUTTIES", 17: "FC Pro Champs Evo", 18: "Festival of Football ICON", 19: "FUT Champions",
+  20: "FoF: Answer the Call", 21: "Prime Hero", 22: "Destined for Glory", 23: "Future Stars Hero",
+  24: "Squad Building Challenge", 25: "End Of An Era", 26: "UCL Primetime Hero",
+  27: "UWCL Primetime Hero", 28: "Festival of Football: Captains", 30: "FUT Birthday",
+  31: "UEFA Women's Champions League Primetime", 32: "UEFA Women's Champions League Road to the Final",
+  33: "Thunderstruck", 34: "FC Pro Live", 35: "Winter Wildcards ICON", 36: "Journey of Nations",
+  37: "Special Item", 38: "FC Pro Leagues Live", 39: "Special Item", 40: "Special Item",
+  41: "Special Item", 42: "POTM Bundesliga", 43: "POTM Premier League", 44: "VBL Power Item",
+  45: "Gallery Excellence", 46: "UEFA Europa League Primetime", 47: "UEFA Champions League Common",
+  48: "UEFA Champions League Rare", 49: "Winter Wildcards Hero", 50: "UEFA Champions League Primetime",
+  51: "Flashback", 52: "Winter Wildcards Seasonal Excellence", 53: "Winter Wildcards ICON Red",
+  54: "Winter Wildcards Hero Red", 55: "Knockout Royalty", 56: "Limited Edition Noble",
+  57: "Showdown Upgrade", 58: "Showdown", 59: "CONMEBOL Sudamericana MOTM",
+  60: "In-Progress Evolution", 61: "Evolutions I", 62: "Festival of Football Showdown",
+  63: "Festival of Football Showdown Upgrade", 64: "TOTY Honourable Mentions",
+  65: "TOTS Honourable Mentions", 66: "Future Stars Evolution", 67: "Future Stars Academy",
+  68: "Premium World Tour", 69: "Ads & Sponsorships", 70: "World Tour EVO", 71: "Future Stars",
+  72: "Base Hero", 73: "Special Item", 74: "Special Item", 75: "Special Item",
+  76: "Trophy Titans ICON", 77: "Trophy Titans Hero", 78: "Summer Stars Tournament Winners",
+  79: "POTM Ligue 1", 80: "Team of the Year Honourable Mentions Hero", 81: "Classic XI Hero",
+  82: "Unbreakables", 83: "Unbreakables Hero", 84: "Special Item", 85: "Unbreakables ICON",
+  86: "POTM LALIGA EA SPORTS", 87: "Squad Foundations", 88: "Unbreakables Evolution",
+  89: "ICON SWAPS 1", 90: "Moments", 91: "World Tour", 92: "Special Item", 93: "Special Item",
+  94: "Festival of Football: Star Performer", 95: "Festival of Football: Summer Stars Red",
+  96: "Joga Bonito", 97: "Joga Bonito Hero", 98: "Festival of Football: National Pride",
+  99: "Epic", 100: "Vintage", 101: "Limited Edition Epic", 102: "Limited Edition Legendary",
+  103: "Festival of Football: National Pride Red", 104: "Festival of Football: Glory Hunters Red",
+  105: "UEFA Conference League Primetime", 106: "Festival of Football: Phenoms Red",
+  107: "Festival of Football: Path to Glory", 108: "Time Warp", 109: "Festival of Football: Glory Hunters",
+  110: "Season Ladder Excellence", 111: "Fantasy FC", 112: "Time Warp ICON", 113: "Fantasy FC Live",
+  114: "POTM Serie A", 115: "POTM Eredevisie", 116: "Festival of Football: Captains ICON",
+  117: "Winter Wildcards", 118: "WINTER WILDCARDS", 119: "FUTTIES Evolution", 120: "TOTS Breakthrough",
+  121: "Standard", 122: "Legendary", 124: "UEFA Champions League Road to the Final",
+  125: "UEFA Europa League Road to the Final", 126: "UEFA Conference League Road to the Final",
+  127: "Team of the Season Champions", 128: "Champions Mastery", 129: "Ones to Watch Retro 18",
+  130: "Ones to Watch Retro 19", 131: "Ones to Watch Retro 20", 132: "TOTY HM Evolution",
+  133: "TOTS Evolution", 134: "Fantasy FUT ON", 135: "Fantasy FC Hero", 136: "TOTS Breakthrough Evolution",
+  137: "Festival of Football: Phenoms", 138: "Festival of Football: Summer Stars", 139: "FUTTIES ICON",
+  140: "FUT Birthday Retro 18", 141: "FUT Birthday Retro 19", 142: "FUT Birthday Retro 20",
+  145: "World Cup Stories", 146: "World Cup Phenoms", 147: "FUT Birthday EVO", 148: "FUT Birthday Hero",
+  149: "FUT Birthday ICON", 150: "Ones to Watch", 151: "Ultimate Scream", 152: "FUT Birthday Icon",
+  153: "Alternate Reality ICON", 154: "FUTTIES Hero", 155: "Team of the Year ICON", 156: "HISTORY MAKERS",
+  157: "Thunderstruck ICON", 158: "FIFA WORLD CUP", 160: "Debut International Icon",
+  161: "Champion International Icon", 162: "FC Pro Open Champion ICON", 163: "eCL Champion ICON",
+  164: "FC Pro World Champion ICON", 168: "Ultimate Scream Hero", 170: "Future Stars ICON",
+  171: "UEFA Heroes (Mens)", 172: "UEFA Heroes (Womens)", 177: "POTM LIGA F",
+  180: "UEFA Euro Path to Glory", 181: "UEFA Euro Road to the Cup", 182: "Nike Mad Ready",
+};
+
 function normalizeStatKey(raw: string): string | null {
   return STAT_KEY_MAP[raw.toLowerCase().replace(/[^a-z]/g, "")] ?? null;
 }
@@ -223,9 +292,11 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
   // FUTMind only gives a numeric cardType (no label). Keep it as an honest
   // placeholder until a real id -> name lookup is available.
   const cardTypeNum = parseNumberOrNull(item.cardType);
+  const rareFlagNum = parseNumberOrNull(item.rareflag);
   const rarity =
     extractLabel(item.rarity) ||
     extractLabel(item.rarityName) ||
+    (rareFlagNum != null ? RARITY_NAMES[rareFlagNum] : null) ||
     (typeof item.cardType === "string" ? extractLabel(item.cardType) : null) ||
     (typeof item.version === "string" ? extractLabel(item.version) : null) ||
     (cardTypeNum != null ? `Card Type ${cardTypeNum}` : inferDefaultRarity(overall));
@@ -291,9 +362,20 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     }
   };
 
-  // NOTE: FUTMind list items only carry numeric ids (plusRoles, plusPlusRoles,
-  // playStyle, baseTraits) with no names, so PlayStyles stay empty until an
-  // id -> name lookup is added. Names are never guessed.
+  // FUTMind trait ids -> names (baseTraits = PlayStyles, iconTraits = PlayStyles+)
+  if (Array.isArray(item.baseTraits)) {
+    for (const t of item.baseTraits) {
+      const nm = PLAYSTYLE_NAMES[Number(t)];
+      if (nm) pushStyle(nm, false);
+    }
+  }
+  if (Array.isArray(item.iconTraits)) {
+    for (const t of item.iconTraits) {
+      const nm = PLAYSTYLE_NAMES[Number(t)];
+      if (nm) pushStyle(nm, true);
+    }
+  }
+
   for (const field of [item.playstylePlus, item.playStylePlus, item.playstylesPlus, item.playStylesPlus]) {
     if (Array.isArray(field)) {
       for (const ps of field) {
