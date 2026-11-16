@@ -4,7 +4,8 @@ import { useAccount } from '@/hooks/useAccount';
 import { runAiBuildPipeline, allMasteriesUnlocked, type BatchBuildSettings } from '@/utils/aiBuildPipeline';
 import { computeBuildView } from '@/utils/buildView';
 import { mergeMasteries } from '@/utils/masteryFromLevel';
-import { buildExport, downloadCsv, EXPORT_KINDS, type ExportKind } from '@/utils/batchExport';
+import { buildTitlesCsv, downloadCsv, exportable } from '@/utils/batchExport';
+import { renderPlayerImages, zipPlayerFiles, downloadBlob, shareOrDownload, slug } from '@/utils/batchImages';
 import { parsePlayerList, playerIdentity, friendlyError, runQueue, composeBuildRecord, summarise } from '@/utils/batchRunner';
 import { NewBatchForm, SavedBatches, BatchView, type BatchItemView, type BatchSettingsView } from '@/components/batch/BatchPanels';
 
@@ -80,6 +81,8 @@ export default function BatchPage() {
   const [addText, setAddText] = useState('');
   const [socialBusy, setSocialBusy] = useState<number[]>([]);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [imageProgress, setImageProgress] = useState<string | null>(null);
+  const [imagesBusyId, setImagesBusyId] = useState<number | null>(null);
   const stopRef = useRef(false);
   const runningRef = useRef(false);
 
@@ -87,7 +90,7 @@ export default function BatchPage() {
   const summary = useMemo(() => summarise(items), [items]);
   // What an export would hold right now (selected, finished players)
   const exportInfo = useMemo(() => {
-    const r = buildExport('titles', items, open?.name ?? 'batch');
+    const r = buildTitlesCsv(items, open?.name ?? 'batch');
     return { ready: r.rowCount, usingTemplate: r.usedTemplate.length, skipped: r.skipped.length };
   }, [items, open]);
   const missingCopy = useMemo(() => items.filter(i => i.status === 'done' && !i.social).length, [items]);
@@ -325,9 +328,9 @@ export default function BatchPage() {
     }
   };
 
-  const doExport = (kind: ExportKind) => {
+  const exportTitles = () => {
     if (!open) return;
-    const r = buildExport(kind, items, open.name);
+    const r = buildTitlesCsv(items, open.name);
     if (r.rowCount === 0) { setExportNotice('Tick at least one finished player first.'); return; }
     downloadCsv(r.filename, r.csv);
     setExportNotice(
@@ -337,9 +340,63 @@ export default function BatchPage() {
     );
   };
 
-  const exportAll = () => {
-    // Staggered so the browser treats them as separate downloads (it may ask to allow multiple downloads)
-    EXPORT_KINDS.forEach((k, i) => setTimeout(() => doExport(k.id), i * 600));
+  /** Draw the 3 images for every ticked player and save them in ZIP files of 10 players (keeps phone memory low) */
+  const downloadImages = async () => {
+    if (!open || imageProgress !== null) return;
+    const chosen = exportable(items);
+    if (chosen.length === 0) { setExportNotice('Tick at least one finished player first.'); return; }
+
+    const total = chosen.length * 3;
+    const CHUNK = 10;
+    let made = 0;
+    let zips = 0;
+    const skipped: string[] = [];
+    setExportNotice(null);
+    try {
+      for (let start = 0; start < chosen.length; start += CHUNK) {
+        const files: { name: string; blob: Blob }[] = [];
+        for (const item of chosen.slice(start, start + CHUNK)) {
+          setImageProgress(`Drawing images ${Math.min(made + 1, total)} of ${total}…`);
+          await new Promise(r => setTimeout(r, 0)); // let the screen update between players
+          const set = await renderPlayerImages(item);
+          if (!set) { skipped.push(item.playerName); continue; }
+          files.push(...set.files);
+          made += set.files.length;
+        }
+        if (files.length === 0) continue;
+        setImageProgress('Packing ZIP…');
+        const zip = await zipPlayerFiles(files);
+        zips++;
+        const suffix = chosen.length > CHUNK ? `-${zips}` : '';
+        // staggered so the browser treats them as separate downloads
+        setTimeout(() => downloadBlob(zip, `${slug(open.name)}-images${suffix}.zip`), (zips - 1) * 700);
+      }
+      setExportNotice(
+        `${made} image${made === 1 ? '' : 's'} saved in ${zips} ZIP file${zips === 1 ? '' : 's'}. Open the ZIP in your Files app, then add the images to TikTok.` +
+          (zips > 1 ? ' If only one file downloaded, allow multiple downloads in Chrome.' : '') +
+          (skipped.length > 0 ? ` Skipped (incomplete build): ${skipped.join(', ')}.` : '')
+      );
+    } catch (e) {
+      setExportNotice(`Could not draw the images: ${friendlyError(e)}`);
+    } finally {
+      setImageProgress(null);
+    }
+  };
+
+  /** One player: draw the 3 images and open the phone's share sheet (or download them) */
+  const shareImages = async (item: BatchItemView) => {
+    if (imagesBusyId !== null) return;
+    setImagesBusyId(item.id);
+    try {
+      const set = await renderPlayerImages(item);
+      if (!set) { setNotice(`${item.playerName}'s build is incomplete. Regenerate the player first.`); return; }
+      const how = await shareOrDownload(set.files, `${item.playerName} FC27 build`);
+      if (how === 'downloaded') setNotice(`${item.playerName}: 3 images downloaded.`);
+    } catch (e) {
+      setNotice(`Could not draw the images for ${item.playerName}: ${friendlyError(e)}`);
+    } finally {
+      setImagesBusyId(null);
+    }
   };
 
   const toggleSelect = (item: BatchItemView) => {
@@ -447,8 +504,11 @@ export default function BatchPage() {
           onRegenerateSocial={regenerateCopy}
           exportInfo={exportInfo}
           exportNotice={exportNotice}
-          onExport={doExport}
-          onExportAll={exportAll}
+          onExportTitles={exportTitles}
+          onDownloadImages={downloadImages}
+          imageProgress={imageProgress}
+          onShareImages={shareImages}
+          imagesBusyId={imagesBusyId}
         />
       )}
     </Shell>
