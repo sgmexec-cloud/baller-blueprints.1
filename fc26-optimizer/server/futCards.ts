@@ -151,9 +151,11 @@ function parseNumberOrNull(raw: unknown): number | null {
 function extractLabel(val: unknown): string | null {
   if (!val) return null;
   if (typeof val === "string") return val.trim() || null;
+  if (Array.isArray(val)) return extractLabel(val[0]);
   if (typeof val === "object") {
     const obj = val as Record<string, any>;
-    const candidate = obj.name ?? obj.label ?? obj.title ?? obj.shortLabel ?? obj.displayName;
+    const candidate =
+      obj.name ?? obj.label ?? obj.title ?? obj.shortLabel ?? obj.short ?? obj.code ?? obj.displayName;
     if (typeof candidate === "string" && candidate.trim()) return candidate.trim();
   }
   return null;
@@ -168,11 +170,13 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     extractLabel(item.common_name) ||
     [item.firstName, item.lastName].filter(Boolean).join(" ").trim() ||
     extractLabel(item.name) ||
+    extractLabel(item.cardName) ||
+    extractLabel(item.displayName) ||
     extractLabel(item.fullName) ||
     extractLabel(item.playerName);
 
   const overall = parseNumberOrNull(
-    item.overall ?? item.overallRating ?? item.overall_rating ?? item.rating ?? item.ovr
+    item.overall ?? item.overallRating ?? item.overall_rating ?? item.rating ?? item.cardRating ?? item.ovr
   );
   if (!fullName || !overall || overall < 40 || overall > 99) return null;
 
@@ -180,6 +184,7 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     extractLabel(item.position) ||
     extractLabel(item.mainPosition) ||
     extractLabel(item.preferredPosition) ||
+    extractLabel(item.pos) ||
     "";
   const posTokens = rawPos
     .split(/[,/|;\s]+/)
@@ -221,7 +226,6 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
   const defending = parseNumberOrNull(faceObj.defending ?? faceObj.def) ?? 50;
   const physical = parseNumberOrNull(faceObj.physical ?? faceObj.physicality ?? faceObj.phy) ?? 70;
 
-  // Collect in-game attributes from nested objects or top-level keys
   const attributes: Record<string, number> = {};
   const statSources = [
     item.attributes,
@@ -234,7 +238,6 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
 
   for (const src of statSources) {
     for (const [k, v] of Object.entries(src)) {
-      // If grouped by category (e.g. { pace: { acceleration: 63, sprintSpeed: 62 } })
       if (v && typeof v === "object" && !Array.isArray(v) && !("value" in (v as any))) {
         for (const [subK, subV] of Object.entries(v as Record<string, any>)) {
           const mappedSub = normalizeStatKey(subK);
@@ -253,7 +256,6 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     }
   }
 
-  // Extract PlayStyles and PlayStyle+
   const playstylePlus: string[] = [];
   const playstyles: string[] = [];
 
@@ -397,54 +399,57 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
   }
   const uniqueCards = Array.from(deduped.values());
 
-  for (let i = 0; i < uniqueCards.length; i += batchSize) {
-    const chunk = uniqueCards.slice(i, i + batchSize);
-    const valuesSql = sql.join(
-      chunk.map(
-        (c) => sql`(
-          ${c.id}, ${c.eaAssetId}, ${c.name}, ${c.commonName}, ${c.rarity}, ${c.overall}, ${c.position},
-          ${JSON.stringify(c.altPositions)}::jsonb, ${c.club}, ${c.league}, ${c.nation}, ${c.heightCm}, ${c.weightKg},
-          ${c.skillMoves}, ${c.weakFoot}, ${c.preferredFoot},
-          ${JSON.stringify(c.faceStats)}::jsonb, ${JSON.stringify(c.attributes)}::jsonb,
-          ${JSON.stringify(c.playstylePlus)}::jsonb, ${JSON.stringify(c.playstyles)}::jsonb, ${c.avatarUrl}, NOW()
-        )`
-      ),
-      sql`, `
-    );
+  try {
+    for (let i = 0; i < uniqueCards.length; i += batchSize) {
+      const chunk = uniqueCards.slice(i, i + batchSize);
+      const valuesSql = sql.join(
+        chunk.map(
+          (c) => sql`(
+            ${c.id}, ${c.eaAssetId}, ${c.name}, ${c.commonName}, ${c.rarity}, ${c.overall}, ${c.position},
+            ${JSON.stringify(c.altPositions)}::jsonb, ${c.club}, ${c.league}, ${c.nation}, ${c.heightCm}, ${c.weightKg},
+            ${c.skillMoves}, ${c.weakFoot}, ${c.preferredFoot},
+            ${JSON.stringify(c.faceStats)}::jsonb, ${JSON.stringify(c.attributes)}::jsonb,
+            ${JSON.stringify(c.playstylePlus)}::jsonb, ${JSON.stringify(c.playstyles)}::jsonb, ${c.avatarUrl}, NOW()
+          )`
+        ),
+        sql`, `
+      );
 
-    await db.execute(sql`
-      INSERT INTO fut_cards (
-        id, ea_asset_id, name, common_name, rarity, overall, position,
-        alt_positions, club, league, nation, height_cm, weight_kg,
-        skill_moves, weak_foot, preferred_foot, face_stats, attributes,
-        playstyle_plus, playstyles, avatar_url, updated_at
-      ) VALUES ${valuesSql}
-      ON CONFLICT (id) DO UPDATE SET
-        name = EXCLUDED.name,
-        common_name = EXCLUDED.common_name,
-        rarity = EXCLUDED.rarity,
-        overall = EXCLUDED.overall,
-        position = EXCLUDED.position,
-        alt_positions = EXCLUDED.alt_positions,
-        club = EXCLUDED.club,
-        league = EXCLUDED.league,
-        nation = EXCLUDED.nation,
-        height_cm = COALESCE(EXCLUDED.height_cm, fut_cards.height_cm),
-        weight_kg = COALESCE(EXCLUDED.weight_kg, fut_cards.weight_kg),
-        skill_moves = EXCLUDED.skill_moves,
-        weak_foot = EXCLUDED.weak_foot,
-        preferred_foot = EXCLUDED.preferred_foot,
-        face_stats = EXCLUDED.face_stats,
-        attributes = CASE
-          WHEN jsonb_object_length(EXCLUDED.attributes) >= jsonb_object_length(fut_cards.attributes)
-          THEN EXCLUDED.attributes
-          ELSE fut_cards.attributes
-        END,
-        playstyle_plus = EXCLUDED.playstyle_plus,
-        playstyles = EXCLUDED.playstyles,
-        avatar_url = COALESCE(EXCLUDED.avatar_url, fut_cards.avatar_url),
-        updated_at = NOW()
-    `);
+      await db.execute(sql`
+        INSERT INTO fut_cards (
+          id, ea_asset_id, name, common_name, rarity, overall, position,
+          alt_positions, club, league, nation, height_cm, weight_kg,
+          skill_moves, weak_foot, preferred_foot, face_stats, attributes,
+          playstyle_plus, playstyles, avatar_url, updated_at
+        ) VALUES ${valuesSql}
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          common_name = EXCLUDED.common_name,
+          rarity = EXCLUDED.rarity,
+          overall = EXCLUDED.overall,
+          position = EXCLUDED.position,
+          alt_positions = EXCLUDED.alt_positions,
+          club = EXCLUDED.club,
+          league = EXCLUDED.league,
+          nation = EXCLUDED.nation,
+          height_cm = COALESCE(EXCLUDED.height_cm, fut_cards.height_cm),
+          weight_kg = COALESCE(EXCLUDED.weight_kg, fut_cards.weight_kg),
+          skill_moves = EXCLUDED.skill_moves,
+          weak_foot = EXCLUDED.weak_foot,
+          preferred_foot = EXCLUDED.preferred_foot,
+          face_stats = EXCLUDED.face_stats,
+          attributes = CASE
+            WHEN EXCLUDED.attributes <> '{}'::jsonb THEN EXCLUDED.attributes
+            ELSE fut_cards.attributes
+          END,
+          playstyle_plus = EXCLUDED.playstyle_plus,
+          playstyles = EXCLUDED.playstyles,
+          avatar_url = COALESCE(EXCLUDED.avatar_url, fut_cards.avatar_url),
+          updated_at = NOW()
+      `);
+    }
+  } catch (err) {
+    console.error("[futCards] upsertFutCardsBatch SQL error:", err);
   }
 
   return uniqueCards.length;
@@ -480,23 +485,33 @@ async function fetchFutMindPage(params: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0.0.0 Safari/537.36",
         Accept: "application/json, text/plain, */*",
         Referer: "https://futmind.com/",
+        Origin: "https://futmind.com",
       },
     });
-    if (!res.ok) return { cards: [], lastPage: 1, total: 0 };
+    if (!res.ok) {
+      console.warn(`[FUTMind 2027] HTTP ${res.status} for ${url.toString()}`);
+      return { cards: [], lastPage: 1, total: 0 };
+    }
     const data = await res.json();
     const rawItems = Array.isArray(data?.items)
       ? data.items
       : Array.isArray(data?.players)
         ? data.players
-        : Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data)
-            ? data
-            : [];
+        : Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data)
+              ? data
+              : [];
 
     const cards = rawItems
       .map((item: any) => parseCardObject(item))
       .filter((c: FutCard | null): c is FutCard => c !== null);
+
+    if (rawItems.length > 0 && cards.length === 0) {
+      console.warn("[FUTMind 2027] Unparsed item keys:", Object.keys(rawItems[0] || {}));
+    }
 
     return {
       cards,
@@ -599,7 +614,6 @@ async function warmTopPagesFromFutMind(db: any): Promise<void> {
   if (initialWarmupStarted) return;
   initialWarmupStarted = true;
   try {
-    // Warm top-rated pages from FUTMind 2027 so default browse view & rarities populate immediately
     for (let page = 1; page <= 5; page++) {
       const { cards, lastPage } = await fetchFutMindPage({ page, timeoutMs: 7000 });
       if (cards.length > 0) {
@@ -657,7 +671,6 @@ export async function ensureFutCardsSchema(): Promise<void> {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_search ON fut_cards (LOWER(name), position, rarity)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_overall ON fut_cards (overall DESC)`);
 
-  // Purge all old guessed/fabricated rows
   await db.execute(sql`DELETE FROM fut_cards WHERE id LIKE 'fc27-%' OR rarity = 'Base Gold'`);
   dbReady = true;
 
@@ -755,7 +768,6 @@ export async function searchFutCards(params: {
     await ensureFutCardsSchema();
     const db = await getDatabase();
 
-    // Always query FUTMind 2027 page=1 live when a search query is entered so all versions appear
     if (params.query && params.query.trim().length >= 2) {
       const live = await fetchFutMindPage({
         page: 1,
