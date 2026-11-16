@@ -18,6 +18,7 @@ import { FoundationTab } from '@/components/builder/FoundationTab';
 import { AttributesTab } from '@/components/builder/AttributesTab';
 import { PlaystylesTab } from '@/components/builder/PlaystylesTab';
 import { AiGeneratorModal } from '@/components/builder/AiGeneratorModal';
+import { CardMatcherModal } from '@/components/builder/CardMatcherModal';
 import { PhysicalsModal } from '@/components/builder/PhysicalsModal';
 import { SkillsModal } from '@/components/builder/SkillsModal';
 import { FacilitiesModal } from '@/components/builder/FacilitiesModal';
@@ -67,6 +68,9 @@ export default function ManualBuilder() {
     buildStyle, setBuildStyle,
     aiFloorReport, setAiFloorReport,
     aiError,
+    isCardModalOpen, setIsCardModalOpen,
+    cardMatchReport, setCardMatchReport,
+    handleApplyCardMatch,
     serverArchetypes,
     progressionData,
     isArchLoading, isProgLoading,
@@ -89,6 +93,7 @@ export default function ManualBuilder() {
   } = useBuilderLogic();
 
   const [activePosition, setActivePosition] = useState<string>('');
+  const [showCardDiff, setShowCardDiff] = useState<boolean>(false);
 
   const recommendedPositions = useMemo<string[]>(() => {
     if (!archetype) return ['ST'];
@@ -339,11 +344,11 @@ export default function ManualBuilder() {
         </div>
 
         {/* BUILD MODE OPTIONS */}
-        <div className="flex bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
+        <div className="grid grid-cols-3 gap-1 bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
           <button
-            className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]"
+            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]"
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >MANUAL BUILD</button>
+          >MANUAL</button>
           
           <button
             onClick={() => {
@@ -356,10 +361,82 @@ export default function ManualBuilder() {
               setFacilityMode(Object.keys(equippedFacilities).length > 0 ? 'keep' : 'ai');
               setIsAiModalOpen(true);
             }}
-            className="flex-1 py-2 rounded-lg text-xs font-bold tracking-widest transition-all text-[#59657A] hover:text-[#8E9AAF] hover:bg-[#131A2A]"
+            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#131A2A]"
             style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >✨ AI AUTO-BUILD</button>
+          >✨ AI SCOUT</button>
+
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                setIsAuthPromptOpen(true);
+                return;
+              }
+              setIsCardModalOpen(true);
+            }}
+            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all text-[#21E6A4] hover:bg-[#131A2A]"
+            style={{ fontFamily: "'Rajdhani', sans-serif" }}
+          >🃏 CARD MATCH</button>
         </div>
+
+        {/* CARD MATCH SIMILARITY REPORT */}
+        {cardMatchReport && (
+          <div className="mb-6 bg-[#0D1220] border border-[#21E6A4]/40 rounded-2xl p-4 shadow-md">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-widest text-[#21E6A4]">
+                  FUT Card Match Active
+                </div>
+                <div className="text-sm font-black text-[#F4F7FB]">
+                  {cardMatchReport.card?.overall} {cardMatchReport.card?.name} ({cardMatchReport.card?.position})
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full bg-[#21E6A4]/15 border border-[#21E6A4]/50 text-xs font-black text-[#21E6A4]">
+                  {cardMatchReport.similarityScore}% Match
+                </span>
+                <button
+                  onClick={() => setCardMatchReport(null)}
+                  className="text-[#8E9AAF] hover:text-[#F4F7FB] text-sm px-1"
+                  aria-label="Dismiss card match report"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-2.5 flex items-center justify-between text-[11px] text-[#8E9AAF]">
+              <span>Matched Archetype: <b className="text-[#F4F7FB]">{cardMatchReport.chosenArchetype}</b></span>
+              <button
+                onClick={() => setShowCardDiff((prev) => !prev)}
+                className="font-bold text-[#4D8DFF] hover:underline"
+              >
+                {showCardDiff ? 'Hide Stat Diff' : 'View Stat Diff'}
+              </button>
+            </div>
+
+            {showCardDiff && Array.isArray(cardMatchReport.comparison) && (
+              <div className="mt-3 max-h-52 overflow-y-auto border-t border-[#26334A] pt-2.5 space-y-1 text-[11px] hide-scrollbar">
+                {cardMatchReport.comparison.map((row: any) => (
+                  <div key={row.attribute} className="flex items-center justify-between py-0.5 px-1 rounded hover:bg-[#131A2A]">
+                    <span className="text-[#8E9AAF]">{row.attribute}</span>
+                    <div className="flex items-center gap-2 font-bold">
+                      <span className="text-[#facc15]">Card {row.cardValue}</span>
+                      <span className="text-[#59657A]">→</span>
+                      <span className="text-[#F4F7FB]">Pro {row.proValue}</span>
+                      <span
+                        className={`w-8 text-right ${
+                          row.diff >= 0 ? 'text-[#21E6A4]' : row.diff >= -4 ? 'text-[#facc15]' : 'text-red-400'
+                        }`}
+                      >
+                        {row.diff >= 0 ? `+${row.diff}` : row.diff}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* BUILD NOTES (usability floors and attribute priorities after an AI build) */}
         {((aiPriorityReport && aiPriorityReport.length > 0) || (aiFloorReport && aiFloorReport.length > 0)) && (
@@ -473,6 +550,20 @@ export default function ManualBuilder() {
         setAttributePriorities={setAttributePriorities}
         buildStyle={buildStyle}
         setBuildStyle={setBuildStyle}
+      />
+
+      <CardMatcherModal
+        isOpen={isCardModalOpen}
+        setIsOpen={setIsCardModalOpen}
+        defaultLevel={level}
+        clubLevel={clubLevel}
+        equippedFacilities={equippedFacilities}
+        unlockedMasteries={unlockedMasteries}
+        serverArchetypes={serverArchetypes}
+        progressionData={progressionData}
+        canSelectArchetype={!!accountUser && accountUser.tier !== 'free'}
+        onUpgrade={() => { window.location.href = '/pricing'; }}
+        onApplyCardBuild={handleApplyCardMatch}
       />
 
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
