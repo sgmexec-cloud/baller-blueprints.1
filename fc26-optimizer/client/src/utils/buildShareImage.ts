@@ -24,14 +24,16 @@ export interface ShareBuildData {
   specialization: string | null;
   apSpent: number;
   apTotal: number;
+  /** Optional: a player's name (Batch Build Generator). When given it is shown above the archetype. */
+  playerName?: string;
 }
 
 // ---------- constants ----------
-const W = 1080;
-const H = 1350;
-const PAD = 60;
+export const W = 1080;
+export const H = 1350;
+export const PAD = 60;
 
-const C = {
+export const C = {
   bg: '#080B14',
   panel: '#131A2A',
   panelAlt: '#192235',
@@ -43,17 +45,17 @@ const C = {
   gold: '#facc15',
 };
 
-const HEAD = `'Rajdhani', 'Inter', system-ui, sans-serif`;
-const BODY = `'Inter', system-ui, -apple-system, sans-serif`;
-const NUM = `'Montserrat', 'Inter', system-ui, sans-serif`;
+export const HEAD = `'Rajdhani', 'Inter', system-ui, sans-serif`;
+export const BODY = `'Inter', system-ui, -apple-system, sans-serif`;
+export const NUM = `'Montserrat', 'Inter', system-ui, sans-serif`;
 
-const tierColor = (v: number) =>
+export const tierColor = (v: number) =>
   v >= 90 ? '#21E6A4' : v >= 80 ? '#4ade80' : v >= 70 ? '#facc15' : v >= 60 ? '#fb923c' : '#f87171';
 
 // ---------- helpers ----------
 const imageCache = new Map<string, Promise<HTMLImageElement | null>>();
 
-function loadImage(src: string): Promise<HTMLImageElement | null> {
+export function loadImage(src: string): Promise<HTMLImageElement | null> {
   const cached = imageCache.get(src);
   if (cached) return cached;
   const p = new Promise<HTMLImageElement | null>((resolve) => {
@@ -66,7 +68,7 @@ function loadImage(src: string): Promise<HTMLImageElement | null> {
   return p;
 }
 
-async function ensureFonts() {
+export async function ensureFonts() {
   try {
     if (!('fonts' in document)) return;
     await Promise.all([
@@ -79,7 +81,7 @@ async function ensureFonts() {
   }
 }
 
-function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+export function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   const rr = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
   ctx.moveTo(x + rr, y);
@@ -90,7 +92,7 @@ function rrect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h
   ctx.closePath();
 }
 
-function fitFont(
+export function fitFont(
   ctx: CanvasRenderingContext2D,
   text: string,
   weight: number,
@@ -108,7 +110,15 @@ function fitFont(
   return size;
 }
 
-function drawContain(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { width: number; height: number }, x: number, y: number, w: number, h: number) {
+/** Text cut with an ellipsis so it fits `maxWidth` in the font currently set on the canvas */
+export function ellipsize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string {
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let t = text;
+  while (t.length > 1 && ctx.measureText(`${t}…`).width > maxWidth) t = t.slice(0, -1);
+  return `${t.trimEnd()}…`;
+}
+
+export function drawContain(ctx: CanvasRenderingContext2D, img: CanvasImageSource & { width: number; height: number }, x: number, y: number, w: number, h: number) {
   const s = Math.min(w / img.width, h / img.height);
   const dw = img.width * s;
   const dh = img.height * s;
@@ -215,7 +225,7 @@ function drawChips(
   return cy + h;
 }
 
-type PillKind = 'plus' | 'spec' | 'style' | 'facility';
+export type PillKind = 'plus' | 'spec' | 'style' | 'facility';
 
 const PILL_STYLES: Record<PillKind, { fill: string; stroke: string; text: string }> = {
   plus: { fill: 'rgba(250,204,21,0.12)', stroke: C.gold, text: C.gold },
@@ -224,7 +234,7 @@ const PILL_STYLES: Record<PillKind, { fill: string; stroke: string; text: string
   facility: { fill: 'rgba(142,154,175,0.12)', stroke: C.muted, text: '#d5dcea' },
 };
 
-function drawPills(
+export function drawPills(
   ctx: CanvasRenderingContext2D,
   pills: { text: string; kind: PillKind }[],
   x: number,
@@ -384,9 +394,21 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = C.text;
-  fitFont(ctx, d.archetype || 'Your Pro', 700, HEAD, 68, 36, rw);
-  ctx.fillText(d.archetype || 'Your Pro', rx, cy + 56);
-  cy += 76;
+  if (d.playerName) {
+    // Batch builds: the player's name leads, the archetype and position sit under it
+    fitFont(ctx, d.playerName, 700, HEAD, 64, 26, rw);
+    ctx.fillText(ellipsize(ctx, d.playerName, rw), rx, cy + 52);
+    cy += 64;
+    const sub = `${d.archetype || 'Your Pro'}${d.position ? `  •  ${d.position}` : ''}`;
+    fitFont(ctx, sub, 700, HEAD, 32, 22, rw);
+    ctx.fillStyle = C.green;
+    ctx.fillText(sub, rx, cy + 24);
+    cy += 44;
+  } else {
+    fitFont(ctx, d.archetype || 'Your Pro', 700, HEAD, 68, 36, rw);
+    ctx.fillText(d.archetype || 'Your Pro', rx, cy + 56);
+    cy += 76;
+  }
 
   ctx.font = `600 24px ${BODY}`;
   ctx.fillStyle = C.muted;
