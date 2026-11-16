@@ -7,13 +7,12 @@ import { MASTERIES, SPECIALIZATIONS_DATA, FACILITIES } from '@/constants/playsty
 import type { StatReq } from '@/types/builder';
 import { getModifier, getStatCaps, getTotalStarCost, getCostForPoints, getApCost } from '@/utils/builderUtils';
 import { optimiseFacilities, normStat, type FacilityPlan } from '@/utils/facilityOptimizer';
-import { getMaxLevel, getSlotUnlockLevels, getSignatureUnlockLevels, getSignatureUpgradesAt, samePlaystyle, FALLBACK_SLOT_LEVELS } from '@/utils/gameRules';
+import { getMaxLevel, getSlotUnlockLevels, getSignatureUpgradesAt, samePlaystyle, FALLBACK_SLOT_LEVELS } from '@/utils/gameRules';
 import { useAccount } from '@/hooks/useAccount';
 import type { BuildSnapshot, ProfileSnapshot } from '@/types/buildSnapshot';
 import { masteryFromLevel, mergeMasteries } from '@/utils/masteryFromLevel';
 import { EMPTY_PRIORITIES, type AttributePriorities } from '@/components/builder/AiGeneratorModal';
 
-// One empty string per playstyle slot (4 since level 55)
 const emptySlots = (): string[] => FALLBACK_SLOT_LEVELS.map(() => '');
 
 export function useBuilderLogic() {
@@ -56,16 +55,17 @@ export function useBuilderLogic() {
   const [aiTargetLevel, setAiTargetLevel] = useState<number>(25);
   const [aiBlueprint, setAiBlueprint] = useState<any>(null);
   const [aiError, setAiError] = useState<string | null>(null);
-  // Facilities in the AI step: 'ai' = pick the best ones within the Club level budget, 'keep' = use the ones already set
   const [facilityMode, setFacilityMode] = useState<'ai' | 'keep'>('ai');
   const [aiFacilityPlan, setAiFacilityPlan] = useState<FacilityPlan | null>(null);
   const [attributePriorities, setAttributePriorities] = useState<AttributePriorities>(EMPTY_PRIORITIES);
   const [aiPriorityReport, setAiPriorityReport] = useState<any[] | null>(null);
-  // Which Signature the specialisation's PlayStyle+ replaced in the last AI build (only valid for that specialisation)
   const [specSwap, setSpecSwap] = useState<{ spec: string; index: number } | null>(null);
-  // 'balanced' tops up Stamina / pace to a playable level, 'authentic' keeps the build exactly as scouted
   const [buildStyle, setBuildStyle] = useState<'balanced' | 'authentic'>('balanced');
   const [aiFloorReport, setAiFloorReport] = useState<any[] | null>(null);
+
+  // FUT Card Matcher State
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [cardMatchReport, setCardMatchReport] = useState<any | null>(null);
 
   // tRPC Queries
   const { data: progressionData, isLoading: isProgLoading } = trpc.build.getProgression.useQuery({ gameVersion } as any);
@@ -189,7 +189,6 @@ export function useBuilderLogic() {
   };
 
   const handleGenerateBlueprint = () => runGenerate(false);
-  // Ask the AI again instead of using the saved result for this player (uses one AI build)
   const handleRescoutBlueprint = () => runGenerate(true);
 
   const handleFinalizeBuild = async () => {
@@ -208,10 +207,8 @@ export function useBuilderLogic() {
       const availableApForMath = Math.max(0, maxApForAi - smCost - wfCost);
       const unlockedSlotIndexes = unlockedSlotsAt(aiTargetLevel);
       const standardSlotsCount = unlockedSlotIndexes.length;
-      // The server was working this out from the post-star budget, which can be one level too low
       const signatureSlotsCount = getSignatureUpgradesAt(progressionData, aiTargetLevel);
 
-      // Attribute Priorities: send only what the plan allows (the server checks again)
       const tierRank = ({ free: 0, premium: 1, premium_plus: 2, vip: 3, owner: 3 } as Record<string, number>)[accountUser?.tier ?? 'free'] ?? 0;
       const prioPayload = {
         weights: tierRank >= 1 ? attributePriorities.weights : {},
@@ -248,13 +245,8 @@ export function useBuilderLogic() {
         foundationBoosts["Balance"] = -hModRaw + wModRaw;
       }
 
-
-      // Masteries are permanent and apply to EVERY build, so add the bonuses from all archetypes
-      // (the same total the stats screen shows)
       Object.entries(masteryModifiers).forEach(([s, v]) => { foundationBoosts[s] = (foundationBoosts[s] || 0) + v; });
 
-      // ── FACILITIES ──
-      // At this point foundationBoosts holds height/weight + masteries only. Facilities are added below.
       const baseBoosts: Record<string, number> = { ...foundationBoosts };
       const addFacilityBoosts = (target: Record<string, number>, facs: Record<string, number>) => {
         Object.entries(facs).forEach(([name, tier]) => {
@@ -270,7 +262,6 @@ export function useBuilderLogic() {
       let facilityPlan: FacilityPlan | null = null;
 
       if (facilityMode === 'ai') {
-        // Pass 1: build WITHOUT facilities to see where every attribute lands
         const baseline: any = await calculateStatsMutation.mutateAsync({
           blueprint: aiBlueprint,
           apBudget: availableApForMath,
@@ -279,19 +270,16 @@ export function useBuilderLogic() {
           foundationBoosts: baseBoosts,
           signatureSlots: signatureSlotsCount,
           attributePriorities: attributePrioritiesToSend,
-        buildStyle: buildStyle,
+          buildStyle: buildStyle,
           starsPrepaid: true
         });
 
-        // In-game value of each attribute before any facility (points + height/weight + masteries)
         const boostFor = (stat: string) => Object.entries(baseBoosts).reduce((sum, [k, v]) => (normStat(k) === normStat(stat) ? sum + v : sum), 0);
         const landing: Record<string, number> = {};
         for (const st of (baseline.stats ?? []) as { attribute: string; final: number }[]) {
           landing[st.attribute] = st.final + boostFor(st.attribute);
         }
 
-        // How much the build cares about each attribute: ones it spent points on count fully,
-        // the AI's picks count partly, everything else barely
         const bought = new Set<string>(
           Object.entries(baseline.investedPoints ?? {}).filter(([, v]) => (v as number) > 0).map(([k]) => normStat(k))
         );
@@ -302,7 +290,6 @@ export function useBuilderLogic() {
         mark(aiBlueprint.tertiaryAttributes, 0.4);
         const relevance = (stat: string) => (bought.has(normStat(stat)) ? 1 : role.get(normStat(stat)) ?? 0.15);
 
-        // A tier-3 facility's free PlayStyle is worth more the higher the AI ranked it. Signatures are already free.
         const signatureNames: string[] = serverArchetypes?.[targetArch]?.signatures ?? [];
         const ranked: string[] = (aiBlueprint.playstyles ?? []).map((p: any) => p.name);
 
@@ -334,6 +321,7 @@ export function useBuilderLogic() {
         starsPrepaid: true 
       });
 
+      setCardMatchReport(null);
       setLevel(aiTargetLevel);
       setAiPriorityReport((mathResult as any)?.priorityReport ?? null);
       setAiFloorReport((mathResult as any)?.floorReport ?? null);
@@ -385,6 +373,58 @@ export function useBuilderLogic() {
     } finally {
       setIsGeneratingAi(false);
     }
+  };
+
+  /** Applies the deterministic FUT Card Match result straight into the Pro Clubs builder */
+  const handleApplyCardMatch = (payload: {
+    matchOutput: any;
+    targetLevel: number;
+    appliedFacilities: Record<string, number>;
+    appliedMasteries: Record<string, { l10: boolean; l30: boolean; l55?: boolean }>;
+    facilityMode: 'ai' | 'keep' | 'none';
+  }) => {
+    const { matchOutput, targetLevel, appliedFacilities, appliedMasteries } = payload;
+    const targetArch =
+      matchOutput.chosenArchetype && serverArchetypes?.[matchOutput.chosenArchetype]
+        ? matchOutput.chosenArchetype
+        : archetype;
+
+    const starCaps = ARCHETYPE_STAR_CAPS[targetArch] || ARCHETYPE_STAR_CAPS['Finisher'];
+    const targetSm = Math.max(starCaps.sm.min, Math.min(starCaps.sm.max, matchOutput.engineResult?.skillMovesLevel ?? matchOutput.card?.skillMoves ?? starCaps.sm.min));
+    const targetWf = Math.max(starCaps.wf.min, Math.min(starCaps.wf.max, matchOutput.engineResult?.weakFootLevel ?? matchOutput.card?.weakFoot ?? starCaps.wf.min));
+
+    setAiPriorityReport(null);
+    setAiFloorReport(null);
+    setAiFacilityPlan(null);
+    setLevel(targetLevel);
+    setArchetype(targetArch);
+    setHeight(matchOutput.physicals?.heightCm ?? 175);
+    setWeight(matchOutput.physicals?.weightKg ?? 75);
+    setSmLevel(targetSm);
+    setWfLevel(targetWf);
+    setEquippedFacilities(appliedFacilities);
+    setUnlockedMasteries(appliedMasteries);
+    setViewMode('boosted');
+
+    if (matchOutput.engineResult?.investedPoints) {
+      setAddedPoints(matchOutput.engineResult.investedPoints);
+    } else {
+      setAddedPoints({});
+    }
+
+    const unlockedSlotIndexes = unlockedSlotsAt(targetLevel);
+    const signatureNames: string[] = serverArchetypes?.[targetArch]?.signatures ?? [];
+    const standardList = (matchOutput.playstyles?.standard || []).filter(
+      (n: string) => !signatureNames.some(sn => samePlaystyle(sn, n))
+    );
+    const newEquipped = emptySlots();
+    unlockedSlotIndexes.forEach((slotIdx, arrayIdx) => {
+      if (standardList[arrayIdx]) newEquipped[slotIdx] = standardList[arrayIdx];
+    });
+    setEquippedPlaystyles(newEquipped);
+    setEquippedSpecialization(null);
+    setSpecSwap(null);
+    setCardMatchReport(matchOutput);
   };
 
   const getSnapshot = (): BuildSnapshot => ({
@@ -773,13 +813,9 @@ export function useBuilderLogic() {
     ? SPECIALIZATIONS_DATA[archetype]?.find(s => s.name === equippedSpecialization)?.perk ?? null
     : null;
 
-  // Dual Signature Logic
   const signatureNames: string[] = serverArchetypes?.[archetype]?.signatures ?? [];
   const sigUpgrades = getSignatureUpgradesAt(progressionData, level);
 
-  // The specialisation's PlayStyle+ takes the place of ONE Signature (it never adds a slot).
-  // Default: the second Signature (it is the one still plain until level 55). An AI build can choose differently,
-  // or leave the specialisation's PlayStyle+ out (index -1) when both Signatures fit the player better.
   const plainPs = (x: string) => String(x).replace(/\+/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
   const specSameAs = specPerk ? signatureNames.findIndex(sn => plainPs(sn) === plainPs(specPerk)) : -1;
   const aiSwap = specSwap && specSwap.spec === equippedSpecialization ? specSwap.index : null;
@@ -792,7 +828,6 @@ export function useBuilderLogic() {
   const sig1 = sigSlot(0);
   const sig2 = sigSlot(1);
 
-  // Lets the PlayStyle Hub choose which Signature the specialisation's PlayStyle+ replaces (-1 = none)
   const setSpecSwapIndex = (index: number) => {
     if (!equippedSpecialization) return;
     setSpecSwap({ spec: equippedSpecialization, index });
@@ -844,6 +879,9 @@ export function useBuilderLogic() {
     buildStyle, setBuildStyle,
     aiFloorReport, setAiFloorReport,
     aiError,
+    isCardModalOpen, setIsCardModalOpen,
+    cardMatchReport, setCardMatchReport,
+    handleApplyCardMatch,
     serverArchetypes,
     progressionData,
     isArchLoading, isProgLoading,
