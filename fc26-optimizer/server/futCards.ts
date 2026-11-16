@@ -1,5 +1,15 @@
-import { db } from "./db";
+import * as dbModule from "./db";
 import { sql } from "drizzle-orm";
+
+async function getDatabase() {
+  const mod = dbModule as any;
+  if (mod.db) return mod.db;
+  if (typeof mod.getDb === "function") {
+    const inst = await mod.getDb();
+    if (inst) return inst;
+  }
+  throw new Error("Database connection unavailable");
+}
 
 export interface FutCard {
   id: string;
@@ -81,6 +91,7 @@ let schemaReady = false;
 
 export async function ensureFutCardsSchema(): Promise<void> {
   if (schemaReady) return;
+  const db = await getDatabase();
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS fut_cards (
       id VARCHAR(128) PRIMARY KEY,
@@ -148,6 +159,7 @@ function rowToFutCard(row: any): FutCard {
 export async function upsertFutCards(cards: FutCard[]): Promise<number> {
   if (!cards.length) return 0;
   await ensureFutCardsSchema();
+  const db = await getDatabase();
   for (const c of cards) {
     await db.execute(sql`
       INSERT INTO fut_cards (
@@ -277,7 +289,6 @@ async function fetchUpstreamCards(searchTerm?: string): Promise<FutCard[]> {
   return [];
 }
 
-// Tuple: [id, name, rarity, ovr, pos, alts, club, league, nation, h, w, sm, wf, foot, [pac,sho,pas,dri,def,phy], psPlus, psStd, overrides]
 type SeedTuple = [
   string, string, string, number, string, string[], string, string, string,
   number, number, number, number, "Right" | "Left",
@@ -367,6 +378,7 @@ export async function searchFutCards(params: {
   limit?: number;
 }): Promise<FutCard[]> {
   await ensureFutCardsSchema();
+  const db = await getDatabase();
   const countRes = await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`);
   if (Number((countRes.rows?.[0] as any)?.cnt ?? 0) === 0) {
     await upsertFutCards(BUILTIN_FC27_CARDS);
@@ -407,13 +419,17 @@ export async function searchFutCards(params: {
 
 export async function getFutCardById(id: string): Promise<FutCard | null> {
   await ensureFutCardsSchema();
+  const db = await getDatabase();
   const res = await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`);
   const row = res.rows?.[0];
   return row ? rowToFutCard(row) : null;
 }
 
-export async function getDistinctRarities(): Promise<string[]> {
+export async function getAvailableRarities(): Promise<string[]> {
   await ensureFutCardsSchema();
+  const db = await getDatabase();
   const res = await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`);
   return (res.rows ?? []).map((r: any) => String(r.rarity));
 }
+
+export const getDistinctRarities = getAvailableRarities;
