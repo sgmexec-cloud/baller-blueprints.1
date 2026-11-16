@@ -95,6 +95,7 @@ function normalizeStatKey(raw: string): string | null {
 }
 
 let schemaReady = false;
+let catalogSeeded = false;
 
 export async function ensureFutCardsSchema(): Promise<void> {
   if (schemaReady) return;
@@ -195,7 +196,7 @@ export async function upsertFutCards(cards: FutCard[]): Promise<number> {
   return cards.length;
 }
 
-async function fetchJsonSafe(url: string, timeoutMs = 7000): Promise<any | null> {
+async function fetchJsonSafe(url: string, timeoutMs = 4000): Promise<any | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -287,7 +288,7 @@ async function fetchUpstreamCards(searchTerm?: string): Promise<FutCard[]> {
     `https://drop-api.ea.com/rating/ea-sports-fc?locale=en&limit=100${q}`,
     `https://drop-api.ea.com/rating/fc-27?locale=en&limit=100${q}`,
   ]) {
-    const data = await fetchJsonSafe(url);
+    const data = await fetchJsonSafe(url, 3500);
     const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
     if (items.length > 0) {
       return items.map(parseEaItem).filter((c): c is FutCard => !!c && c.position !== "GK");
@@ -370,12 +371,21 @@ const BUILTIN_FC27_CARDS: FutCard[] = SEED_DATA.map(
   })
 );
 
-export async function syncFutCards(): Promise<{ synced: number }> {
+async function ensureBuiltinCatalogSeeded(): Promise<void> {
+  if (catalogSeeded) return;
   await ensureFutCardsSchema();
-  const seeded = await upsertFutCards(BUILTIN_FC27_CARDS);
+  const db = await getDatabase();
+  // Remove any stale placeholder rows from earlier seed attempts
+  await db.execute(sql`DELETE FROM fut_cards WHERE rarity = 'Base Gold'`);
+  await upsertFutCards(BUILTIN_FC27_CARDS);
+  catalogSeeded = true;
+}
+
+export async function syncFutCards(): Promise<{ synced: number }> {
+  await ensureBuiltinCatalogSeeded();
   const upstream = await fetchUpstreamCards();
   const extra = upstream.length > 0 ? await upsertFutCards(upstream) : 0;
-  return { synced: seeded + extra };
+  return { synced: BUILTIN_FC27_CARDS.length + extra };
 }
 
 export async function searchFutCards(params: {
@@ -384,12 +394,8 @@ export async function searchFutCards(params: {
   rarity?: string;
   limit?: number;
 }): Promise<FutCard[]> {
-  await ensureFutCardsSchema();
+  await ensureBuiltinCatalogSeeded();
   const db = await getDatabase();
-  const countRows = extractRows(await db.execute(sql`SELECT COUNT(*)::int AS cnt FROM fut_cards`));
-  if (Number(countRows[0]?.cnt ?? 0) === 0) {
-    await upsertFutCards(BUILTIN_FC27_CARDS);
-  }
 
   const limit = Math.min(50, Math.max(1, params.limit ?? 25));
   const conditions: any[] = [sql`position <> 'GK'`];
@@ -407,32 +413,22 @@ export async function searchFutCards(params: {
   }
 
   const whereClause = sql.join(conditions, sql` AND `);
-  let rows = extractRows(await db.execute(sql`
+  const rows = extractRows(await db.execute(sql`
     SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
   `));
-
-  if (rows.length === 0 && params.query && params.query.trim().length >= 3) {
-    const liveHits = await fetchUpstreamCards(params.query.trim());
-    if (liveHits.length > 0) {
-      await upsertFutCards(liveHits);
-      rows = extractRows(await db.execute(sql`
-        SELECT * FROM fut_cards WHERE ${whereClause} ORDER BY overall DESC, name ASC LIMIT ${limit}
-      `));
-    }
-  }
 
   return rows.map(rowToFutCard);
 }
 
 export async function getFutCardById(id: string): Promise<FutCard | null> {
-  await ensureFutCardsSchema();
+  await ensureBuiltinCatalogSeeded();
   const db = await getDatabase();
   const rows = extractRows(await db.execute(sql`SELECT * FROM fut_cards WHERE id = ${id} LIMIT 1`));
   return rows[0] ? rowToFutCard(rows[0]) : null;
 }
 
 export async function getAvailableRarities(): Promise<string[]> {
-  await ensureFutCardsSchema();
+  await ensureBuiltinCatalogSeeded();
   const db = await getDatabase();
   const rows = extractRows(await db.execute(sql`SELECT DISTINCT rarity FROM fut_cards WHERE position <> 'GK' ORDER BY rarity ASC`));
   return rows.map((r: any) => String(r.rarity));
