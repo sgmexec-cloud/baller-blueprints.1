@@ -108,6 +108,7 @@ const STAT_KEY_MAP: Record<string, string> = {
   attackingheadingaccuracy: "Heading Acc.",
   defensiveawareness: "Def. Awareness",
   defawareness: "Def. Awareness",
+  defawerness: "Def. Awareness", // FUTMind's actual (misspelled) key
   marking: "Def. Awareness",
   defendingmarkingawareness: "Def. Awareness",
   standingtackle: "Stand Tackle",
@@ -161,19 +162,29 @@ function extractLabel(val: unknown): string | null {
   return null;
 }
 
+function titleCase(s: string): string {
+  return s.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+}
+
 // ── Parse FUTMind / EA / Generic Card JSON Object ───────────────────────────
 function parseCardObject(item: Record<string, any>): FutCard | null {
   if (!item || typeof item !== "object") return null;
 
+  const first = item.firstName ?? item.firstname;
+  const last = item.lastName ?? item.lastname;
+  const joinedName = [first, last].filter((x) => typeof x === "string" && x.trim()).join(" ").trim();
+
   const fullName =
     extractLabel(item.commonName) ||
     extractLabel(item.common_name) ||
-    [item.firstName, item.lastName].filter(Boolean).join(" ").trim() ||
+    joinedName ||
     extractLabel(item.name) ||
     extractLabel(item.cardName) ||
     extractLabel(item.displayName) ||
     extractLabel(item.fullName) ||
-    extractLabel(item.playerName);
+    extractLabel(item.playerName) ||
+    (extractLabel(item.fullnameClean) ? titleCase(extractLabel(item.fullnameClean)!) : null) ||
+    (extractLabel(item.nameClean) ? titleCase(extractLabel(item.nameClean)!) : null);
 
   const overall = parseNumberOrNull(
     item.overall ?? item.overallRating ?? item.overall_rating ?? item.rating ?? item.cardRating ?? item.ovr
@@ -194,7 +205,12 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
   if (position === "GK") return null;
 
   const rawAlt =
-    item.altPositions ?? item.alt_positions ?? item.alternativePositions ?? item.alternatePositions ?? [];
+    item.altPositions ??
+    item.alt_positions ??
+    item.alternativePositions ??
+    item.alternatePositions ??
+    item.possiblePositions ??
+    [];
   const extraAlts = Array.isArray(rawAlt)
     ? rawAlt.map((p) => (extractLabel(p) || "").toUpperCase()).filter(Boolean)
     : typeof rawAlt === "string"
@@ -204,12 +220,15 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     (p) => p !== position && p !== "GK"
   );
 
+  // FUTMind only gives a numeric cardType (no label). Keep it as an honest
+  // placeholder until a real id -> name lookup is available.
+  const cardTypeNum = parseNumberOrNull(item.cardType);
   const rarity =
     extractLabel(item.rarity) ||
     extractLabel(item.rarityName) ||
-    extractLabel(item.cardType) ||
-    extractLabel(item.version) ||
-    inferDefaultRarity(overall);
+    (typeof item.cardType === "string" ? extractLabel(item.cardType) : null) ||
+    (typeof item.version === "string" ? extractLabel(item.version) : null) ||
+    (cardTypeNum != null ? `Card Type ${cardTypeNum}` : inferDefaultRarity(overall));
 
   const rawId = String(
     item.id ?? item.cardId ?? item.playerId ?? item.assetId ?? item.eaId ?? ""
@@ -218,13 +237,15 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
   const raritySlug = rarity.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const id = rawId ? `fm27-${rawId}` : `fm27-${slug}-${overall}-${raritySlug}`;
 
+  // FUTMind face stats: attributeArray = [PAC, SHO, PAS, DRI, DEF, PHY]
+  const faceArr: any[] = Array.isArray(item.attributeArray) ? item.attributeArray : [];
   const faceObj = item.faceStats ?? item.stats ?? item;
-  const pace = parseNumberOrNull(faceObj.pace ?? faceObj.pac) ?? 70;
-  const shooting = parseNumberOrNull(faceObj.shooting ?? faceObj.sho) ?? 70;
-  const passing = parseNumberOrNull(faceObj.passing ?? faceObj.pas) ?? 70;
-  const dribbling = parseNumberOrNull(faceObj.dribbling ?? faceObj.dri) ?? 70;
-  const defending = parseNumberOrNull(faceObj.defending ?? faceObj.def) ?? 50;
-  const physical = parseNumberOrNull(faceObj.physical ?? faceObj.physicality ?? faceObj.phy) ?? 70;
+  const pace = parseNumberOrNull(faceObj.pace ?? faceObj.pac ?? faceArr[0]) ?? 70;
+  const shooting = parseNumberOrNull(faceObj.shooting ?? faceObj.sho ?? faceArr[1]) ?? 70;
+  const passing = parseNumberOrNull(faceObj.passing ?? faceObj.pas ?? faceArr[2]) ?? 70;
+  const dribbling = parseNumberOrNull(faceObj.dribbling ?? faceObj.dri ?? faceArr[3]) ?? 70;
+  const defending = parseNumberOrNull(faceObj.defending ?? faceObj.def ?? faceArr[4]) ?? 50;
+  const physical = parseNumberOrNull(faceObj.physical ?? faceObj.physicality ?? faceObj.phy ?? faceArr[5]) ?? 70;
 
   const attributes: Record<string, number> = {};
   const statSources = [
@@ -270,6 +291,9 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     }
   };
 
+  // NOTE: FUTMind list items only carry numeric ids (plusRoles, plusPlusRoles,
+  // playStyle, baseTraits) with no names, so PlayStyles stay empty until an
+  // id -> name lookup is added. Names are never guessed.
   for (const field of [item.playstylePlus, item.playStylePlus, item.playstylesPlus, item.playStylesPlus]) {
     if (Array.isArray(field)) {
       for (const ps of field) {
@@ -297,7 +321,7 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     }
   }
 
-  const footRaw = String(item.preferredFoot ?? item.preferred_foot ?? item.foot ?? "Right");
+  const footRaw = String(item.preferredFoot ?? item.preferred_foot ?? item.preferredfoot ?? item.foot ?? "Right");
   const preferredFoot =
     footRaw === "2" || footRaw.toLowerCase().startsWith("l") ? "Left" : "Right";
 
@@ -324,8 +348,17 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     nation: extractLabel(item.nation ?? item.nationality ?? item.nationName),
     heightCm: parseNumberOrNull(item.heightCm ?? item.height_cm ?? item.height),
     weightKg: parseNumberOrNull(item.weightKg ?? item.weight_kg ?? item.weight),
-    skillMoves: Math.min(5, Math.max(1, parseNumberOrNull(item.skillMoves ?? item.skill_moves ?? item.skills) ?? 3)),
-    weakFoot: Math.min(5, Math.max(1, parseNumberOrNull(item.weakFoot ?? item.weak_foot ?? item.weakFootAbility) ?? 3)),
+    skillMoves: Math.min(
+      5,
+      Math.max(1, parseNumberOrNull(item.skillMoves ?? item.skill_moves ?? item.skillmoves ?? item.skills) ?? 3)
+    ),
+    weakFoot: Math.min(
+      5,
+      Math.max(
+        1,
+        parseNumberOrNull(item.weakFoot ?? item.weak_foot ?? item.weakFootAbility ?? item.weakfootabilitytypecode) ?? 3
+      )
+    ),
     preferredFoot,
     faceStats: { pace, shooting, passing, dribbling, defending, physical },
     attributes,
@@ -510,12 +543,15 @@ async function fetchFutMindPage(params: {
       .filter((c: FutCard | null): c is FutCard => c !== null);
 
     if (rawItems.length > 0 && cards.length === 0) {
-      console.warn("[FUTMind 2027] Unparsed item keys:", Object.keys(rawItems[0] || {}));
+      // Single-line so Render logs don't truncate it
+      console.warn(
+        "[FUTMind 2027] Unparsed item keys: " + JSON.stringify(Object.keys(rawItems[0] || {}))
+      );
     }
 
     return {
       cards,
-      lastPage: Number(data?.lastPage ?? data?.meta?.last_page ?? 1),
+      lastPage: Number(data?.last_page ?? data?.lastPage ?? data?.meta?.last_page ?? 1),
       total: Number(data?.total ?? data?.meta?.total ?? cards.length),
     };
   } catch (err) {
@@ -575,9 +611,11 @@ export async function importFutCardsFromJson(payload: any): Promise<{ imported: 
       ? payload.players
       : Array.isArray(payload?.cards)
         ? payload.cards
-        : Array.isArray(payload)
-          ? payload
-          : [];
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : Array.isArray(payload)
+            ? payload
+            : [];
 
   const cards = rawItems
     .map((item: any) => parseCardObject(item))
