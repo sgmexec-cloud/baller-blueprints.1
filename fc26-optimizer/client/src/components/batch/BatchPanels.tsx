@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ItemStatus } from '@/utils/batchRunner';
 import { buildCaption, parseHashtagInput, LIMITS } from '@/utils/socialCopy';
-import { EXPORT_KINDS, type ExportKind } from '@/utils/batchExport';
 
 // ───────────────────────── shared bits ─────────────────────────
 
@@ -357,7 +356,9 @@ const ItemRow: React.FC<{
   socialBusy: boolean;
   onSaveSocial: (social: any) => void;
   onRegenerateSocial: () => void;
-}> = ({ item, expanded, locked, onExpand, onRetry, onRegenerate, onRemove, onToggleSelect, socialBusy, onSaveSocial, onRegenerateSocial }) => {
+  imagesBusy: boolean;
+  onShareImages: () => void;
+}> = ({ item, expanded, locked, onExpand, onRetry, onRegenerate, onRemove, onToggleSelect, socialBusy, onSaveSocial, onRegenerateSocial, imagesBusy, onShareImages }) => {
   const b = item.build;
   const v = b?.view;
   const f = v?.faceStats;
@@ -423,6 +424,9 @@ const ItemRow: React.FC<{
             <p><span className="text-[#F4F7FB] font-bold">Playability floors:</span> {b.floorReport.map((r: any) => `${r.attribute} ${r.before}→${r.after}`).join(', ')}</p>
           )}
           {(b.notes ?? []).length > 0 && <p className="text-[#facc15]">{(b.notes as string[]).join(' ')}</p>}
+          <button onClick={onShareImages} disabled={imagesBusy} className="w-full py-2.5 rounded-lg border border-[#4D8DFF]/40 bg-[#192235] text-[#4D8DFF] text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+            {imagesBusy ? 'Drawing images…' : 'Share this player’s 3 images'}
+          </button>
           <SocialEditor item={item} busy={socialBusy} onSave={onSaveSocial} onRegenerate={onRegenerateSocial} />
         </div>
       )}
@@ -462,8 +466,15 @@ export interface BatchViewProps {
   /** What an export would contain right now (selected, finished players) */
   exportInfo: { ready: number; usingTemplate: number; skipped: number };
   exportNotice: string | null;
-  onExport: (kind: ExportKind) => void;
-  onExportAll: () => void;
+  onExportTitles: () => void;
+  /** Saves the player card, facilities and scout report images of every ticked player (ZIP files) */
+  onDownloadImages: () => void;
+  /** e.g. "Drawing images 12 of 60…" while the images are being made, otherwise null */
+  imageProgress: string | null;
+  /** Share (or download) the 3 images of one player */
+  onShareImages: (item: BatchItemView) => void;
+  /** The player whose images are being drawn right now */
+  imagesBusyId: number | null;
 }
 
 export const BatchView: React.FC<BatchViewProps> = p => {
@@ -544,36 +555,43 @@ export const BatchView: React.FC<BatchViewProps> = p => {
             socialBusy={p.socialBusy.includes(item.id)}
             onSaveSocial={social => p.onSaveSocial(item, social)}
             onRegenerateSocial={() => p.onRegenerateSocial(item)}
+            imagesBusy={p.imagesBusyId === item.id}
+            onShareImages={() => p.onShareImages(item)}
           />
         ))}
       </div>
 
       <div className="rounded-2xl border border-[#26334A] bg-[#0D1220] p-4 space-y-3">
-        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#facc15]">Export for Canva</div>
+        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#facc15]">Export</div>
         <p className="text-[10px] text-[#8E9AAF] leading-relaxed">
           {p.exportInfo.ready} of {s.done} finished player{s.done === 1 ? '' : 's'} will be exported (the ones ticked above).
-          {p.exportInfo.usingTemplate > 0 && ` ${p.exportInfo.usingTemplate} ${p.exportInfo.usingTemplate === 1 ? 'has' : 'have'} no saved copy, so template wording is used.`}
+          {p.exportInfo.usingTemplate > 0 && ` ${p.exportInfo.usingTemplate} ${p.exportInfo.usingTemplate === 1 ? 'has' : 'have'} no saved copy, so template wording is used in the CSV.`}
           {p.exportInfo.skipped > 0 && ` ${p.exportInfo.skipped} skipped: incomplete build, regenerate ${p.exportInfo.skipped === 1 ? 'it' : 'them'}.`}
         </p>
-        <div className="space-y-2">
-          {EXPORT_KINDS.map(k => (
-            <button
-              key={k.id}
-              onClick={() => p.onExport(k.id)}
-              disabled={p.exportInfo.ready === 0}
-              className="w-full text-left rounded-lg border border-[#26334A] bg-[#131A2A] p-3 hover:border-[#4D8DFF]/50 disabled:opacity-40 transition-colors"
-            >
-              <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">Download {k.label} CSV</div>
-              <div className="text-[10px] text-[#8E9AAF] mt-0.5 leading-snug">{k.help}</div>
-            </button>
-          ))}
-        </div>
-        <button onClick={p.onExportAll} disabled={p.exportInfo.ready === 0} className="w-full py-2.5 rounded-lg bg-[#4D8DFF] text-[#080B14] text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
-          Download all three
+
+        <button
+          onClick={p.onDownloadImages}
+          disabled={p.exportInfo.ready === 0 || p.imageProgress !== null}
+          className="w-full text-left rounded-lg border border-[#4D8DFF]/40 bg-[#192235] p-3 hover:border-[#4D8DFF] disabled:opacity-40 transition-colors"
+        >
+          <div className="text-[11px] font-black text-[#4D8DFF] uppercase tracking-wider">{p.imageProgress ?? 'Download images (ZIP)'}</div>
+          <div className="text-[10px] text-[#8E9AAF] mt-0.5 leading-snug">
+            Three 4:5 images per player: player card, facilities, scout report. Ready for TikTok. Saved in ZIP files of 10 players.
+          </div>
         </button>
+
+        <button
+          onClick={p.onExportTitles}
+          disabled={p.exportInfo.ready === 0}
+          className="w-full text-left rounded-lg border border-[#26334A] bg-[#131A2A] p-3 hover:border-[#4D8DFF]/50 disabled:opacity-40 transition-colors"
+        >
+          <div className="text-[11px] font-black text-[#F4F7FB] uppercase tracking-wider">Download Titles CSV (for Canva)</div>
+          <div className="text-[10px] text-[#8E9AAF] mt-0.5 leading-snug">Title, archetype, position, OVR, face stats, 3 standout attributes, hashtags, caption</div>
+        </button>
+
         {p.exportNotice && <p className="text-[10px] text-[#21E6A4] leading-relaxed">{p.exportNotice}</p>}
         <p className="text-[10px] text-[#59657A] leading-relaxed">
-          Player images are not in the files. Upload them to Canva and match each one by the player_name column.
+          The card image leaves the left side empty for the player photo. For the CSV, upload your player images to Canva and match each by the player_name column.
         </p>
       </div>
 
