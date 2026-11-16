@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { trpc } from '@/lib/trpc';
 import { ARCH_PHYSICALS } from '@/constants/archetypeData';
 import { FACILITIES, MASTERIES } from '@/constants/playstylesData';
 import { CLUB_BUDGETS } from '@/constants/builderData';
 import { getModifier, getApCost } from '@/utils/builderUtils';
-import { optimiseFacilities, normStat } from '@/utils/facilityOptimizer';
+import { optimiseFacilities } from '@/utils/facilityOptimizer';
 import { samePlaystyle } from '@/utils/gameRules';
 
 export interface CardMatcherModalProps {
@@ -43,6 +43,7 @@ export function CardMatcherModal({
   onApplyCardBuild,
 }: CardMatcherModalProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState('ALL');
   const [rarityFilter, setRarityFilter] = useState('ALL');
   const [selectedCard, setSelectedCard] = useState<any | null>(null);
@@ -57,11 +58,16 @@ export function CardMatcherModal({
   const [isMatching, setIsMatching] = useState(false);
   const [matchError, setMatchError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const utils = trpc.useUtils();
 
   const cardsQuery = trpc.scout.cards.search.useQuery(
     {
-      query: searchQuery.trim() || undefined,
+      query: debouncedQuery || undefined,
       position: positionFilter === 'ALL' ? undefined : positionFilter,
       rarity: rarityFilter === 'ALL' ? undefined : rarityFilter,
       limit: 30,
@@ -96,7 +102,6 @@ export function CardMatcherModal({
     setMatchError(null);
 
     try {
-      // 1. Resolve mastery boosts according to user's selected mode
       let effectiveMasteries: Record<string, { l10: boolean; l30: boolean; l55?: boolean }> = {};
       if (masteryMode === 'current') {
         effectiveMasteries = unlockedMasteries;
@@ -115,7 +120,6 @@ export function CardMatcherModal({
         if (status.l55 && m.l55) Object.entries(m.l55).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
       });
 
-      // 2. Estimate physical boosts (for facility optimization pass)
       const guessArch =
         canSelectArchetype && archetypeLock !== 'AUTO'
           ? archetypeLock
@@ -136,7 +140,6 @@ export function CardMatcherModal({
         Balance: (masteryBoosts['Balance'] || 0) - hMod + wMod,
       };
 
-      // 3. Resolve facilities according to selected mode
       let finalFacilities: Record<string, number> = {};
       if (facilityMode === 'keep') {
         finalFacilities = equippedFacilities;
@@ -172,7 +175,6 @@ export function CardMatcherModal({
         }
       });
 
-      // 4. Progression AP & slots for targetLevel
       const progRow = progressionData?.[targetLevel];
       const apBudget = progRow?.apAvailable ?? Math.floor(targetLevel * 1.5) + 10;
       const signatureSlots = progRow?.signatureUpgrades ?? (targetLevel >= 55 ? 2 : targetLevel >= 20 ? 1 : 0);
@@ -263,7 +265,6 @@ export function CardMatcherModal({
               ← Back to Cards
             </button>
 
-            {/* Card Header */}
             <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center gap-4">
               <div className="w-16 h-20 rounded-xl bg-gradient-to-b from-[#facc15]/20 to-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
                 <span className="text-2xl font-black text-[#facc15] leading-none">{selectedCard.overall}</span>
@@ -285,7 +286,6 @@ export function CardMatcherModal({
               </div>
             </div>
 
-            {/* Bio & PlayStyles */}
             <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3.5 space-y-3 text-xs">
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="bg-[#131A2A] p-2 rounded-lg">
@@ -331,11 +331,9 @@ export function CardMatcherModal({
               )}
             </div>
 
-            {/* Match Settings */}
             <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-4 space-y-3.5">
               <div className="text-xs font-black uppercase tracking-wider text-[#4D8DFF]">Match Configuration</div>
 
-              {/* Target Pro Level */}
               <div>
                 <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Pro Level (1–55)</label>
                 <select
@@ -351,7 +349,6 @@ export function CardMatcherModal({
                 </select>
               </div>
 
-              {/* Archetype Selection */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-[11px] font-bold text-[#8E9AAF]">Archetype</label>
@@ -376,7 +373,6 @@ export function CardMatcherModal({
                 </select>
               </div>
 
-              {/* Masteries Toggle */}
               <div>
                 <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Masteries</label>
                 <div className="grid grid-cols-3 gap-1.5">
@@ -401,7 +397,6 @@ export function CardMatcherModal({
                 </div>
               </div>
 
-              {/* Facilities Toggle */}
               <div>
                 <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">
                   Club Facilities (Club Lvl {clubLevel})
@@ -459,7 +454,7 @@ export function CardMatcherModal({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search FC 27 player (e.g. Mbappé, Bellingham, Putellas)..."
+                placeholder="Search FC 27 player (e.g. Harry Kane, Mbappé, Bellingham)..."
                 className="w-full bg-[#131A2A] border border-[#26334A] focus:border-[#4D8DFF] rounded-xl px-3.5 py-2.5 text-xs text-[#F4F7FB] placeholder-[#59657A] outline-none"
               />
 
