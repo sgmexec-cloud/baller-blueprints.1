@@ -44,6 +44,67 @@ function Logo({ src, title }: { src?: string | null; title: string }) {
   );
 }
 
+const PLAYER_IMG_BASE = 'https://futmind.com/images/fifa2027/players';
+
+/**
+ * Player picture with the rating and position on a strip at the bottom (so the face stays visible).
+ * FUTMind names base-card images and special-card images differently, so several addresses are tried
+ * in turn; if none load, it falls back to the plain rating box.
+ */
+function CardThumb({ card, size }: { card: any; size: 'sm' | 'lg' }) {
+  const candidates = useMemo(() => {
+    const list: string[] = [];
+    const add = (u?: string | null) => {
+      if (u && !list.includes(u)) list.push(u);
+    };
+    add(card.avatarUrl);
+    if (card.eaAssetId) {
+      add(`${PLAYER_IMG_BASE}/${card.eaAssetId}.png`);
+      add(`${PLAYER_IMG_BASE}/p${card.eaAssetId}.png`);
+    }
+    return list;
+  }, [card.avatarUrl, card.eaAssetId]);
+
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [card.id]);
+
+  const src = candidates[idx];
+  const big = size === 'lg';
+
+  return (
+    <div
+      className={`relative overflow-hidden shrink-0 border border-[#facc15]/40 bg-gradient-to-b from-[#facc15]/20 to-[#192235] ${
+        big ? 'w-20 h-24 rounded-xl' : 'w-14 h-[72px] rounded-lg'
+      }`}
+    >
+      {src ? (
+        <>
+          <img
+            key={src}
+            src={src}
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            onError={() => setIdx((i) => i + 1)}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+          />
+          <div className="absolute inset-x-0 bottom-0 bg-black/80 text-center leading-none py-1">
+            <span className={`font-black text-[#facc15] ${big ? 'text-base' : 'text-sm'}`}>{card.overall}</span>
+            <span className={`font-bold text-[#F4F7FB] ml-1 ${big ? 'text-[11px]' : 'text-[9px]'}`}>{card.position}</span>
+          </div>
+        </>
+      ) : (
+        <div className="w-full h-full flex flex-col items-center justify-center">
+          <span className={`font-black text-[#facc15] leading-none ${big ? 'text-2xl' : 'text-base'}`}>{card.overall}</span>
+          <span className={`font-bold text-[#F4F7FB] ${big ? 'text-[11px] mt-1' : 'text-[9px] mt-0.5'}`}>{card.position}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const POSITIONS = ['ALL', 'ST', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB'];
 
 export function CardMatcherModal({
@@ -316,21 +377,7 @@ export function CardMatcherModal({
             </button>
 
             <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center gap-4">
-              <div className="relative overflow-hidden w-16 h-20 rounded-xl bg-gradient-to-b from-[#facc15]/20 to-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
-                {selectedCard.avatarUrl && (
-                  <img
-                    src={selectedCard.avatarUrl}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    className="absolute inset-0 w-full h-full object-cover opacity-40"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                )}
-                <span className="relative text-2xl font-black text-[#facc15] leading-none drop-shadow">{selectedCard.overall}</span>
-                <span className="relative text-[11px] font-bold text-[#F4F7FB] mt-1 drop-shadow">{selectedCard.position}</span>
-              </div>
+              <CardThumb card={selectedCard} size="lg" />
               <div className="flex-1 min-w-0">
                 <div className="text-lg font-black text-[#F4F7FB] truncate">{selectedCard.name}</div>
                 <div className="text-xs text-[#8E9AAF] truncate">
@@ -570,22 +617,7 @@ export function CardMatcherModal({
                     className="bg-[#0D1220] hover:bg-[#131A2A] border border-[#26334A] rounded-xl p-3 flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="relative overflow-hidden w-11 h-14 rounded-lg bg-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
-                        {card.avatarUrl && (
-                          <img
-                            src={card.avatarUrl}
-                            alt=""
-                            referrerPolicy="no-referrer"
-                            loading="lazy"
-                            className="absolute inset-0 w-full h-full object-cover opacity-40"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <span className="relative text-base font-black text-[#facc15] leading-none drop-shadow">{card.overall}</span>
-                        <span className="relative text-[9px] font-bold text-[#F4F7FB] mt-0.5 drop-shadow">{card.position}</span>
-                      </div>
+                      <CardThumb card={card} size="sm" />
                       <div className="min-w-0">
                         <div className="text-xs font-black text-[#F4F7FB] truncate">{card.name}</div>
                         <div className="text-[10px] text-[#8E9AAF] truncate">
