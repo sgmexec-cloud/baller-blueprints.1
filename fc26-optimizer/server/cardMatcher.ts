@@ -43,6 +43,61 @@ const ARCH_PHYSICALS: Record<string, { minH: number; maxH: number; minW: number;
   "Target":     { minH: 180, maxH: 203, minW: 75, maxW: 105 },
 };
 
+// ── Skill Moves / Weak Foot AP pricing ──────────────────────────────────────
+// MUST stay in sync with STAR_UPGRADE_COSTS and ARCHETYPE_STAR_CAPS in
+// client/src/constants/archetypeData.ts (copied here because the server
+// cannot import the client's "@/..." alias).
+// Index = star level reached; the cost of a level is paid for every level
+// above the archetype's minimum.
+const STAR_UPGRADE_COSTS: Record<string, number[]> = {
+  star0: [0, 0, 5, 10, 25, 40],
+  star1: [0, 0, 8, 15, 25, 40],
+  star2: [0, 0, 10, 10, 20, 35],
+  star3: [0, 0, 10, 20, 35, 50],
+  star4: [0, 0, 10, 8, 15, 25],
+};
+
+type StarCap = { min: number; max: number; tier: string };
+const ARCHETYPE_STAR_CAPS: Record<string, { sm: StarCap; wf: StarCap }> = {
+  "Progressor": { sm: { min: 2, max: 4, tier: "star2" }, wf: { min: 3, max: 4, tier: "star1" } },
+  "Boss":       { sm: { min: 2, max: 3, tier: "star0" }, wf: { min: 2, max: 4, tier: "star3" } },
+  "Disruptor":  { sm: { min: 2, max: 4, tier: "star2" }, wf: { min: 3, max: 5, tier: "star3" } },
+  "Marauder":   { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Recycler":   { sm: { min: 2, max: 4, tier: "star4" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Maestro":    { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Creator":    { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Spark":      { sm: { min: 3, max: 5, tier: "star4" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Magician":   { sm: { min: 3, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
+  "Finisher":   { sm: { min: 3, max: 5, tier: "star4" }, wf: { min: 3, max: 5, tier: "star3" } },
+  "Target":     { sm: { min: 2, max: 5, tier: "star4" }, wf: { min: 2, max: 5, tier: "star3" } },
+};
+
+function starCostBetween(tier: string, minLevel: number, targetLevel: number): number {
+  const costs = STAR_UPGRADE_COSTS[tier];
+  if (!costs) return 0;
+  let total = 0;
+  for (let i = minLevel + 1; i <= targetLevel; i++) total += costs[i] ?? 0;
+  return total;
+}
+
+/**
+ * The stars the Pro can actually reach for this card (clamped to the archetype's
+ * min/max) and what they cost in AP. Returns null for an unknown archetype.
+ */
+export function resolveCardStars(
+  card: FutCard,
+  archetype: string
+): { skillMoves: number; weakFoot: number; skillMovesCost: number; weakFootCost: number; totalCost: number } | null {
+  const key = Object.keys(ARCHETYPE_STAR_CAPS).find(k => normAttr(k) === normAttr(archetype));
+  if (!key) return null;
+  const caps = ARCHETYPE_STAR_CAPS[key];
+  const skillMoves = clamp(card.skillMoves, caps.sm.min, caps.sm.max);
+  const weakFoot = clamp(card.weakFoot, caps.wf.min, caps.wf.max);
+  const skillMovesCost = starCostBetween(caps.sm.tier, caps.sm.min, skillMoves);
+  const weakFootCost = starCostBetween(caps.wf.tier, caps.wf.min, weakFoot);
+  return { skillMoves, weakFoot, skillMovesCost, weakFootCost, totalCost: skillMovesCost + weakFootCost };
+}
+
 function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
@@ -203,6 +258,16 @@ export interface CardMatchOutput {
   physicals: { heightCm: number; weightKg: number };
   blueprint: ScoutingBlueprint;
   engineResult: ReturnType<typeof runMathEngine>;
+  /** Stars the Pro reaches for this card and the AP they cost (already taken out of the budget the engine used) */
+  stars: {
+    skillMoves: number;
+    weakFoot: number;
+    skillMovesCost: number;
+    weakFootCost: number;
+    totalCost: number;
+    /** AP the engine was allowed to spend on attributes (apBudget minus star cost) */
+    attributeBudget: number;
+  };
   playstyles: {
     signatures: string[];
     standard: string[];
@@ -228,14 +293,27 @@ export function matchFutCardToPro(params: {
 
   const { blueprint, priorities, physicals } = buildBlueprintFromCard(params.card, chosenArchetype);
 
+  // Stars: reserve their AP BEFORE the engine spends the budget on attributes.
+  // (The engine has no star rows for these archetypes, so it never paid for them,
+  //  and the build screen then charged them on top -> overspend.)
+  const starInfo = resolveCardStars(params.card, chosenArchetype);
+  const starCost = params.starsPrepaid ? 0 : starInfo?.totalCost ?? 0;
+  const attributeBudget = Math.max(0, params.apBudget - starCost);
+
+  // Hand the engine the clamped star levels so the blueprint matches what is bought
+  if (starInfo) {
+    blueprint.skillMoves = starInfo.skillMoves;
+    blueprint.weakFoot = starInfo.weakFoot;
+  }
+
   const engineResult = runMathEngine(
     blueprint,
-    params.apBudget,
+    attributeBudget,
     params.standardSlots,
     blueprint.coreAttributes,
     params.foundationBoosts,
     {
-      starsPrepaid: params.starsPrepaid,
+      starsPrepaid: true, // stars are paid for above
       priorities,
       signatureUpgrades: params.signatureSlots,
     }
@@ -282,6 +360,14 @@ export function matchFutCardToPro(params: {
     physicals,
     blueprint,
     engineResult,
+    stars: {
+      skillMoves: starInfo?.skillMoves ?? params.card.skillMoves,
+      weakFoot: starInfo?.weakFoot ?? params.card.weakFoot,
+      skillMovesCost: starInfo?.skillMovesCost ?? 0,
+      weakFootCost: starInfo?.weakFootCost ?? 0,
+      totalCost: starCost,
+      attributeBudget,
+    },
     playstyles: {
       signatures: resolvedSignatures,
       standard: standardPlaystyles,
