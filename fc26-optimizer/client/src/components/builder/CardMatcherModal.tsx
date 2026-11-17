@@ -75,12 +75,13 @@ function CardThumb({ card, size }: { card: any; size: 'sm' | 'lg' }) {
 
   return (
     <div
-      className={`relative overflow-hidden shrink-0 border border-[#facc15]/40 bg-gradient-to-b from-[#facc15]/20 to-[#192235] ${
-        big ? 'w-20 h-24 rounded-xl' : 'w-14 h-[72px] rounded-lg'
+      className={`shrink-0 flex flex-col overflow-hidden border border-[#facc15]/40 bg-[#192235] ${
+        big ? 'w-20 rounded-xl' : 'w-14 rounded-lg'
       }`}
     >
-      {src ? (
-        <>
+      {/* Picture */}
+      <div className={`relative bg-gradient-to-b from-[#facc15]/15 to-[#192235] ${big ? 'h-24' : 'h-14'}`}>
+        {src ? (
           <img
             key={src}
             src={src}
@@ -90,17 +91,78 @@ function CardThumb({ card, size }: { card: any; size: 'sm' | 'lg' }) {
             onError={() => setIdx((i) => i + 1)}
             className="absolute inset-0 w-full h-full object-cover object-top"
           />
-          <div className="absolute inset-x-0 bottom-0 bg-black/80 text-center leading-none py-1">
-            <span className={`font-black text-[#facc15] ${big ? 'text-base' : 'text-sm'}`}>{card.overall}</span>
-            <span className={`font-bold text-[#F4F7FB] ml-1 ${big ? 'text-[11px]' : 'text-[9px]'}`}>{card.position}</span>
-          </div>
-        </>
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center">
-          <span className={`font-black text-[#facc15] leading-none ${big ? 'text-2xl' : 'text-base'}`}>{card.overall}</span>
-          <span className={`font-bold text-[#F4F7FB] ${big ? 'text-[11px] mt-1' : 'text-[9px] mt-0.5'}`}>{card.position}</span>
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center text-lg opacity-30">👤</span>
+        )}
+      </div>
+      {/* Rating + position in their own space */}
+      <div className="bg-[#0D1220] border-t border-[#facc15]/30 text-center leading-none py-1.5">
+        <span className={`font-black text-[#facc15] ${big ? 'text-lg' : 'text-sm'}`}>{card.overall}</span>
+        <span className={`font-bold text-[#F4F7FB] ml-1 ${big ? 'text-xs' : 'text-[10px]'}`}>{card.position}</span>
+      </div>
+    </div>
+  );
+}
+
+function allPositions(card: any): string[] {
+  return Array.from(new Set([card.position, ...(card.altPositions ?? [])].filter(Boolean) as string[]));
+}
+
+function PositionChips({ card }: { card: any }) {
+  const list = allPositions(card);
+  if (list.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {list.map((pos, i) => (
+        <span
+          key={pos}
+          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+            i === 0
+              ? 'bg-[#21E6A4]/15 border-[#21E6A4]/50 text-[#21E6A4]'
+              : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
+          }`}
+        >
+          {pos}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function FaceStatsRow({ stats }: { stats: any }) {
+  const items: Array<[string, number]> = [
+    ['PAC', stats?.pace],
+    ['SHO', stats?.shooting],
+    ['PAS', stats?.passing],
+    ['DRI', stats?.dribbling],
+    ['DEF', stats?.defending],
+    ['PHY', stats?.physical],
+  ];
+  return (
+    <div className="grid grid-cols-6 gap-1 text-center bg-[#080B14] p-1.5 rounded-lg border border-[#26334A]">
+      {items.map(([label, val]) => (
+        <div key={label}>
+          <div className="text-[9px] text-[#8E9AAF]">{label}</div>
+          <div className="text-xs font-bold text-[#F4F7FB]">{val ?? '-'}</div>
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
+
+function PlaystylePlusChips({ card }: { card: any }) {
+  const list: string[] = card.playstylePlus ?? [];
+  if (list.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {list.map((ps) => (
+        <span
+          key={ps}
+          className="px-2 py-0.5 rounded-md bg-[#facc15]/15 border border-[#facc15]/50 text-[#facc15] text-[10px] font-bold"
+        >
+          {ps}+
+        </span>
+      ))}
     </div>
   );
 }
@@ -388,6 +450,7 @@ export function CardMatcherModal({
                   <Logo src={selectedCard.leagueLogoUrl} title="League" />
                   <Logo src={selectedCard.clubLogoUrl} title="Club" />
                 </div>
+                <PositionChips card={selectedCard} />
                 <div className="grid grid-cols-6 gap-1 mt-2.5 text-center bg-[#080B14] p-2 rounded-lg border border-[#26334A]">
                   <div><div className="text-[9px] text-[#8E9AAF]">PAC</div><div className="text-xs font-bold">{selectedCard.faceStats.pace}</div></div>
                   <div><div className="text-[9px] text-[#8E9AAF]">SHO</div><div className="text-xs font-bold">{selectedCard.faceStats.shooting}</div></div>
@@ -614,31 +677,30 @@ export function CardMatcherModal({
                 (cardsQuery.data ?? []).map((card: any) => (
                   <div
                     key={card.id}
-                    className="bg-[#0D1220] hover:bg-[#131A2A] border border-[#26334A] rounded-xl p-3 flex items-center justify-between gap-3 transition-colors"
+                    className="bg-[#0D1220] hover:bg-[#131A2A] border border-[#26334A] rounded-xl p-3 space-y-2.5 transition-colors"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <CardThumb card={card} size="sm" />
-                      <div className="min-w-0">
-                        <div className="text-xs font-black text-[#F4F7FB] truncate">{card.name}</div>
-                        <div className="text-[10px] text-[#8E9AAF] truncate">
-                          {card.rarity} • {card.skillMoves}★/{card.weakFoot}★
-                          {card.playstylePlus?.[0] ? ` • ${card.playstylePlus[0]}+` : ''}
-                        </div>
-                        <div className="flex gap-2 mt-1 text-[10px] font-bold text-[#8E9AAF]">
-                          <span>PAC <b className="text-[#F4F7FB]">{card.faceStats.pace}</b></span>
-                          <span>SHO <b className="text-[#F4F7FB]">{card.faceStats.shooting}</b></span>
-                          <span>PAS <b className="text-[#F4F7FB]">{card.faceStats.passing}</b></span>
-                          <span>DRI <b className="text-[#F4F7FB]">{card.faceStats.dribbling}</b></span>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <CardThumb card={card} size="sm" />
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-[#F4F7FB] truncate">{card.name}</div>
+                          <div className="text-[10px] text-[#8E9AAF] truncate">
+                            {card.rarity} • {card.skillMoves}★ SM / {card.weakFoot}★ WF
+                          </div>
+                          <PositionChips card={card} />
                         </div>
                       </div>
+
+                      <button
+                        onClick={() => openMatchSheet(card)}
+                        className="px-3 py-2 rounded-lg bg-[#192235] hover:bg-[#4D8DFF] text-[#4D8DFF] hover:text-[#080B14] border border-[#4D8DFF]/40 font-black text-[10px] uppercase tracking-wider shrink-0 transition-colors"
+                      >
+                        Match
+                      </button>
                     </div>
 
-                    <button
-                      onClick={() => openMatchSheet(card)}
-                      className="px-3 py-2 rounded-lg bg-[#192235] hover:bg-[#4D8DFF] text-[#4D8DFF] hover:text-[#080B14] border border-[#4D8DFF]/40 font-black text-[10px] uppercase tracking-wider shrink-0 transition-colors"
-                    >
-                      Match
-                    </button>
+                    <FaceStatsRow stats={card.faceStats} />
+                    <PlaystylePlusChips card={card} />
                   </div>
                 ))
               )}
