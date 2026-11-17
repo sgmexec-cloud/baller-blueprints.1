@@ -301,8 +301,11 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     (typeof item.version === "string" ? extractLabel(item.version) : null) ||
     (cardTypeNum != null ? `Card Type ${cardTypeNum}` : inferDefaultRarity(overall));
 
+  // FUTMind: `id`/`assetId` are the PLAYER (shared by every version of that player),
+  // `resourceId` is the individual CARD. Using the player id made all versions overwrite
+  // each other in the DB, so the wrong version came back when a card was picked.
   const rawId = String(
-    item.id ?? item.cardId ?? item.playerId ?? item.assetId ?? item.eaId ?? ""
+    item.resourceId ?? item.resource_id ?? item.cardId ?? item.id ?? item.playerId ?? item.assetId ?? item.eaId ?? ""
   ).trim();
   const slug = fullName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
   const raritySlug = rarity.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -620,9 +623,18 @@ async function fetchFutMindPage(params: {
               ? data
               : [];
 
-    const cards = rawItems
+    const parsed = rawItems
       .map((item: any) => parseCardObject(item))
       .filter((c: FutCard | null): c is FutCard => c !== null);
+
+    // FUTMind lists some cards twice (a normal and a "dynamic image" copy with identical stats)
+    const seenCards = new Set<string>();
+    const cards = parsed.filter((c: FutCard) => {
+      const key = `${c.eaAssetId}|${c.rarity}|${c.overall}|${c.position}|${Object.values(c.attributes).join(",")}`;
+      if (seenCards.has(key)) return false;
+      seenCards.add(key);
+      return true;
+    });
 
     if (rawItems.length > 0 && cards.length === 0) {
       // Single-line so Render logs don't truncate it
