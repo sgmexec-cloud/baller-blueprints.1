@@ -1,600 +1,718 @@
-import { getAllArchetypes, getArchetypeProfiles, getPlaystyles } from "./csvLoader";
-import {
-  runMathEngine,
-  ScoutingBlueprint,
-  AttributePriorities,
-  resolveSignaturePlaystyles,
-  pickSpecialisationSwap,
-  buildPlaystyleFit,
-  STANDARD_ATTRS,
-} from "./mathEngine27";
-import { rolesToPositions } from "./positionMap";
-import { FutCard } from "./futCards";
+import React, { useState, useMemo, useEffect } from 'react';
+import { trpc } from '@/lib/trpc';
+import { ARCH_PHYSICALS } from '@/constants/archetypeData';
+import { FACILITIES, MASTERIES } from '@/constants/playstylesData';
+import { CLUB_BUDGETS } from '@/constants/builderData';
+import { getModifier, getApCost } from '@/utils/builderUtils';
+import { optimiseFacilities } from '@/utils/facilityOptimizer';
+import { samePlaystyle } from '@/utils/gameRules';
 
-function normAttr(s: string): string {
-  if (!s) return "";
-  let n = s.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-  if (n.startsWith("att") && n.includes("pos")) return "attackpositioning";
-  if (n.includes("fk") && n.includes("acc")) return "fkaccuracy";
-  if (n.startsWith("def") && n.includes("awar")) return "defawareness";
-  if (n.includes("stand") && n.includes("tack")) return "standingtackle";
-  if (n.includes("slid") && n.includes("tack")) return "slidingtackle";
-  if (n.startsWith("short") && n.includes("pass")) return "shortpassing";
-  if (n.startsWith("long") && n.includes("pass")) return "longpassing";
-  if (n.includes("head") && n.includes("acc")) return "headingaccuracy";
-  if (n.includes("sprint")) return "sprintspeed";
-  return n;
+export interface CardMatcherModalProps {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  defaultLevel: number;
+  clubLevel: number;
+  equippedFacilities: Record<string, number>;
+  unlockedMasteries: Record<string, { l10: boolean; l30: boolean; l55?: boolean }>;
+  serverArchetypes: Record<string, any> | undefined;
+  progressionData: any;
+  canSelectArchetype: boolean;
+  onUpgrade: () => void;
+  onApplyCardBuild: (payload: {
+    matchOutput: any;
+    targetLevel: number;
+    appliedFacilities: Record<string, number>;
+    appliedMasteries: Record<string, { l10: boolean; l30: boolean; l55?: boolean }>;
+    facilityMode: 'ai' | 'keep' | 'none';
+  }) => void;
 }
 
-const stripPlus = (s: string) => normAttr(String(s || "").replace(/\+/g, ""));
-
-// Outfield archetype physical min/max ranges (cm / kg)
-const ARCH_PHYSICALS: Record<string, { minH: number; maxH: number; minW: number; maxW: number }> = {
-  "Progressor": { minH: 170, maxH: 196, minW: 65, maxW: 95 },
-  "Boss":       { minH: 178, maxH: 201, minW: 72, maxW: 102 },
-  "Marauder":   { minH: 168, maxH: 191, minW: 62, maxW: 88 },
-  "Disruptor":  { minH: 170, maxH: 196, minW: 65, maxW: 94 },
-  "Recycler":   { minH: 165, maxH: 191, minW: 60, maxW: 88 },
-  "Maestro":    { minH: 162, maxH: 188, minW: 58, maxW: 84 },
-  "Creator":    { minH: 162, maxH: 191, minW: 58, maxW: 86 },
-  "Spark":      { minH: 160, maxH: 185, minW: 55, maxW: 80 },
-  "Magician":   { minH: 160, maxH: 185, minW: 55, maxW: 80 },
-  "Finisher":   { minH: 168, maxH: 193, minW: 64, maxW: 90 },
-  "Target":     { minH: 180, maxH: 203, minW: 75, maxW: 105 },
-};
-
-// ── Skill Moves / Weak Foot AP pricing ──────────────────────────────────────
-// MUST stay in sync with STAR_UPGRADE_COSTS and ARCHETYPE_STAR_CAPS in
-// client/src/constants/archetypeData.ts (copied here because the server
-// cannot import the client's "@/..." alias).
-// Index = star level reached; the cost of a level is paid for every level
-// above the archetype's minimum.
-const STAR_UPGRADE_COSTS: Record<string, number[]> = {
-  star0: [0, 0, 5, 10, 25, 40],
-  star1: [0, 0, 8, 15, 25, 40],
-  star2: [0, 0, 10, 10, 20, 35],
-  star3: [0, 0, 10, 20, 35, 50],
-  star4: [0, 0, 10, 8, 15, 25],
-};
-
-type StarCap = { min: number; max: number; tier: string };
-const ARCHETYPE_STAR_CAPS: Record<string, { sm: StarCap; wf: StarCap }> = {
-  "Progressor": { sm: { min: 2, max: 4, tier: "star2" }, wf: { min: 3, max: 4, tier: "star1" } },
-  "Boss":       { sm: { min: 2, max: 3, tier: "star0" }, wf: { min: 2, max: 4, tier: "star3" } },
-  "Disruptor":  { sm: { min: 2, max: 4, tier: "star2" }, wf: { min: 3, max: 5, tier: "star3" } },
-  "Marauder":   { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Recycler":   { sm: { min: 2, max: 4, tier: "star4" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Maestro":    { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Creator":    { sm: { min: 2, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Spark":      { sm: { min: 3, max: 5, tier: "star4" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Magician":   { sm: { min: 3, max: 5, tier: "star2" }, wf: { min: 3, max: 5, tier: "star1" } },
-  "Finisher":   { sm: { min: 3, max: 5, tier: "star4" }, wf: { min: 3, max: 5, tier: "star3" } },
-  "Target":     { sm: { min: 2, max: 5, tier: "star4" }, wf: { min: 2, max: 5, tier: "star3" } },
-};
-
-function starCostBetween(tier: string, minLevel: number, targetLevel: number): number {
-  const costs = STAR_UPGRADE_COSTS[tier];
-  if (!costs) return 0;
-  let total = 0;
-  for (let i = minLevel + 1; i <= targetLevel; i++) total += costs[i] ?? 0;
-  return total;
+function Logo({ src, title }: { src?: string | null; title: string }) {
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={title}
+      title={title}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      className="w-5 h-5 object-contain"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
 }
+
+const PLAYER_IMG_BASE = 'https://futmind.com/images/fifa2027/players';
 
 /**
- * The stars the Pro can actually reach for this card (clamped to the archetype's
- * min/max) and what they cost in AP. Returns null for an unknown archetype.
+ * Player picture with the rating and position on a strip at the bottom (so the face stays visible).
+ * FUTMind names base-card images and special-card images differently, so several addresses are tried
+ * in turn; if none load, it falls back to the plain rating box.
  */
-export function resolveCardStars(
-  card: FutCard,
-  archetype: string
-): { skillMoves: number; weakFoot: number; skillMovesCost: number; weakFootCost: number; totalCost: number } | null {
-  const key = Object.keys(ARCHETYPE_STAR_CAPS).find(k => normAttr(k) === normAttr(archetype));
-  if (!key) return null;
-  const caps = ARCHETYPE_STAR_CAPS[key];
-  const skillMoves = clamp(card.skillMoves, caps.sm.min, caps.sm.max);
-  const weakFoot = clamp(card.weakFoot, caps.wf.min, caps.wf.max);
-  const skillMovesCost = starCostBetween(caps.sm.tier, caps.sm.min, skillMoves);
-  const weakFootCost = starCostBetween(caps.wf.tier, caps.wf.min, weakFoot);
-  return { skillMoves, weakFoot, skillMovesCost, weakFootCost, totalCost: skillMovesCost + weakFootCost };
-}
-
-function clamp(v: number, lo: number, hi: number): number {
-  return Math.min(hi, Math.max(lo, v));
-}
-
-// Facility names differ slightly from card names ("Aerial" vs "Aerial Fortress")
-function canonPlaystyle(name: string): string {
-  const k = normAttr(String(name || "").replace(/\+/g, ""));
-  if (k === "aerial") return "aerialfortress";
-  return k;
-}
-
-/** Which archetype "Automatic" will pick for this card (same ranking the match uses). */
-export function previewArchetypeForCard(
-  card: FutCard,
-  opts?: ArchetypePickOptions
-): { archetype: string; ranking?: ArchetypeRanking[] } {
-  if (opts) {
-    const ranking = rankArchetypesForCard(card, opts);
-    if (ranking.length) return { archetype: ranking[0].archetype, ranking: ranking.slice(0, 5) };
-  }
-  const best = scoreArchetypesForCard(card)[0];
-  return { archetype: best?.archetype ?? "Maestro" };
-}
-
-/**
- * Scores all 11 outfield archetypes against a FUT card:
- * 1. Signature PlayStyle overlap with the card's PlayStyle+ and PlayStyles
- * 2. Recommended position match with the card's primary/alt positions
- * 3. How well the archetype's stat caps can accommodate the card's top 10 attributes
- */
-export function scoreArchetypesForCard(card: FutCard): Array<{ archetype: string; score: number }> {
-  const profiles = getArchetypeProfiles("FC27");
-  const allArch = getAllArchetypes("FC27");
-  const cardPlusSet = new Set(card.playstylePlus.map(stripPlus));
-  const cardAllSet = new Set([...card.playstylePlus, ...card.playstyles].map(stripPlus));
-  const cardPositions = new Set([card.position, ...card.altPositions].map(p => p.toUpperCase()));
-
-  // Top 10 attributes on the FUT card
-  const topAttrs = Object.entries(card.attributes)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 10);
-
-  const results: Array<{ archetype: string; score: number }> = [];
-
-  for (const row of profiles) {
-    const archName = String(row.Archetype || "").trim();
-    if (!archName) continue;
-    const normA = normAttr(archName);
-    if (normA === "shotstopper" || normA === "sweeperkeeper") continue; // skip GK archetypes
-
-    let score = 0;
-
-    // 1. Signature PlayStyle synergy (up to +45 pts)
-    const sigs = String(row.Signature_PlayStyles || "")
-      .split(/[\/,]/)
-      .map(s => stripPlus(s))
-      .filter(Boolean);
-    for (const sig of sigs) {
-      if (cardPlusSet.has(sig)) score += 25;
-      else if (cardAllSet.has(sig)) score += 12;
+function CardThumb({ card, size }: { card: any; size: 'sm' | 'lg' }) {
+  const candidates = useMemo(() => {
+    const list: string[] = [];
+    const add = (u?: string | null) => {
+      if (u && !list.includes(u)) list.push(u);
+    };
+    add(card.avatarUrl);
+    if (card.eaAssetId) {
+      add(`${PLAYER_IMG_BASE}/${card.eaAssetId}.png`);
+      add(`${PLAYER_IMG_BASE}/p${card.eaAssetId}.png`);
     }
+    return list;
+  }, [card.avatarUrl, card.eaAssetId]);
 
-    // 2. Position compatibility (up to +25 pts)
-    const recPos = rolesToPositions(row.Recommended_Positions).map(p => p.toUpperCase());
-    if (recPos[0] === card.position.toUpperCase()) score += 25;
-    else if (recPos.some(p => cardPositions.has(p))) score += 15;
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    setIdx(0);
+  }, [card.id]);
 
-    // 3. Attribute cap headroom on the card's top 10 stats (up to +30 pts)
-    const archRows = allArch.filter((r: any) => normAttr(r.Archetype) === normA);
-    const maxMap: Record<string, number> = {};
-    for (const r of archRows) {
-      maxMap[normAttr(r.Attribute)] = parseInt(r["Max Value"], 10) || 95;
-    }
+  const src = candidates[idx];
+  const big = size === 'lg';
 
-    let capPenalty = 0;
-    for (const [attr, cardVal] of topAttrs) {
-      const cap = maxMap[normAttr(attr)] ?? 90;
-      if (cardVal > cap) {
-        capPenalty += (cardVal - cap) * 1.5;
-      }
-    }
-    score += Math.max(0, 30 - capPenalty);
-
-    results.push({ archetype: archName, score: Math.round(score * 10) / 10 });
-  }
-
-  return results.sort((a, b) => b.score - a.score || a.archetype.localeCompare(b.archetype));
+  return (
+    <div
+      className={`shrink-0 flex flex-col overflow-hidden border border-[#facc15]/40 bg-[#192235] ${
+        big ? 'w-20 rounded-xl' : 'w-14 rounded-lg'
+      }`}
+    >
+      {/* Picture */}
+      <div className={`relative bg-gradient-to-b from-[#facc15]/15 to-[#192235] ${big ? 'h-24' : 'h-14'}`}>
+        {src ? (
+          <img
+            key={src}
+            src={src}
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            onError={() => setIdx((i) => i + 1)}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+          />
+        ) : (
+          <span className="absolute inset-0 flex items-center justify-center text-lg opacity-30">👤</span>
+        )}
+      </div>
+      {/* Rating + position in their own space */}
+      <div className="bg-[#0D1220] border-t border-[#facc15]/30 text-center leading-none py-1.5">
+        <span className={`font-black text-[#facc15] ${big ? 'text-lg' : 'text-sm'}`}>{card.overall}</span>
+        <span className={`font-bold text-[#F4F7FB] ml-1 ${big ? 'text-xs' : 'text-[10px]'}`}>{card.position}</span>
+      </div>
+    </div>
+  );
 }
 
-/**
- * Picks optimal height & weight inside the archetype's allowed bounds.
- * When FUT weight is missing ("Unavailable"), chooses a lighter weight for high Pace/Agility cards
- * and a heavier weight for high Strength/Heading cards.
- */
-export function resolveCardPhysicals(card: FutCard, archetype: string): { heightCm: number; weightKg: number } {
-  const bounds = ARCH_PHYSICALS[archetype] ?? { minH: 165, maxH: 195, minW: 60, maxW: 92 };
-  const heightCm = clamp(card.heightCm ?? Math.round((bounds.minH + bounds.maxH) / 2), bounds.minH, bounds.maxH);
-
-  if (card.weightKg !== null) {
-    return { heightCm, weightKg: clamp(card.weightKg, bounds.minW, bounds.maxW) };
-  }
-
-  // Fit weight to stats when card weight is unavailable
-  const paceAgility = ((card.attributes["Acceleration"] ?? 75) + (card.attributes["Sprint Speed"] ?? 75) + (card.attributes["Agility"] ?? 75)) / 3;
-  const strengthDef = ((card.attributes["Strength"] ?? 70) + (card.attributes["Aggression"] ?? 70) + (card.attributes["Heading Accuracy"] ?? 70)) / 3;
-  const ratio = clamp(0.5 + (strengthDef - paceAgility) / 80, 0, 1);
-  const weightKg = Math.round(bounds.minW + ratio * (bounds.maxW - bounds.minW));
-  return { heightCm, weightKg };
+function allPositions(card: any): string[] {
+  return Array.from(new Set([card.position, ...(card.altPositions ?? [])].filter(Boolean) as string[]));
 }
 
-/**
- * Converts a FUT card into a ClubsDNA ScoutingBlueprint + AttributePriorities
- * so mathEngine27 replicates the card's exact stat shape as closely as possible.
- */
-export function buildBlueprintFromCard(card: FutCard, archetype: string): {
-  blueprint: ScoutingBlueprint;
-  priorities: AttributePriorities;
-  physicals: { heightCm: number; weightKg: number };
-} {
-  const physicals = resolveCardPhysicals(card, archetype);
-
-  // Rank all 29 attributes by their value on the FUT card
-  const sortedAttrs = STANDARD_ATTRS
-    .map(attr => ({ attr, val: card.attributes[attr] ?? 65 }))
-    .sort((a, b) => b.val - a.val);
-
-  const coreAttributes = sortedAttrs.slice(0, 3).map(x => x.attr);
-  const secondaryAttributes = sortedAttrs.slice(3, 7).map(x => x.attr);
-  const tertiaryAttributes = sortedAttrs.slice(7, 11).map(x => x.attr);
-
-  // Build weighted priorities + soft ceilings matching the card's exact stat curve
-  const weights: Record<string, number> = {};
-  const max: Record<string, number> = {};
-  const exclude: string[] = [];
-
-  for (const { attr, val } of sortedAttrs) {
-    if (val >= 88) weights[attr] = 5;
-    else if (val >= 82) weights[attr] = 4;
-    else if (val >= 76) weights[attr] = 3;
-    else if (val >= 70) weights[attr] = 2;
-    else if (val >= 62) weights[attr] = 1;
-    else exclude.push(attr);
-
-    // Prevent overshooting a stat higher than the FUT card while higher-priority stats still need AP
-    max[attr] = Math.min(99, Math.max(55, val));
-  }
-
-  const blueprint: ScoutingBlueprint = {
-    archetype,
-    position: card.position,
-    playstylePlus: card.playstylePlus.slice(0, 4),
-    playstyles: card.playstyles.map(name => ({ name, requirements: [] })),
-    coreAttributes,
-    secondaryAttributes,
-    tertiaryAttributes,
-    skillMoves: card.skillMoves,
-    weakFoot: card.weakFoot,
-  };
-
-  return {
-    blueprint,
-    priorities: { weights, max, exclude },
-    physicals,
-  };
+function PositionChips({ card }: { card: any }) {
+  const list = allPositions(card);
+  if (list.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {list.map((pos, i) => (
+        <span
+          key={pos}
+          className={`px-1.5 py-0.5 rounded text-[9px] font-bold border ${
+            i === 0
+              ? 'bg-[#21E6A4]/15 border-[#21E6A4]/50 text-[#21E6A4]'
+              : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
+          }`}
+        >
+          {pos}
+        </span>
+      ))}
+    </div>
+  );
 }
 
-export interface CardStatComparisonRow {
-  attribute: string;
-  cardValue: number;
-  proValue: number;
-  diff: number;
+function FaceStatsRow({ stats }: { stats: any }) {
+  const items: Array<[string, number]> = [
+    ['PAC', stats?.pace],
+    ['SHO', stats?.shooting],
+    ['PAS', stats?.passing],
+    ['DRI', stats?.dribbling],
+    ['DEF', stats?.defending],
+    ['PHY', stats?.physical],
+  ];
+  return (
+    <div className="grid grid-cols-6 gap-1 text-center bg-[#080B14] p-1.5 rounded-lg border border-[#26334A]">
+      {items.map(([label, val]) => (
+        <div key={label}>
+          <div className="text-[9px] text-[#8E9AAF]">{label}</div>
+          <div className="text-xs font-bold text-[#F4F7FB]">{val ?? '-'}</div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-export interface CardMatchOutput {
-  card: FutCard;
-  chosenArchetype: string;
-  archetypeScores: Array<{ archetype: string; score: number }>;
-  physicals: { heightCm: number; weightKg: number };
-  blueprint: ScoutingBlueprint;
-  engineResult: ReturnType<typeof runMathEngine>;
-  /** Stars the Pro reaches for this card and the AP they cost (already taken out of the budget the engine used) */
-  stars: {
-    skillMoves: number;
-    weakFoot: number;
-    skillMovesCost: number;
-    weakFootCost: number;
-    totalCost: number;
-    /** AP the engine was allowed to spend on attributes (apBudget minus star cost) */
-    attributeBudget: number;
-  };
-  playstyles: {
-    signatures: string[];
-    standard: string[];
-    specialisation: string | null;
-    specSwapIndex: number;
-  };
-  recommendedPositions: string[];
-  comparison: CardStatComparisonRow[];
-  similarityScore: number; // 0-100% how closely the Pro replicates the FUT card
+function PlaystylePlusChips({ card }: { card: any }) {
+  const list: string[] = card.playstylePlus ?? [];
+  if (list.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {list.map((ps) => (
+        <span
+          key={ps}
+          className="px-2 py-0.5 rounded-md bg-[#facc15]/15 border border-[#facc15]/50 text-[#facc15] text-[10px] font-bold"
+        >
+          {ps}+
+        </span>
+      ))}
+    </div>
+  );
 }
 
-// ── Archetype selection: try every archetype and keep the best ───────────────
-interface AttemptParams {
-  apBudget: number;
-  signatureSlots: number;
-  standardSlots: number;
-  foundationBoosts: Record<string, number>;
-  starsPrepaid?: boolean;
-  facilityPlaystyles?: string[];
-}
+const POSITIONS = ['ALL', 'ST', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB'];
 
-export interface ArchetypePickOptions {
-  apBudget: number;
-  signatureSlots: number;
-  standardSlots: number;
-}
+export function CardMatcherModal({
+  isOpen,
+  setIsOpen,
+  defaultLevel,
+  clubLevel,
+  equippedFacilities,
+  unlockedMasteries,
+  serverArchetypes,
+  progressionData,
+  canSelectArchetype,
+  onUpgrade,
+  onApplyCardBuild,
+}: CardMatcherModalProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [positionFilter, setPositionFilter] = useState('ALL');
+  const [rarityFilter, setRarityFilter] = useState('ALL');
+  const [selectedCard, setSelectedCard] = useState<any | null>(null);
 
-export interface ArchetypeRanking {
-  archetype: string;
-  /** Final ranking score (similarity + signature/PlayStyle bonuses - penalties) */
-  score: number;
-  /** How closely the build matches the card's 29 stats, 0-100 */
-  similarity: number;
-  signatureBonus: number;
-  playstylesUnlocked: number;
-  penalties: number;
-}
+  // Match options
+  const [targetLevel, setTargetLevel] = useState<number>(defaultLevel);
+  const [archetypeLock, setArchetypeLock] = useState<string>('AUTO');
+  const [masteryMode, setMasteryMode] = useState<'current' | 'all55' | 'none'>('current');
+  const [facilityMode, setFacilityMode] = useState<'ai' | 'keep' | 'none'>(
+    Object.keys(equippedFacilities).length > 0 ? 'keep' : 'ai'
+  );
+  const [isMatching, setIsMatching] = useState(false);
+  const [matchError, setMatchError] = useState<string | null>(null);
 
-/** Builds the Pro for ONE archetype (stars reserved, PlayStyle ceilings relaxed, engine run). */
-function runArchetypeAttempt(card: FutCard, archetype: string, params: AttemptParams) {
-  const { blueprint, priorities, physicals } = buildBlueprintFromCard(card, archetype);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 250);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  // Stars: reserve their AP BEFORE the engine spends the budget on attributes.
-  // (The engine has no star rows for these archetypes, so it never paid for them,
-  //  and the build screen then charged them on top -> overspend.)
-  const starInfo = resolveCardStars(card, archetype);
-  const starCost = params.starsPrepaid ? 0 : starInfo?.totalCost ?? 0;
-  const attributeBudget = Math.max(0, params.apBudget - starCost);
+  const utils = trpc.useUtils();
 
-  // Hand the engine the clamped star levels so the blueprint matches what is bought
-  if (starInfo) {
-    blueprint.skillMoves = starInfo.skillMoves;
-    blueprint.weakFoot = starInfo.weakFoot;
-  }
-
-  // Facility-granted PlayStyles are already on the build, so the engine must not
-  // spend a standard slot (or AP) on them. The slots go to the card's other styles.
-  const facilityKeys = new Set((params.facilityPlaystyles ?? []).map(canonPlaystyle));
-  const notFromFacility = (name: string) => !facilityKeys.has(canonPlaystyle(name));
-  const engineBlueprint: ScoutingBlueprint = {
-    ...blueprint,
-    playstylePlus: blueprint.playstylePlus.filter(notFromFacility),
-    playstyles: blueprint.playstyles.filter(ps => notFromFacility(ps.name)),
-  };
-
-  // ── Let the card's PlayStyles actually unlock ─────────────────────────────
-  // priorities.max caps each stat at the card's own value (minus boosts). But a PlayStyle needs its
-  // attributes at a fixed level on the build's OWN points (e.g. Power Shot: Finishing 80), which can be a
-  // few points above the card's stat. Without this, the engine treats those styles as unreachable and
-  // equips almost none. Raise the ceiling just enough for the styles the card really has.
-  {
-    const pmax: Record<string, number> = (priorities.max ??= {} as Record<string, number>);
-    const archMax: Record<string, number> = {};
-    for (const r of getAllArchetypes("FC27")) {
-      if (normAttr(r.Archetype) === normAttr(archetype)) {
-        archMax[normAttr(r.Attribute)] = parseInt(r["Max Value"], 10) || 99;
-      }
-    }
-    const sigProfile = getArchetypeProfiles("FC27").find((a: any) => normAttr(a.Archetype) === normAttr(archetype));
-    const signatureKeys = new Set(
-      String(sigProfile?.Signature_PlayStyles || "").split(/[\/,]/).map(canonPlaystyle).filter(Boolean)
-    );
-    const boostByAttr: Record<string, number> = {};
-    for (const [k, v] of Object.entries(params.foundationBoosts)) boostByAttr[normAttr(k)] = v;
-    const statNameByKey: Record<string, string> = {};
-    for (const a of STANDARD_ATTRS) statNameByKey[normAttr(a)] = a;
-
-    const styleTable = getPlaystyles("FC27");
-    const seenStyle = new Set<string>();
-    const orderedStyleNames = [...engineBlueprint.playstylePlus, ...engineBlueprint.playstyles.map(ps => ps.name)];
-    for (const styleName of orderedStyleNames) {
-      const key = canonPlaystyle(styleName);
-      if (!key || seenStyle.has(key) || signatureKeys.has(key)) continue;
-      seenStyle.add(key);
-      const def: any = styleTable.find((p: any) => canonPlaystyle(p.Playstyle || "") === key);
-      if (!def) continue;
-      const reqs = [
-        [def.Req_Attr1 || def.Attr1, def.Req_Val1 || def.Val1],
-        [def.Req_Attr2 || def.Attr2, def.Req_Val2 || def.Val2],
-        [def.Req_Attr3 || def.Attr3, def.Req_Val3 || def.Val3],
-      ]
-        .filter(([a, v]) => a && v)
-        .map(([a, v]) => ({ attr: normAttr(String(a)), val: parseInt(String(v), 10) }));
-      if (reqs.length === 0) continue;
-      // Needs more than this archetype can ever reach on its own points -> can't be unlocked, leave it
-      if (reqs.some(r => !(r.attr in archMax) || r.val > archMax[r.attr])) continue;
-      for (const r of reqs) {
-        const stat = statNameByKey[r.attr];
-        if (!stat) continue;
-        const needed = Math.min(99, r.val + (boostByAttr[r.attr] ?? 0));
-        if ((pmax[stat] ?? 0) < needed) pmax[stat] = needed;
-      }
-    }
-  }
-
-  const engineResult = runMathEngine(
-    engineBlueprint,
-    attributeBudget,
-    params.standardSlots,
-    blueprint.coreAttributes,
-    params.foundationBoosts,
+  const cardsQuery = trpc.scout.cards.search.useQuery(
     {
-      starsPrepaid: true, // stars are paid for above
-      priorities,
-      signatureUpgrades: params.signatureSlots,
-    }
+      query: debouncedQuery || undefined,
+      position: positionFilter === 'ALL' ? undefined : positionFilter,
+      rarity: rarityFilter === 'ALL' ? undefined : rarityFilter,
+      limit: 30,
+    },
+    { enabled: isOpen }
   );
 
-  return { blueprint, priorities, physicals, starInfo, starCost, attributeBudget, engineResult, engineBlueprint };
-}
+  const raritiesQuery = trpc.scout.cards.getRarities.useQuery(undefined, { enabled: isOpen });
+  const quotaQuery = trpc.scout.cards.getMatchQuota.useQuery(undefined, { enabled: isOpen });
+  const matchCardMutation = trpc.scout.cards.matchCard.useMutation();
 
+  const archetypeNames = useMemo(
+    () =>
+      Object.keys(serverArchetypes ?? {})
+        .filter((a) => a !== 'Shot Stopper' && a !== 'Sweeper Keeper')
+        .sort(),
+    [serverArchetypes]
+  );
 
-function similarityOf(card: FutCard, engineResult: ReturnType<typeof runMathEngine>, boosts: Record<string, number>): number {
-  let totalAbsDiff = 0;
-  for (const attr of STANDARD_ATTRS) {
-    const cardValue = card.attributes[attr] ?? 70;
-    const statRow = engineResult.stats.find(st => normAttr(st.attribute) === normAttr(attr));
-    const boost = Object.entries(boosts).find(([k]) => normAttr(k) === normAttr(attr))?.[1] ?? 0;
-    totalAbsDiff += Math.abs(Math.min(99, (statRow?.final ?? 70) + boost) - cardValue);
-  }
-  return Math.max(0, Math.min(100, 100 - (totalAbsDiff / STANDARD_ATTRS.length) * 4));
-}
+  if (!isOpen) return null;
 
-/**
- * Runs the real build for every archetype (neutral boosts, same budget and slots) and ranks them:
- *   similarity to the card's 29 stats   (the main signal)
- *   + signature PlayStyles the card has (PlayStyle+ counts double)
- *   + card PlayStyles the build can unlock
- *   + a small position bonus            (tiebreaker only)
- *   - height outside the archetype's range, and stars the archetype can't reach
- * The preview and the match both call this with the same inputs, so they always agree.
- */
-export function rankArchetypesForCard(card: FutCard, opts: ArchetypePickOptions): ArchetypeRanking[] {
-  const profiles = getArchetypeProfiles("FC27");
-  const cardPlus = new Set(card.playstylePlus.map(canonPlaystyle));
-  const cardAll = new Set([...card.playstylePlus, ...card.playstyles].map(canonPlaystyle));
-  const cardPositions = new Set([card.position, ...card.altPositions].map(pos => pos.toUpperCase()));
+  const openMatchSheet = (card: any) => {
+    setSelectedCard(card);
+    setTargetLevel(defaultLevel);
+    setArchetypeLock('AUTO');
+    setMatchError(null);
+  };
 
-  const seen = new Set<string>();
-  const out: ArchetypeRanking[] = [];
-
-  for (const row of profiles) {
-    const name = String(row.Archetype || "").trim();
-    const key = normAttr(name);
-    if (!name || seen.has(key)) continue;
-    seen.add(key);
-    if (key === "shotstopper" || key === "sweeperkeeper") continue; // outfield only
+  const handleRunMatch = async () => {
+    if (!selectedCard || isMatching) return;
+    setIsMatching(true);
+    setMatchError(null);
 
     try {
-      const attempt = runArchetypeAttempt(card, name, {
-        apBudget: opts.apBudget,
-        signatureSlots: opts.signatureSlots,
-        standardSlots: opts.standardSlots,
-        foundationBoosts: {},
+      let effectiveMasteries: Record<string, { l10: boolean; l30: boolean; l55?: boolean }> = {};
+      if (masteryMode === 'current') {
+        effectiveMasteries = unlockedMasteries;
+      } else if (masteryMode === 'all55') {
+        for (const arch of Object.keys(MASTERIES)) {
+          effectiveMasteries[arch] = { l10: true, l30: true, l55: true };
+        }
+      }
+
+      const masteryBoosts: Record<string, number> = {};
+      Object.entries(effectiveMasteries).forEach(([arch, status]) => {
+        const m = MASTERIES[arch];
+        if (!m) return;
+        if (status.l10 && m.l10) Object.entries(m.l10).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
+        if (status.l30 && m.l30) Object.entries(m.l30).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
+        if (status.l55 && m.l55) Object.entries(m.l55).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
+      });
+
+      // Which archetype will the match really use? Locked = the chosen one.
+      // Automatic = ask the server (free, same scoring the match uses), so height/weight
+      // boosts and the facility plan are worked out for the RIGHT archetype.
+      const progRow = progressionData?.[targetLevel];
+      const apBudget = progRow?.apAvailable ?? Math.floor(targetLevel * 1.5) + 10;
+      const signatureSlots = progRow?.signatureUpgrades ?? (targetLevel >= 55 ? 2 : targetLevel >= 20 ? 1 : 0);
+      const standardSlots =
+        progRow?.customSlots ??
+        progRow?.playstyleSlots ??
+        (targetLevel >= 55 ? 4 : targetLevel >= 40 ? 3 : targetLevel >= 15 ? 2 : targetLevel >= 5 ? 1 : 0);
+
+      let guessArch: string;
+      if (canSelectArchetype && archetypeLock !== 'AUTO') {
+        guessArch = archetypeLock;
+      } else {
+        try {
+          const preview = await utils.scout.cards.previewArchetype.fetch({
+            cardId: selectedCard.id,
+            apBudget,
+            signatureSlots,
+            standardSlots,
+          });
+          guessArch = preview.archetype;
+        } catch {
+          guessArch = archetypeNames[0] || 'Maestro';
+        }
+      }
+      const archSignatures: string[] = serverArchetypes?.[guessArch]?.signatures ?? [];
+      const isSignature = (ps: string) => archSignatures.some((sig) => samePlaystyle(sig, ps));
+
+      const bounds = ARCH_PHYSICALS[guessArch] || ARCH_PHYSICALS['Finisher'];
+      const hCm = Math.min(bounds.maxH, Math.max(bounds.minH, selectedCard.heightCm ?? bounds.baseH));
+      const wKg = Math.min(bounds.maxW, Math.max(bounds.minW, selectedCard.weightKg ?? bounds.baseW));
+      const hMod = getModifier(hCm, bounds.baseH, 4);
+      const wMod = getModifier(wKg, bounds.baseW, 8);
+
+      const baseBoosts: Record<string, number> = {
+        ...masteryBoosts,
+        Jumping: (masteryBoosts['Jumping'] || 0) + hMod + wMod,
+        'Sprint Speed': (masteryBoosts['Sprint Speed'] || 0) + hMod - wMod,
+        Strength: (masteryBoosts['Strength'] || 0) + hMod + wMod,
+        Acceleration: (masteryBoosts['Acceleration'] || 0) - hMod - wMod,
+        Agility: (masteryBoosts['Agility'] || 0) - hMod - wMod,
+        Balance: (masteryBoosts['Balance'] || 0) - hMod + wMod,
+      };
+
+      let finalFacilities: Record<string, number> = {};
+      let aiFacilityPlaystyles: string[] = [];
+      if (facilityMode === 'keep') {
+        finalFacilities = equippedFacilities;
+      } else if (facilityMode === 'ai') {
+        const currentInGame: Record<string, number> = {};
+        const archBase = serverArchetypes?.[guessArch]?.base ?? {};
+        for (const [stat, baseVal] of Object.entries(archBase)) {
+          currentInGame[stat] = Number(baseVal) + (baseBoosts[stat] || 0);
+        }
+        const cardStyles = [...(selectedCard.playstylePlus ?? []), ...(selectedCard.playstyles ?? [])];
+        const plan = optimiseFacilities({
+          facilities: FACILITIES,
+          budget: CLUB_BUDGETS[clubLevel] || 0,
+          currentStats: currentInGame,
+          pointValue: (stat, lvl) => {
+            const cardTarget = selectedCard.attributes?.[stat] ?? 75;
+            const weight = cardTarget >= 85 ? 1.2 : cardTarget >= 78 ? 0.9 : 0.4;
+            return getApCost(guessArch, stat, lvl) * weight;
+          },
+          // A PlayStyle the archetype already has as a Signature is worth nothing from a facility
+          playstyleBonus: (ps) => {
+            if (isSignature(ps)) return 0;
+            return cardStyles.some((cs) => samePlaystyle(cs, ps)) ? 90 : 0;
+          },
+        });
+        finalFacilities = plan.equipped;
+        aiFacilityPlaystyles = plan.playstylesGained;
+      }
+
+      const fullBoosts: Record<string, number> = { ...baseBoosts };
+      Object.entries(finalFacilities).forEach(([name, tier]) => {
+        const fac = FACILITIES[name];
+        if (fac) {
+          const amt = fac.boosts[tier - 1];
+          fac.stats.forEach((s) => {
+            fullBoosts[s] = (fullBoosts[s] || 0) + amt;
+          });
+        }
+      });
+
+      // PlayStyles the tier-3 facilities already grant (they use no standard slot)
+      let facilityPlaystyles: string[] = [];
+      if (facilityMode === 'ai') {
+        facilityPlaystyles = aiFacilityPlaystyles;
+      } else if (facilityMode === 'keep') {
+        facilityPlaystyles = Object.entries(finalFacilities)
+          .filter(([, tier]) => tier === 3)
+          .map(([name]) => FACILITIES[name]?.playstyle)
+          .filter((ps): ps is string => Boolean(ps));
+      }
+      facilityPlaystyles = Array.from(new Set(facilityPlaystyles));
+
+      const forcedArchetype = canSelectArchetype && archetypeLock !== 'AUTO' ? archetypeLock : undefined;
+
+      const result = await matchCardMutation.mutateAsync({
+        cardId: selectedCard.id,
+        forcedArchetype,
+        apBudget,
+        signatureSlots,
+        standardSlots,
+        foundationBoosts: fullBoosts,
         starsPrepaid: false,
-        facilityPlaystyles: [],
+        facilityPlaystyles,
       });
 
-      const similarity = similarityOf(card, attempt.engineResult, {});
-
-      let signatureBonus = 0;
-      for (const sig of String(row.Signature_PlayStyles || "").split(/[\/,]/).map(canonPlaystyle).filter(Boolean)) {
-        if (cardPlus.has(sig)) signatureBonus += 4;
-        else if (cardAll.has(sig)) signatureBonus += 2;
-      }
-
-      const playstylesUnlocked = attempt.engineResult.equippedPlaystyles?.length ?? 0;
-
-      let positionBonus = 0;
-      const rec = rolesToPositions(row.Recommended_Positions).map((pos: string) => pos.toUpperCase());
-      if (rec[0] && cardPositions.has(rec[0])) positionBonus = 1;
-      else if (rec.some((pos: string) => cardPositions.has(pos))) positionBonus = 0.5;
-
-      let penalties = 0;
-      const bounds = ARCH_PHYSICALS[name];
-      if (bounds && card.heightCm != null) {
-        penalties += Math.max(0, bounds.minH - card.heightCm, card.heightCm - bounds.maxH) * 0.5;
-      }
-      const stars = resolveCardStars(card, name);
-      if (stars) {
-        penalties += (Math.abs(card.skillMoves - stars.skillMoves) + Math.abs(card.weakFoot - stars.weakFoot)) * 3;
-      }
-
-      const score = similarity + signatureBonus + playstylesUnlocked * 1.5 + positionBonus - penalties;
-      out.push({
-        archetype: name,
-        score: Math.round(score * 10) / 10,
-        similarity: Math.round(similarity * 10) / 10,
-        signatureBonus,
-        playstylesUnlocked,
-        penalties: Math.round(penalties * 10) / 10,
+      onApplyCardBuild({
+        matchOutput: result,
+        targetLevel,
+        appliedFacilities: finalFacilities,
+        appliedMasteries: effectiveMasteries,
+        facilityMode,
       });
-    } catch {
-      // archetype missing from the data or the build failed: leave it out of the ranking
+
+      utils.scout.cards.getMatchQuota.invalidate();
+      setSelectedCard(null);
+      setIsOpen(false);
+    } catch (err: any) {
+      const msg = err?.message || '';
+      if (msg === 'CARD_MATCH_LIMIT_REACHED') {
+        setMatchError("You've reached your monthly FUT Card Match limit. Upgrade your plan for more matches.");
+      } else if (msg === 'PAID_FEATURE') {
+        setMatchError('Locking a specific archetype is available on Paid plans. Switch back to Automatic.');
+      } else {
+        setMatchError('Could not match this card right now. Your quota was not charged.');
+      }
+    } finally {
+      setIsMatching(false);
     }
-  }
-
-  return out.sort((a, b) => b.score - a.score || a.archetype.localeCompare(b.archetype));
-}
-
-export function matchFutCardToPro(params: {
-  card: FutCard;
-  forcedArchetype?: string | null;
-  apBudget: number;
-  signatureSlots: number;
-  standardSlots: number;
-  foundationBoosts: Record<string, number>;
-  starsPrepaid?: boolean;
-  /** PlayStyles already granted by tier-3 club facilities (they take no standard slot) */
-  facilityPlaystyles?: string[];
-}): CardMatchOutput {
-  const ranking = rankArchetypesForCard(params.card, {
-    apBudget: params.apBudget,
-    signatureSlots: params.signatureSlots,
-    standardSlots: params.standardSlots,
-  });
-  const legacyScores = ranking.length ? [] : scoreArchetypesForCard(params.card);
-  const chosenArchetype = params.forcedArchetype || ranking[0]?.archetype || legacyScores[0]?.archetype || "Maestro";
-  const scores = ranking.length ? ranking.map(r => ({ archetype: r.archetype, score: r.score })) : legacyScores;
-
-  const attempt = runArchetypeAttempt(params.card, chosenArchetype, {
-    apBudget: params.apBudget,
-    signatureSlots: params.signatureSlots,
-    standardSlots: params.standardSlots,
-    foundationBoosts: params.foundationBoosts,
-    starsPrepaid: params.starsPrepaid,
-    facilityPlaystyles: params.facilityPlaystyles,
-  });
-  const { blueprint, priorities, physicals, starInfo, starCost, attributeBudget, engineResult } = attempt;
-
-  const playstyleFit = buildPlaystyleFit(blueprint);
-  const specSwapIndex = blueprint.specialisationPlaystylePlus
-    ? pickSpecialisationSwap(chosenArchetype, params.signatureSlots, blueprint.specialisationPlaystylePlus, playstyleFit)
-    : -1;
-
-  const resolvedSignatures = resolveSignaturePlaystyles(
-    chosenArchetype,
-    params.signatureSlots,
-    blueprint.specialisationPlaystylePlus,
-    specSwapIndex
-  );
-
-  const standardPlaystyles = engineResult.equippedPlaystyles?.slice(0, params.standardSlots) ?? [];
-
-  // Compare FUT card stats vs. Pro in-game stats (base + AP + boosts)
-  let totalAbsDiff = 0;
-  const comparison: CardStatComparisonRow[] = STANDARD_ATTRS.map(attr => {
-    const cardValue = params.card.attributes[attr] ?? 70;
-    const statRow = engineResult.stats.find(s => normAttr(s.attribute) === normAttr(attr));
-    const boost = Object.entries(params.foundationBoosts).find(([k]) => normAttr(k) === normAttr(attr))?.[1] ?? 0;
-    const proValue = Math.min(99, (statRow?.final ?? 70) + boost);
-    const diff = proValue - cardValue;
-    totalAbsDiff += Math.abs(diff);
-    return { attribute: attr, cardValue, proValue, diff };
-  });
-
-  // 100% = exact match across all 29 stats; every 1-point average gap deducts ~4%
-  const avgGap = totalAbsDiff / STANDARD_ATTRS.length;
-  const similarityScore = Math.max(0, Math.min(100, Math.round(100 - avgGap * 4)));
-
-  const profiles = getArchetypeProfiles("FC27");
-  const archProfile = profiles.find((a: any) => normAttr(a.Archetype) === normAttr(chosenArchetype));
-  const recommendedPositions = rolesToPositions(archProfile?.Recommended_Positions);
-
-  return {
-    card: params.card,
-    chosenArchetype,
-    archetypeScores: scores,
-    physicals,
-    blueprint,
-    engineResult,
-    stars: {
-      skillMoves: starInfo?.skillMoves ?? params.card.skillMoves,
-      weakFoot: starInfo?.weakFoot ?? params.card.weakFoot,
-      skillMovesCost: starInfo?.skillMovesCost ?? 0,
-      weakFootCost: starInfo?.weakFootCost ?? 0,
-      totalCost: starCost,
-      attributeBudget,
-    },
-    playstyles: {
-      signatures: resolvedSignatures,
-      standard: standardPlaystyles,
-      specialisation: null,
-      specSwapIndex,
-    },
-    recommendedPositions,
-    comparison,
-    similarityScore,
   };
+
+  const quota = quotaQuery.data;
+
+  return (
+    <div className="fixed inset-0 z-50 flex justify-center bg-black/85 backdrop-blur-sm animate-fade-in">
+      <div className="w-full max-w-lg bg-[#080B14] flex flex-col h-full shadow-2xl overflow-hidden border-x border-[#26334A]">
+        {/* HEADER */}
+        <div className="flex items-center justify-between p-4 bg-[#0D1220] border-b border-[#26334A]">
+          <div>
+            <h2
+              className="text-sm font-black text-[#F4F7FB] uppercase tracking-widest flex items-center gap-2"
+              style={{ fontFamily: "'Orbitron', sans-serif" }}
+            >
+              <span>🃏 FUT Card Matcher</span>
+            </h2>
+            <p className="text-[11px] text-[#8E9AAF] mt-0.5">
+              Replicate any FC 27 Ultimate Team card in Pro Clubs
+            </p>
+          </div>
+          <div className="flex items-center gap-2.5">
+            {quota && (
+              <span className="px-2.5 py-1 rounded-full bg-[#192235] border border-[#26334A] text-[10px] font-bold text-[#21E6A4]">
+                {quota.remaining === null ? 'Unlimited' : `${quota.remaining}/${quota.limit} left`}
+              </span>
+            )}
+            <button
+              onClick={() => {
+                setSelectedCard(null);
+                setIsOpen(false);
+              }}
+              className="text-[#8E9AAF] hover:text-[#F4F7FB] p-1.5 text-lg leading-none"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* STEP 2: SELECTED CARD DETAILS & MATCH OPTIONS */}
+        {selectedCard ? (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar">
+            <button
+              onClick={() => setSelectedCard(null)}
+              className="text-xs font-bold text-[#4D8DFF] hover:underline flex items-center gap-1"
+            >
+              ← Back to Cards
+            </button>
+
+            <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center gap-4">
+              <CardThumb card={selectedCard} size="lg" />
+              <div className="flex-1 min-w-0">
+                <div className="text-lg font-black text-[#F4F7FB] truncate">{selectedCard.name}</div>
+                <div className="text-xs text-[#8E9AAF] truncate">
+                  {selectedCard.rarity} {selectedCard.club ? `• ${selectedCard.club}` : ''}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Logo src={selectedCard.nationLogoUrl} title="Nation" />
+                  <Logo src={selectedCard.leagueLogoUrl} title="League" />
+                  <Logo src={selectedCard.clubLogoUrl} title="Club" />
+                </div>
+                <PositionChips card={selectedCard} />
+                <div className="grid grid-cols-6 gap-1 mt-2.5 text-center bg-[#080B14] p-2 rounded-lg border border-[#26334A]">
+                  <div><div className="text-[9px] text-[#8E9AAF]">PAC</div><div className="text-xs font-bold">{selectedCard.faceStats.pace}</div></div>
+                  <div><div className="text-[9px] text-[#8E9AAF]">SHO</div><div className="text-xs font-bold">{selectedCard.faceStats.shooting}</div></div>
+                  <div><div className="text-[9px] text-[#8E9AAF]">PAS</div><div className="text-xs font-bold">{selectedCard.faceStats.passing}</div></div>
+                  <div><div className="text-[9px] text-[#8E9AAF]">DRI</div><div className="text-xs font-bold">{selectedCard.faceStats.dribbling}</div></div>
+                  <div><div className="text-[9px] text-[#8E9AAF]">DEF</div><div className="text-xs font-bold">{selectedCard.faceStats.defending}</div></div>
+                  <div><div className="text-[9px] text-[#8E9AAF]">PHY</div><div className="text-xs font-bold">{selectedCard.faceStats.physical}</div></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3.5 space-y-3 text-xs">
+              <div className="grid grid-cols-4 gap-2 text-center">
+                <div className="bg-[#131A2A] p-2 rounded-lg">
+                  <div className="text-[9px] text-[#8E9AAF] uppercase">Height</div>
+                  <div className="font-bold text-[#F4F7FB]">{selectedCard.heightCm ? `${selectedCard.heightCm}cm` : 'Auto'}</div>
+                </div>
+                <div className="bg-[#131A2A] p-2 rounded-lg">
+                  <div className="text-[9px] text-[#8E9AAF] uppercase">Weight</div>
+                  <div className="font-bold text-[#F4F7FB]">{selectedCard.weightKg ? `${selectedCard.weightKg}kg` : 'Auto-fit'}</div>
+                </div>
+                <div className="bg-[#131A2A] p-2 rounded-lg">
+                  <div className="text-[9px] text-[#8E9AAF] uppercase">SM / WF</div>
+                  <div className="font-bold text-[#facc15]">{selectedCard.skillMoves}★ / {selectedCard.weakFoot}★</div>
+                </div>
+                <div className="bg-[#131A2A] p-2 rounded-lg">
+                  <div className="text-[9px] text-[#8E9AAF] uppercase">Foot</div>
+                  <div className="font-bold text-[#F4F7FB]">{selectedCard.preferredFoot}</div>
+                </div>
+              </div>
+
+              {(selectedCard.playstylePlus?.length > 0 || selectedCard.playstyles?.length > 0) && (
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#8E9AAF] mb-1.5">Card PlayStyles</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(selectedCard.playstylePlus ?? []).map((ps: string) => (
+                      <span
+                        key={ps}
+                        className="px-2 py-0.5 rounded-md bg-[#facc15]/15 border border-[#facc15]/50 text-[#facc15] text-[10px] font-bold"
+                      >
+                        {ps}+
+                      </span>
+                    ))}
+                    {(selectedCard.playstyles ?? []).map((ps: string) => (
+                      <span
+                        key={ps}
+                        className="px-2 py-0.5 rounded-md bg-[#192235] border border-[#26334A] text-[#F4F7FB] text-[10px] font-medium"
+                      >
+                        {ps}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-4 space-y-3.5">
+              <div className="text-xs font-black uppercase tracking-wider text-[#4D8DFF]">Match Configuration</div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Pro Level (1–55)</label>
+                <select
+                  value={targetLevel}
+                  onChange={(e) => setTargetLevel(Number(e.target.value))}
+                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-3 py-2 text-xs font-bold text-[#F4F7FB] outline-none"
+                >
+                  {Array.from({ length: 55 }, (_, i) => i + 1).map((lvl) => (
+                    <option key={lvl} value={lvl}>
+                      Level {lvl}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[11px] font-bold text-[#8E9AAF]">Archetype</label>
+                  {!canSelectArchetype && (
+                    <button onClick={onUpgrade} className="text-[10px] font-bold text-[#facc15] hover:underline">
+                      Paid feature — Upgrade
+                    </button>
+                  )}
+                </div>
+                <select
+                  value={archetypeLock}
+                  onChange={(e) => setArchetypeLock(e.target.value)}
+                  disabled={!canSelectArchetype}
+                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-3 py-2 text-xs font-bold text-[#F4F7FB] outline-none disabled:opacity-60"
+                >
+                  <option value="AUTO">✨ Automatic (Best Archetype Match)</option>
+                  {archetypeNames.map((arch) => (
+                    <option key={arch} value={arch}>
+                      {arch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Masteries</label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'current', label: 'Current' },
+                    { id: 'all55', label: 'All Lvl 55' },
+                    { id: 'none', label: 'None' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setMasteryMode(opt.id as any)}
+                      className={`py-2 rounded-lg text-[11px] font-bold border transition-all ${
+                        masteryMode === opt.id
+                          ? 'bg-[#192235] border-[#21E6A4] text-[#21E6A4]'
+                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">
+                  Club Facilities (Club Lvl {clubLevel})
+                </label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {[
+                    { id: 'ai', label: 'AI Optimised' },
+                    { id: 'keep', label: 'Current' },
+                    { id: 'none', label: 'None' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setFacilityMode(opt.id as any)}
+                      className={`py-2 rounded-lg text-[11px] font-bold border transition-all ${
+                        facilityMode === opt.id
+                          ? 'bg-[#192235] border-[#4D8DFF] text-[#4D8DFF]'
+                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {matchError && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-xs text-red-300 flex items-center justify-between gap-2">
+                <span>{matchError}</span>
+                {matchError.includes('Upgrade') && (
+                  <button
+                    onClick={onUpgrade}
+                    className="px-2.5 py-1 rounded-lg bg-[#facc15] text-[#080B14] font-black text-[10px] shrink-0"
+                  >
+                    Upgrade
+                  </button>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={handleRunMatch}
+              disabled={isMatching}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#21E6A4] text-[#080B14] font-black text-xs uppercase tracking-widest shadow-lg hover:opacity-95 disabled:opacity-50"
+            >
+              {isMatching ? 'Matching Card Stats...' : `Match ${selectedCard.name} (1 Match)`}
+            </button>
+          </div>
+        ) : (
+          /* STEP 1: CARD BROWSER & SEARCH */
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-3 bg-[#0D1220] border-b border-[#26334A] space-y-2.5">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search FC 27 player (e.g. Harry Kane, Mbappé, Bellingham)..."
+                className="w-full bg-[#131A2A] border border-[#26334A] focus:border-[#4D8DFF] rounded-xl px-3.5 py-2.5 text-xs text-[#F4F7FB] placeholder-[#59657A] outline-none"
+              />
+
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 flex gap-1 overflow-x-auto hide-scrollbar">
+                  {POSITIONS.map((pos) => (
+                    <button
+                      key={pos}
+                      onClick={() => setPositionFilter(pos)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 border ${
+                        positionFilter === pos
+                          ? 'bg-[#192235] text-[#21E6A4] border-[#21E6A4]/50'
+                          : 'bg-[#131A2A] text-[#8E9AAF] border-transparent'
+                      }`}
+                    >
+                      {pos}
+                    </button>
+                  ))}
+                </div>
+
+                <select
+                  value={rarityFilter}
+                  onChange={(e) => setRarityFilter(e.target.value)}
+                  className="bg-[#131A2A] border border-[#26334A] rounded-lg px-2 py-1 text-[10px] font-bold text-[#F4F7FB] outline-none max-w-[110px]"
+                >
+                  <option value="ALL">All Rarities</option>
+                  {(raritiesQuery.data ?? []).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 hide-scrollbar">
+              {cardsQuery.isLoading ? (
+                <div className="text-center text-xs text-[#8E9AAF] py-12">Searching FC 27 cards...</div>
+              ) : (cardsQuery.data ?? []).length === 0 ? (
+                <div className="text-center text-xs text-[#8E9AAF] py-12">
+                  No cards found. Try searching another player name.
+                </div>
+              ) : (
+                (cardsQuery.data ?? []).map((card: any) => (
+                  <div
+                    key={card.id}
+                    className="bg-[#0D1220] hover:bg-[#131A2A] border border-[#26334A] rounded-xl p-3 space-y-2.5 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3 min-w-0">
+                        <CardThumb card={card} size="sm" />
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-[#F4F7FB] truncate">{card.name}</div>
+                          <div className="text-[10px] text-[#8E9AAF] truncate">
+                            {card.rarity} • {card.skillMoves}★ SM / {card.weakFoot}★ WF
+                          </div>
+                          <PositionChips card={card} />
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => openMatchSheet(card)}
+                        className="px-3 py-2 rounded-lg bg-[#192235] hover:bg-[#4D8DFF] text-[#4D8DFF] hover:text-[#080B14] border border-[#4D8DFF]/40 font-black text-[10px] uppercase tracking-wider shrink-0 transition-colors"
+                      >
+                        Match
+                      </button>
+                    </div>
+
+                    <FaceStatsRow stats={card.faceStats} />
+                    <PlaystylePlusChips card={card} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
