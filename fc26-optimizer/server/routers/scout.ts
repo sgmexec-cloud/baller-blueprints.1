@@ -115,11 +115,21 @@ const cardsRouter = router({
 
   /** Free preview: which archetype Automatic will pick for this card (no quota used) */
   previewArchetype: publicProcedure
-    .input(z.object({ cardId: z.string().min(1).max(120) }))
+    .input(z.object({
+      cardId: z.string().min(1).max(120),
+      apBudget: z.number().int().min(1).max(999999).optional(),
+      signatureSlots: z.number().int().min(0).max(4).optional(),
+      standardSlots: z.number().int().min(0).max(6).optional(),
+    }))
     .query(async ({ input }) => {
       const card = await getFutCardById(input.cardId);
       if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Card not found." });
-      return previewArchetypeForCard(card);
+      return previewArchetypeForCard(
+        card,
+        input.apBudget
+          ? { apBudget: input.apBudget, signatureSlots: input.signatureSlots ?? 2, standardSlots: input.standardSlots ?? 4 }
+          : undefined
+      );
     }),
 
   /** Metered (10 Free / 40 Premium / 100 Premium+ / Unlimited VIP & Owner): convert FUT card to Pro Clubs build */
