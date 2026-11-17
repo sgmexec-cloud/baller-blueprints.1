@@ -109,8 +109,15 @@ function canonPlaystyle(name: string): string {
   return k;
 }
 
-/** Which archetype "Automatic" will pick for this card (same scoring the match uses). */
-export function previewArchetypeForCard(card: FutCard): { archetype: string } {
+/** Which archetype "Automatic" will pick for this card (same ranking the match uses). */
+export function previewArchetypeForCard(
+  card: FutCard,
+  opts?: ArchetypePickOptions
+): { archetype: string; ranking?: ArchetypeRanking[] } {
+  if (opts) {
+    const ranking = rankArchetypesForCard(card, opts);
+    if (ranking.length) return { archetype: ranking[0].archetype, ranking: ranking.slice(0, 5) };
+  }
   const best = scoreArchetypesForCard(card)[0];
   return { archetype: best?.archetype ?? "Maestro" };
 }
@@ -292,26 +299,41 @@ export interface CardMatchOutput {
   similarityScore: number; // 0-100% how closely the Pro replicates the FUT card
 }
 
-export function matchFutCardToPro(params: {
-  card: FutCard;
-  forcedArchetype?: string | null;
+// ── Archetype selection: try every archetype and keep the best ───────────────
+interface AttemptParams {
   apBudget: number;
   signatureSlots: number;
   standardSlots: number;
   foundationBoosts: Record<string, number>;
   starsPrepaid?: boolean;
-  /** PlayStyles already granted by tier-3 club facilities (they take no standard slot) */
   facilityPlaystyles?: string[];
-}): CardMatchOutput {
-  const scores = scoreArchetypesForCard(params.card);
-  const chosenArchetype = params.forcedArchetype || scores[0]?.archetype || "Maestro";
+}
 
-  const { blueprint, priorities, physicals } = buildBlueprintFromCard(params.card, chosenArchetype);
+export interface ArchetypePickOptions {
+  apBudget: number;
+  signatureSlots: number;
+  standardSlots: number;
+}
+
+export interface ArchetypeRanking {
+  archetype: string;
+  /** Final ranking score (similarity + signature/PlayStyle bonuses - penalties) */
+  score: number;
+  /** How closely the build matches the card's 29 stats, 0-100 */
+  similarity: number;
+  signatureBonus: number;
+  playstylesUnlocked: number;
+  penalties: number;
+}
+
+/** Builds the Pro for ONE archetype (stars reserved, PlayStyle ceilings relaxed, engine run). */
+function runArchetypeAttempt(card: FutCard, archetype: string, params: AttemptParams) {
+  const { blueprint, priorities, physicals } = buildBlueprintFromCard(card, archetype);
 
   // Stars: reserve their AP BEFORE the engine spends the budget on attributes.
   // (The engine has no star rows for these archetypes, so it never paid for them,
   //  and the build screen then charged them on top -> overspend.)
-  const starInfo = resolveCardStars(params.card, chosenArchetype);
+  const starInfo = resolveCardStars(card, archetype);
   const starCost = params.starsPrepaid ? 0 : starInfo?.totalCost ?? 0;
   const attributeBudget = Math.max(0, params.apBudget - starCost);
 
@@ -340,11 +362,11 @@ export function matchFutCardToPro(params: {
     const pmax: Record<string, number> = (priorities.max ??= {} as Record<string, number>);
     const archMax: Record<string, number> = {};
     for (const r of getAllArchetypes("FC27")) {
-      if (normAttr(r.Archetype) === normAttr(chosenArchetype)) {
+      if (normAttr(r.Archetype) === normAttr(archetype)) {
         archMax[normAttr(r.Attribute)] = parseInt(r["Max Value"], 10) || 99;
       }
     }
-    const sigProfile = getArchetypeProfiles("FC27").find((a: any) => normAttr(a.Archetype) === normAttr(chosenArchetype));
+    const sigProfile = getArchetypeProfiles("FC27").find((a: any) => normAttr(a.Archetype) === normAttr(archetype));
     const signatureKeys = new Set(
       String(sigProfile?.Signature_PlayStyles || "").split(/[\/,]/).map(canonPlaystyle).filter(Boolean)
     );
@@ -393,6 +415,128 @@ export function matchFutCardToPro(params: {
       signatureUpgrades: params.signatureSlots,
     }
   );
+
+  return { blueprint, priorities, physicals, starInfo, starCost, attributeBudget, engineResult, engineBlueprint };
+}
+
+
+function similarityOf(card: FutCard, engineResult: ReturnType<typeof runMathEngine>, boosts: Record<string, number>): number {
+  let totalAbsDiff = 0;
+  for (const attr of STANDARD_ATTRS) {
+    const cardValue = card.attributes[attr] ?? 70;
+    const statRow = engineResult.stats.find(st => normAttr(st.attribute) === normAttr(attr));
+    const boost = Object.entries(boosts).find(([k]) => normAttr(k) === normAttr(attr))?.[1] ?? 0;
+    totalAbsDiff += Math.abs(Math.min(99, (statRow?.final ?? 70) + boost) - cardValue);
+  }
+  return Math.max(0, Math.min(100, 100 - (totalAbsDiff / STANDARD_ATTRS.length) * 4));
+}
+
+/**
+ * Runs the real build for every archetype (neutral boosts, same budget and slots) and ranks them:
+ *   similarity to the card's 29 stats   (the main signal)
+ *   + signature PlayStyles the card has (PlayStyle+ counts double)
+ *   + card PlayStyles the build can unlock
+ *   + a small position bonus            (tiebreaker only)
+ *   - height outside the archetype's range, and stars the archetype can't reach
+ * The preview and the match both call this with the same inputs, so they always agree.
+ */
+export function rankArchetypesForCard(card: FutCard, opts: ArchetypePickOptions): ArchetypeRanking[] {
+  const profiles = getArchetypeProfiles("FC27");
+  const cardPlus = new Set(card.playstylePlus.map(canonPlaystyle));
+  const cardAll = new Set([...card.playstylePlus, ...card.playstyles].map(canonPlaystyle));
+  const cardPositions = new Set([card.position, ...card.altPositions].map(pos => pos.toUpperCase()));
+
+  const seen = new Set<string>();
+  const out: ArchetypeRanking[] = [];
+
+  for (const row of profiles) {
+    const name = String(row.Archetype || "").trim();
+    const key = normAttr(name);
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    if (key === "shotstopper" || key === "sweeperkeeper") continue; // outfield only
+
+    try {
+      const attempt = runArchetypeAttempt(card, name, {
+        apBudget: opts.apBudget,
+        signatureSlots: opts.signatureSlots,
+        standardSlots: opts.standardSlots,
+        foundationBoosts: {},
+        starsPrepaid: false,
+        facilityPlaystyles: [],
+      });
+
+      const similarity = similarityOf(card, attempt.engineResult, {});
+
+      let signatureBonus = 0;
+      for (const sig of String(row.Signature_PlayStyles || "").split(/[\/,]/).map(canonPlaystyle).filter(Boolean)) {
+        if (cardPlus.has(sig)) signatureBonus += 4;
+        else if (cardAll.has(sig)) signatureBonus += 2;
+      }
+
+      const playstylesUnlocked = attempt.engineResult.equippedPlaystyles?.length ?? 0;
+
+      let positionBonus = 0;
+      const rec = rolesToPositions(row.Recommended_Positions).map((pos: string) => pos.toUpperCase());
+      if (rec[0] && cardPositions.has(rec[0])) positionBonus = 1;
+      else if (rec.some((pos: string) => cardPositions.has(pos))) positionBonus = 0.5;
+
+      let penalties = 0;
+      const bounds = ARCH_PHYSICALS[name];
+      if (bounds && card.heightCm != null) {
+        penalties += Math.max(0, bounds.minH - card.heightCm, card.heightCm - bounds.maxH) * 0.5;
+      }
+      const stars = resolveCardStars(card, name);
+      if (stars) {
+        penalties += (Math.abs(card.skillMoves - stars.skillMoves) + Math.abs(card.weakFoot - stars.weakFoot)) * 3;
+      }
+
+      const score = similarity + signatureBonus + playstylesUnlocked * 1.5 + positionBonus - penalties;
+      out.push({
+        archetype: name,
+        score: Math.round(score * 10) / 10,
+        similarity: Math.round(similarity * 10) / 10,
+        signatureBonus,
+        playstylesUnlocked,
+        penalties: Math.round(penalties * 10) / 10,
+      });
+    } catch {
+      // archetype missing from the data or the build failed: leave it out of the ranking
+    }
+  }
+
+  return out.sort((a, b) => b.score - a.score || a.archetype.localeCompare(b.archetype));
+}
+
+export function matchFutCardToPro(params: {
+  card: FutCard;
+  forcedArchetype?: string | null;
+  apBudget: number;
+  signatureSlots: number;
+  standardSlots: number;
+  foundationBoosts: Record<string, number>;
+  starsPrepaid?: boolean;
+  /** PlayStyles already granted by tier-3 club facilities (they take no standard slot) */
+  facilityPlaystyles?: string[];
+}): CardMatchOutput {
+  const ranking = rankArchetypesForCard(params.card, {
+    apBudget: params.apBudget,
+    signatureSlots: params.signatureSlots,
+    standardSlots: params.standardSlots,
+  });
+  const legacyScores = ranking.length ? [] : scoreArchetypesForCard(params.card);
+  const chosenArchetype = params.forcedArchetype || ranking[0]?.archetype || legacyScores[0]?.archetype || "Maestro";
+  const scores = ranking.length ? ranking.map(r => ({ archetype: r.archetype, score: r.score })) : legacyScores;
+
+  const attempt = runArchetypeAttempt(params.card, chosenArchetype, {
+    apBudget: params.apBudget,
+    signatureSlots: params.signatureSlots,
+    standardSlots: params.standardSlots,
+    foundationBoosts: params.foundationBoosts,
+    starsPrepaid: params.starsPrepaid,
+    facilityPlaystyles: params.facilityPlaystyles,
+  });
+  const { blueprint, priorities, physicals, starInfo, starCost, attributeBudget, engineResult } = attempt;
 
   const playstyleFit = buildPlaystyleFit(blueprint);
   const specSwapIndex = blueprint.specialisationPlaystylePlus
