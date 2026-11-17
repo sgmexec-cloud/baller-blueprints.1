@@ -120,10 +120,23 @@ export function CardMatcherModal({
         if (status.l55 && m.l55) Object.entries(m.l55).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
       });
 
-      const guessArch =
-        canSelectArchetype && archetypeLock !== 'AUTO'
-          ? archetypeLock
-          : archetypeNames[0] || 'Maestro';
+      // Which archetype will the match really use? Locked = the chosen one.
+      // Automatic = ask the server (free, same scoring the match uses), so height/weight
+      // boosts and the facility plan are worked out for the RIGHT archetype.
+      let guessArch: string;
+      if (canSelectArchetype && archetypeLock !== 'AUTO') {
+        guessArch = archetypeLock;
+      } else {
+        try {
+          const preview = await utils.scout.cards.previewArchetype.fetch({ cardId: selectedCard.id });
+          guessArch = preview.archetype;
+        } catch {
+          guessArch = archetypeNames[0] || 'Maestro';
+        }
+      }
+      const archSignatures: string[] = serverArchetypes?.[guessArch]?.signatures ?? [];
+      const isSignature = (ps: string) => archSignatures.some((sig) => samePlaystyle(sig, ps));
+
       const bounds = ARCH_PHYSICALS[guessArch] || ARCH_PHYSICALS['Finisher'];
       const hCm = Math.min(bounds.maxH, Math.max(bounds.minH, selectedCard.heightCm ?? bounds.baseH));
       const wKg = Math.min(bounds.maxW, Math.max(bounds.minW, selectedCard.weightKg ?? bounds.baseW));
@@ -141,6 +154,7 @@ export function CardMatcherModal({
       };
 
       let finalFacilities: Record<string, number> = {};
+      let aiFacilityPlaystyles: string[] = [];
       if (facilityMode === 'keep') {
         finalFacilities = equippedFacilities;
       } else if (facilityMode === 'ai') {
@@ -159,9 +173,14 @@ export function CardMatcherModal({
             const weight = cardTarget >= 85 ? 1.2 : cardTarget >= 78 ? 0.9 : 0.4;
             return getApCost(guessArch, stat, lvl) * weight;
           },
-          playstyleBonus: (ps) => (cardStyles.some((cs) => samePlaystyle(cs, ps)) ? 90 : 0),
+          // A PlayStyle the archetype already has as a Signature is worth nothing from a facility
+          playstyleBonus: (ps) => {
+            if (isSignature(ps)) return 0;
+            return cardStyles.some((cs) => samePlaystyle(cs, ps)) ? 90 : 0;
+          },
         });
         finalFacilities = plan.equipped;
+        aiFacilityPlaystyles = plan.playstylesGained;
       }
 
       const fullBoosts: Record<string, number> = { ...baseBoosts };
@@ -175,10 +194,23 @@ export function CardMatcherModal({
         }
       });
 
+      // PlayStyles the tier-3 facilities already grant (they use no standard slot)
+      let facilityPlaystyles: string[] = [];
+      if (facilityMode === 'ai') {
+        facilityPlaystyles = aiFacilityPlaystyles;
+      } else if (facilityMode === 'keep') {
+        facilityPlaystyles = Object.entries(finalFacilities)
+          .filter(([, tier]) => tier === 3)
+          .map(([name]) => FACILITIES[name]?.playstyle)
+          .filter((ps): ps is string => Boolean(ps));
+      }
+      facilityPlaystyles = Array.from(new Set(facilityPlaystyles));
+
       const progRow = progressionData?.[targetLevel];
       const apBudget = progRow?.apAvailable ?? Math.floor(targetLevel * 1.5) + 10;
       const signatureSlots = progRow?.signatureUpgrades ?? (targetLevel >= 55 ? 2 : targetLevel >= 20 ? 1 : 0);
       const standardSlots =
+        progRow?.customSlots ??
         progRow?.playstyleSlots ??
         (targetLevel >= 55 ? 4 : targetLevel >= 40 ? 3 : targetLevel >= 15 ? 2 : targetLevel >= 5 ? 1 : 0);
 
@@ -192,6 +224,7 @@ export function CardMatcherModal({
         standardSlots,
         foundationBoosts: fullBoosts,
         starsPrepaid: false,
+        facilityPlaystyles,
       });
 
       onApplyCardBuild({
