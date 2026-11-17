@@ -102,6 +102,19 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.min(hi, Math.max(lo, v));
 }
 
+// Facility names differ slightly from card names ("Aerial" vs "Aerial Fortress")
+function canonPlaystyle(name: string): string {
+  const k = normAttr(String(name || "").replace(/\+/g, ""));
+  if (k === "aerial") return "aerialfortress";
+  return k;
+}
+
+/** Which archetype "Automatic" will pick for this card (same scoring the match uses). */
+export function previewArchetypeForCard(card: FutCard): { archetype: string } {
+  const best = scoreArchetypesForCard(card)[0];
+  return { archetype: best?.archetype ?? "Maestro" };
+}
+
 /**
  * Scores all 11 outfield archetypes against a FUT card:
  * 1. Signature PlayStyle overlap with the card's PlayStyle+ and PlayStyles
@@ -287,6 +300,8 @@ export function matchFutCardToPro(params: {
   standardSlots: number;
   foundationBoosts: Record<string, number>;
   starsPrepaid?: boolean;
+  /** PlayStyles already granted by tier-3 club facilities (they take no standard slot) */
+  facilityPlaystyles?: string[];
 }): CardMatchOutput {
   const scores = scoreArchetypesForCard(params.card);
   const chosenArchetype = params.forcedArchetype || scores[0]?.archetype || "Maestro";
@@ -306,8 +321,18 @@ export function matchFutCardToPro(params: {
     blueprint.weakFoot = starInfo.weakFoot;
   }
 
+  // Facility-granted PlayStyles are already on the build, so the engine must not
+  // spend a standard slot (or AP) on them. The slots go to the card's other styles.
+  const facilityKeys = new Set((params.facilityPlaystyles ?? []).map(canonPlaystyle));
+  const notFromFacility = (name: string) => !facilityKeys.has(canonPlaystyle(name));
+  const engineBlueprint: ScoutingBlueprint = {
+    ...blueprint,
+    playstylePlus: blueprint.playstylePlus.filter(notFromFacility),
+    playstyles: blueprint.playstyles.filter(ps => notFromFacility(ps.name)),
+  };
+
   const engineResult = runMathEngine(
-    blueprint,
+    engineBlueprint,
     attributeBudget,
     params.standardSlots,
     blueprint.coreAttributes,
