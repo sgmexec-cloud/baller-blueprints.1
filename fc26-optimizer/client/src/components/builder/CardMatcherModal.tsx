@@ -27,6 +27,23 @@ export interface CardMatcherModalProps {
   }) => void;
 }
 
+function Logo({ src, title }: { src?: string | null; title: string }) {
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={title}
+      title={title}
+      referrerPolicy="no-referrer"
+      loading="lazy"
+      className="w-5 h-5 object-contain"
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+}
+
 const POSITIONS = ['ALL', 'ST', 'LW', 'RW', 'CAM', 'CM', 'CDM', 'LB', 'RB', 'CB'];
 
 export function CardMatcherModal({
@@ -299,14 +316,30 @@ export function CardMatcherModal({
             </button>
 
             <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center gap-4">
-              <div className="w-16 h-20 rounded-xl bg-gradient-to-b from-[#facc15]/20 to-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
-                <span className="text-2xl font-black text-[#facc15] leading-none">{selectedCard.overall}</span>
-                <span className="text-[11px] font-bold text-[#F4F7FB] mt-1">{selectedCard.position}</span>
+              <div className="relative overflow-hidden w-16 h-20 rounded-xl bg-gradient-to-b from-[#facc15]/20 to-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
+                {selectedCard.avatarUrl && (
+                  <img
+                    src={selectedCard.avatarUrl}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    className="absolute inset-0 w-full h-full object-cover opacity-40"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                )}
+                <span className="relative text-2xl font-black text-[#facc15] leading-none drop-shadow">{selectedCard.overall}</span>
+                <span className="relative text-[11px] font-bold text-[#F4F7FB] mt-1 drop-shadow">{selectedCard.position}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-lg font-black text-[#F4F7FB] truncate">{selectedCard.name}</div>
                 <div className="text-xs text-[#8E9AAF] truncate">
                   {selectedCard.rarity} {selectedCard.club ? `• ${selectedCard.club}` : ''}
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <Logo src={selectedCard.nationLogoUrl} title="Nation" />
+                  <Logo src={selectedCard.leagueLogoUrl} title="League" />
+                  <Logo src={selectedCard.clubLogoUrl} title="Club" />
                 </div>
                 <div className="grid grid-cols-6 gap-1 mt-2.5 text-center bg-[#080B14] p-2 rounded-lg border border-[#26334A]">
                   <div><div className="text-[9px] text-[#8E9AAF]">PAC</div><div className="text-xs font-bold">{selectedCard.faceStats.pace}</div></div>
@@ -537,9 +570,21 @@ export function CardMatcherModal({
                     className="bg-[#0D1220] hover:bg-[#131A2A] border border-[#26334A] rounded-xl p-3 flex items-center justify-between gap-3 transition-colors"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-14 rounded-lg bg-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
-                        <span className="text-base font-black text-[#facc15] leading-none">{card.overall}</span>
-                        <span className="text-[9px] font-bold text-[#F4F7FB] mt-0.5">{card.position}</span>
+                      <div className="relative overflow-hidden w-11 h-14 rounded-lg bg-[#192235] border border-[#facc15]/40 flex flex-col items-center justify-center shrink-0">
+                        {card.avatarUrl && (
+                          <img
+                            src={card.avatarUrl}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover opacity-40"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <span className="relative text-base font-black text-[#facc15] leading-none drop-shadow">{card.overall}</span>
+                        <span className="relative text-[9px] font-bold text-[#F4F7FB] mt-0.5 drop-shadow">{card.position}</span>
                       </div>
                       <div className="min-w-0">
                         <div className="text-xs font-black text-[#F4F7FB] truncate">{card.name}</div>
