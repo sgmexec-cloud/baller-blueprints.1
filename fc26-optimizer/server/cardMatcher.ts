@@ -296,7 +296,9 @@ export interface CardMatchOutput {
   };
   recommendedPositions: string[];
   comparison: CardStatComparisonRow[];
-  similarityScore: number; // 0-100% how closely the Pro replicates the FUT card
+  similarityScore: number; // 0-100%: 100 = every stat meets or beats the card
+  /** Total points the Pro is ABOVE the card, summed over the 29 stats (shown as a bonus, not an error) */
+  surplusPoints: number;
 }
 
 // ── Archetype selection: try every archetype and keep the best ───────────────
@@ -421,14 +423,16 @@ function runArchetypeAttempt(card: FutCard, archetype: string, params: AttemptPa
 
 
 function similarityOf(card: FutCard, engineResult: ReturnType<typeof runMathEngine>, boosts: Record<string, number>): number {
-  let totalAbsDiff = 0;
+  // Only stats that fall SHORT of the card count against the match. A stat at or above the card's value is
+  // a full match (extra points, often forced by the archetype's base stats, are not an error).
+  let totalShortfall = 0;
   for (const attr of STANDARD_ATTRS) {
     const cardValue = card.attributes[attr] ?? 70;
     const statRow = engineResult.stats.find(st => normAttr(st.attribute) === normAttr(attr));
     const boost = Object.entries(boosts).find(([k]) => normAttr(k) === normAttr(attr))?.[1] ?? 0;
-    totalAbsDiff += Math.abs(Math.min(99, (statRow?.final ?? 70) + boost) - cardValue);
+    totalShortfall += Math.max(0, cardValue - Math.min(99, (statRow?.final ?? 70) + boost));
   }
-  return Math.max(0, Math.min(100, 100 - (totalAbsDiff / STANDARD_ATTRS.length) * 4));
+  return Math.max(0, Math.min(100, 100 - (totalShortfall / STANDARD_ATTRS.length) * 4));
 }
 
 /**
@@ -553,20 +557,23 @@ export function matchFutCardToPro(params: {
   const standardPlaystyles = engineResult.equippedPlaystyles?.slice(0, params.standardSlots) ?? [];
 
   // Compare FUT card stats vs. Pro in-game stats (base + AP + boosts)
-  let totalAbsDiff = 0;
+  let totalShortfall = 0;
+  let surplusPoints = 0;
   const comparison: CardStatComparisonRow[] = STANDARD_ATTRS.map(attr => {
     const cardValue = params.card.attributes[attr] ?? 70;
     const statRow = engineResult.stats.find(s => normAttr(s.attribute) === normAttr(attr));
     const boost = Object.entries(params.foundationBoosts).find(([k]) => normAttr(k) === normAttr(attr))?.[1] ?? 0;
     const proValue = Math.min(99, (statRow?.final ?? 70) + boost);
     const diff = proValue - cardValue;
-    totalAbsDiff += Math.abs(diff);
+    if (diff < 0) totalShortfall += -diff;
+    else surplusPoints += diff;
     return { attribute: attr, cardValue, proValue, diff };
   });
 
-  // 100% = exact match across all 29 stats; every 1-point average gap deducts ~4%
-  const avgGap = totalAbsDiff / STANDARD_ATTRS.length;
-  const similarityScore = Math.max(0, Math.min(100, Math.round(100 - avgGap * 4)));
+  // 100% = every one of the 29 stats meets or beats the card. Only shortfalls count against the match;
+  // each 1-point average shortfall deducts ~4%. Extra points are reported separately as surplusPoints.
+  const avgShortfall = totalShortfall / STANDARD_ATTRS.length;
+  const similarityScore = Math.max(0, Math.min(100, Math.round(100 - avgShortfall * 4)));
 
   const profiles = getArchetypeProfiles("FC27");
   const archProfile = profiles.find((a: any) => normAttr(a.Archetype) === normAttr(chosenArchetype));
@@ -596,5 +603,6 @@ export function matchFutCardToPro(params: {
     recommendedPositions,
     comparison,
     similarityScore,
+    surplusPoints,
   };
 }
