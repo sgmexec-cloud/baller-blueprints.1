@@ -1,4 +1,4 @@
-import { getAllArchetypes, getArchetypeProfiles } from "./csvLoader";
+import { getAllArchetypes, getArchetypeProfiles, getPlaystyles } from "./csvLoader";
 import {
   runMathEngine,
   ScoutingBlueprint,
@@ -330,6 +330,56 @@ export function matchFutCardToPro(params: {
     playstylePlus: blueprint.playstylePlus.filter(notFromFacility),
     playstyles: blueprint.playstyles.filter(ps => notFromFacility(ps.name)),
   };
+
+  // ── Let the card's PlayStyles actually unlock ─────────────────────────────
+  // priorities.max caps each stat at the card's own value (minus boosts). But a PlayStyle needs its
+  // attributes at a fixed level on the build's OWN points (e.g. Power Shot: Finishing 80), which can be a
+  // few points above the card's stat. Without this, the engine treats those styles as unreachable and
+  // equips almost none. Raise the ceiling just enough for the styles the card really has.
+  {
+    const pmax: Record<string, number> = (priorities.max ??= {} as Record<string, number>);
+    const archMax: Record<string, number> = {};
+    for (const r of getAllArchetypes("FC27")) {
+      if (normAttr(r.Archetype) === normAttr(chosenArchetype)) {
+        archMax[normAttr(r.Attribute)] = parseInt(r["Max Value"], 10) || 99;
+      }
+    }
+    const sigProfile = getArchetypeProfiles("FC27").find((a: any) => normAttr(a.Archetype) === normAttr(chosenArchetype));
+    const signatureKeys = new Set(
+      String(sigProfile?.Signature_PlayStyles || "").split(/[\/,]/).map(canonPlaystyle).filter(Boolean)
+    );
+    const boostByAttr: Record<string, number> = {};
+    for (const [k, v] of Object.entries(params.foundationBoosts)) boostByAttr[normAttr(k)] = v;
+    const statNameByKey: Record<string, string> = {};
+    for (const a of STANDARD_ATTRS) statNameByKey[normAttr(a)] = a;
+
+    const styleTable = getPlaystyles("FC27");
+    const seenStyle = new Set<string>();
+    const orderedStyleNames = [...engineBlueprint.playstylePlus, ...engineBlueprint.playstyles.map(ps => ps.name)];
+    for (const styleName of orderedStyleNames) {
+      const key = canonPlaystyle(styleName);
+      if (!key || seenStyle.has(key) || signatureKeys.has(key)) continue;
+      seenStyle.add(key);
+      const def: any = styleTable.find((p: any) => canonPlaystyle(p.Playstyle || "") === key);
+      if (!def) continue;
+      const reqs = [
+        [def.Req_Attr1 || def.Attr1, def.Req_Val1 || def.Val1],
+        [def.Req_Attr2 || def.Attr2, def.Req_Val2 || def.Val2],
+        [def.Req_Attr3 || def.Attr3, def.Req_Val3 || def.Val3],
+      ]
+        .filter(([a, v]) => a && v)
+        .map(([a, v]) => ({ attr: normAttr(String(a)), val: parseInt(String(v), 10) }));
+      if (reqs.length === 0) continue;
+      // Needs more than this archetype can ever reach on its own points -> can't be unlocked, leave it
+      if (reqs.some(r => !(r.attr in archMax) || r.val > archMax[r.attr])) continue;
+      for (const r of reqs) {
+        const stat = statNameByKey[r.attr];
+        if (!stat) continue;
+        const needed = Math.min(99, r.val + (boostByAttr[r.attr] ?? 0));
+        if ((pmax[stat] ?? 0) < needed) pmax[stat] = needed;
+      }
+    }
+  }
 
   const engineResult = runMathEngine(
     engineBlueprint,
