@@ -49,9 +49,34 @@ export interface FutCard {
   playstylePlus: string[];
   playstyles: string[];
   avatarUrl: string | null;
+  /** FUTMind numeric ids (names are not available from FUTMind's API) and their logo images */
+  nationId: number | null;
+  leagueId: number | null;
+  clubId: number | null;
+  nationLogoUrl: string | null;
+  leagueLogoUrl: string | null;
+  clubLogoUrl: string | null;
 }
 
 const FUTMIND_BASE_URL = "https://futmind.com/api/beta/players";
+
+const FUTMIND_IMAGE_BASE = "https://futmind.com/images/fifa2027";
+
+function logoUrl(kind: "nations" | "leagues" | "clubs", id: number | null | undefined): string | null {
+  return id != null && Number.isFinite(Number(id)) ? `${FUTMIND_IMAGE_BASE}/${kind}/${Number(id)}.png` : null;
+}
+
+function playerImageUrl(resourceId: string | number | null | undefined): string | null {
+  const v = String(resourceId ?? "").trim();
+  return /^\d+$/.test(v) ? `${FUTMIND_IMAGE_BASE}/players/p${v}.png` : null;
+}
+
+/** Whole-number id from a number or a digits-only string; names and anything else -> null */
+function idOrNull(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return Math.round(v);
+  if (typeof v === "string" && /^\d+$/.test(v.trim())) return Number(v.trim());
+  return null;
+}
 
 const STAT_KEY_MAP: Record<string, string> = {
   acceleration: "Acceleration",
@@ -417,7 +442,12 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     extractLabel(item.image) ||
     extractLabel(item.headshotUrl) ||
     extractLabel(item.playerImage) ||
+    playerImageUrl(item.resourceId) ||
     null;
+
+  const nationId = idOrNull(item.nation) ?? idOrNull(item.nationId);
+  const leagueId = idOrNull(item.leagueId) ?? idOrNull(item.league_id) ?? idOrNull(item.league);
+  const clubId = idOrNull(item.teamid) ?? idOrNull(item.teamId) ?? idOrNull(item.clubId);
 
   return {
     id,
@@ -450,6 +480,12 @@ function parseCardObject(item: Record<string, any>): FutCard | null {
     playstylePlus,
     playstyles,
     avatarUrl,
+    nationId,
+    leagueId,
+    clubId,
+    nationLogoUrl: logoUrl("nations", nationId),
+    leagueLogoUrl: logoUrl("leagues", leagueId),
+    clubLogoUrl: logoUrl("clubs", clubId),
   };
 }
 
@@ -527,7 +563,8 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
             ${JSON.stringify(c.altPositions)}::jsonb, ${c.club}, ${c.league}, ${c.nation}, ${c.heightCm}, ${c.weightKg},
             ${c.skillMoves}, ${c.weakFoot}, ${c.preferredFoot},
             ${JSON.stringify(c.faceStats)}::jsonb, ${JSON.stringify(c.attributes)}::jsonb,
-            ${JSON.stringify(c.playstylePlus)}::jsonb, ${JSON.stringify(c.playstyles)}::jsonb, ${c.avatarUrl}, NOW()
+            ${JSON.stringify(c.playstylePlus)}::jsonb, ${JSON.stringify(c.playstyles)}::jsonb, ${c.avatarUrl ?? null},
+            ${c.nationId ?? null}, ${c.leagueId ?? null}, ${c.clubId ?? null}, NOW()
           )`
         ),
         sql`, `
@@ -538,7 +575,7 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
           id, ea_asset_id, name, common_name, rarity, overall, position,
           alt_positions, club, league, nation, height_cm, weight_kg,
           skill_moves, weak_foot, preferred_foot, face_stats, attributes,
-          playstyle_plus, playstyles, avatar_url, updated_at
+          playstyle_plus, playstyles, avatar_url, nation_id, league_id, club_id, updated_at
         ) VALUES ${valuesSql}
         ON CONFLICT (id) DO UPDATE SET
           name = EXCLUDED.name,
@@ -563,6 +600,9 @@ async function upsertFutCardsBatch(db: any, cards: FutCard[], batchSize = 250): 
           playstyle_plus = EXCLUDED.playstyle_plus,
           playstyles = EXCLUDED.playstyles,
           avatar_url = COALESCE(EXCLUDED.avatar_url, fut_cards.avatar_url),
+          nation_id = COALESCE(EXCLUDED.nation_id, fut_cards.nation_id),
+          league_id = COALESCE(EXCLUDED.league_id, fut_cards.league_id),
+          club_id = COALESCE(EXCLUDED.club_id, fut_cards.club_id),
           updated_at = NOW()
       `);
     }
@@ -800,6 +840,9 @@ export async function ensureFutCardsSchema(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await db.execute(sql`ALTER TABLE fut_cards ADD COLUMN IF NOT EXISTS nation_id INTEGER`);
+  await db.execute(sql`ALTER TABLE fut_cards ADD COLUMN IF NOT EXISTS league_id INTEGER`);
+  await db.execute(sql`ALTER TABLE fut_cards ADD COLUMN IF NOT EXISTS club_id INTEGER`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_search ON fut_cards (LOWER(name), position, rarity)`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_fut_cards_overall ON fut_cards (overall DESC)`);
 
@@ -848,7 +891,13 @@ function rowToFutCard(row: any): FutCard {
     attributes: parseJson<Record<string, number>>(row.attributes, {}),
     playstylePlus: parseJson<string[]>(row.playstyle_plus, []),
     playstyles: parseJson<string[]>(row.playstyles, []),
-    avatarUrl: row.avatar_url ?? null,
+    avatarUrl: row.avatar_url ?? (/^fm27-(\d+)$/.test(String(row.id)) ? playerImageUrl(String(row.id).slice(5)) : null),
+    nationId: row.nation_id != null ? Number(row.nation_id) : null,
+    leagueId: row.league_id != null ? Number(row.league_id) : null,
+    clubId: row.club_id != null ? Number(row.club_id) : null,
+    nationLogoUrl: logoUrl("nations", row.nation_id != null ? Number(row.nation_id) : null),
+    leagueLogoUrl: logoUrl("leagues", row.league_id != null ? Number(row.league_id) : null),
+    clubLogoUrl: logoUrl("clubs", row.club_id != null ? Number(row.club_id) : null),
   };
 }
 
