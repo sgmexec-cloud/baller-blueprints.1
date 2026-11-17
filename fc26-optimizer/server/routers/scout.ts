@@ -16,7 +16,7 @@ import { batchesRouter } from "../batches";
 import { makeScoutCacheKey, getCachedBlueprint, saveCachedBlueprint } from "../scoutCache";
 import { pickArchetypeByScores } from "../archetypePick";
 import { searchFutCards, getFutCardById, getAvailableRarities, upsertFutCards, FutCard } from "../futCards";
-import { matchFutCardToPro } from "../cardMatcher";
+import { matchFutCardToPro, previewArchetypeForCard } from "../cardMatcher";
 import { TRPCError } from "@trpc/server";
 import fs from "fs/promises";
 import path from "path";
@@ -113,6 +113,15 @@ const cardsRouter = router({
       return getCardMatchQuota(userId, (ctx.user as any).tier);
     }),
 
+  /** Free preview: which archetype Automatic will pick for this card (no quota used) */
+  previewArchetype: publicProcedure
+    .input(z.object({ cardId: z.string().min(1).max(120) }))
+    .query(async ({ input }) => {
+      const card = await getFutCardById(input.cardId);
+      if (!card) throw new TRPCError({ code: "NOT_FOUND", message: "Card not found." });
+      return previewArchetypeForCard(card);
+    }),
+
   /** Metered (10 Free / 40 Premium / 100 Premium+ / Unlimited VIP & Owner): convert FUT card to Pro Clubs build */
   matchCard: protectedProcedure
     .input(z.object({
@@ -123,6 +132,7 @@ const cardsRouter = router({
       standardSlots: z.number().int().min(0).max(6).default(4),
       foundationBoosts: z.record(z.string(), z.number()).optional().default({}),
       starsPrepaid: z.boolean().optional(),
+      facilityPlaystyles: z.array(z.string().max(60)).max(8).optional().default([]),
     }))
     .mutation(async ({ ctx, input }) => {
       const userId = Number((ctx.user as any).id);
@@ -164,6 +174,7 @@ const cardsRouter = router({
           standardSlots: input.standardSlots,
           foundationBoosts: input.foundationBoosts,
           starsPrepaid: input.starsPrepaid,
+          facilityPlaystyles: input.facilityPlaystyles,
         });
       } catch (err) {
         if (quota.metered) await refundCardMatch(userId);
