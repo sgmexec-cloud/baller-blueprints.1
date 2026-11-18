@@ -36,7 +36,7 @@ function Logo({ src, title }: { src?: string | null; title: string }) {
       title={title}
       referrerPolicy="no-referrer"
       loading="lazy"
-      className="w-5 h-5 object-contain"
+      className="w-4 h-4 object-contain"
       onError={(e) => {
         (e.currentTarget as HTMLImageElement).style.display = 'none';
       }}
@@ -433,199 +433,171 @@ export function CardMatcherModal({
           </div>
         </div>
 
-        {/* STEP 2: SELECTED CARD DETAILS & MATCH OPTIONS */}
+        {/* STEP 2: SELECTED CARD + COMPACT MATCH OPTIONS (fits on one phone screen) */}
         {selectedCard ? (
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 hide-scrollbar">
-            <button
-              onClick={() => setSelectedCard(null)}
-              className="text-xs font-bold text-[#4D8DFF] hover:underline flex items-center gap-1"
-            >
-              ← Back to Cards
-            </button>
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 hide-scrollbar">
+              <button
+                onClick={() => setSelectedCard(null)}
+                className="text-xs font-bold text-[#4D8DFF] hover:underline"
+              >
+                ← Back to Cards
+              </button>
 
-            <div className="bg-[#131A2A] border border-[#26334A] rounded-2xl p-4 flex items-center gap-4">
-              <CardThumb card={selectedCard} size="lg" />
-              <div className="flex-1 min-w-0">
-                <div className="text-lg font-black text-[#F4F7FB] truncate">{selectedCard.name}</div>
-                <div className="text-xs text-[#8E9AAF] truncate">
-                  {selectedCard.rarity} {selectedCard.club ? `• ${selectedCard.club}` : ''}
-                </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Logo src={selectedCard.nationLogoUrl} title="Nation" />
-                  <Logo src={selectedCard.leagueLogoUrl} title="League" />
-                  <Logo src={selectedCard.clubLogoUrl} title="Club" />
-                </div>
-                <PositionChips card={selectedCard} />
-                <div className="grid grid-cols-6 gap-1 mt-2.5 text-center bg-[#080B14] p-2 rounded-lg border border-[#26334A]">
-                  <div><div className="text-[9px] text-[#8E9AAF]">PAC</div><div className="text-xs font-bold">{selectedCard.faceStats.pace}</div></div>
-                  <div><div className="text-[9px] text-[#8E9AAF]">SHO</div><div className="text-xs font-bold">{selectedCard.faceStats.shooting}</div></div>
-                  <div><div className="text-[9px] text-[#8E9AAF]">PAS</div><div className="text-xs font-bold">{selectedCard.faceStats.passing}</div></div>
-                  <div><div className="text-[9px] text-[#8E9AAF]">DRI</div><div className="text-xs font-bold">{selectedCard.faceStats.dribbling}</div></div>
-                  <div><div className="text-[9px] text-[#8E9AAF]">DEF</div><div className="text-xs font-bold">{selectedCard.faceStats.defending}</div></div>
-                  <div><div className="text-[9px] text-[#8E9AAF]">PHY</div><div className="text-xs font-bold">{selectedCard.faceStats.physical}</div></div>
+              {/* Card summary */}
+              <div className="bg-[#131A2A] border border-[#26334A] rounded-xl p-2.5 flex items-start gap-3">
+                <CardThumb card={selectedCard} size="sm" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-black text-[#F4F7FB] truncate">{selectedCard.name}</div>
+                  <div className="flex items-center gap-1.5 text-[10px] text-[#8E9AAF]">
+                    <span className="truncate">{selectedCard.rarity}</span>
+                    <Logo src={selectedCard.nationLogoUrl} title="Nation" />
+                    <Logo src={selectedCard.leagueLogoUrl} title="League" />
+                    <Logo src={selectedCard.clubLogoUrl} title="Club" />
+                  </div>
+                  <PositionChips card={selectedCard} />
+                  <div className="mt-1.5">
+                    <FaceStatsRow stats={selectedCard.faceStats} />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3.5 space-y-3 text-xs">
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div className="bg-[#131A2A] p-2 rounded-lg">
-                  <div className="text-[9px] text-[#8E9AAF] uppercase">Height</div>
-                  <div className="font-bold text-[#F4F7FB]">{selectedCard.heightCm ? `${selectedCard.heightCm}cm` : 'Auto'}</div>
-                </div>
-                <div className="bg-[#131A2A] p-2 rounded-lg">
-                  <div className="text-[9px] text-[#8E9AAF] uppercase">Weight</div>
-                  <div className="font-bold text-[#F4F7FB]">{selectedCard.weightKg ? `${selectedCard.weightKg}kg` : 'Auto-fit'}</div>
-                </div>
-                <div className="bg-[#131A2A] p-2 rounded-lg">
-                  <div className="text-[9px] text-[#8E9AAF] uppercase">SM / WF</div>
-                  <div className="font-bold text-[#facc15]">{selectedCard.skillMoves}★ / {selectedCard.weakFoot}★</div>
-                </div>
-                <div className="bg-[#131A2A] p-2 rounded-lg">
-                  <div className="text-[9px] text-[#8E9AAF] uppercase">Foot</div>
-                  <div className="font-bold text-[#F4F7FB]">{selectedCard.preferredFoot}</div>
-                </div>
+              {/* Key details on one line */}
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                {[
+                  ['Height', selectedCard.heightCm ? `${selectedCard.heightCm}cm` : 'Auto'],
+                  ['Weight', selectedCard.weightKg ? `${selectedCard.weightKg}kg` : 'Auto-fit'],
+                  ['SM / WF', `${selectedCard.skillMoves}★ / ${selectedCard.weakFoot}★`],
+                  ['Foot', selectedCard.preferredFoot],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-[#131A2A] rounded-lg py-1.5 px-1">
+                    <div className="text-[8px] text-[#8E9AAF] uppercase tracking-wide">{label}</div>
+                    <div className={`text-[11px] font-bold ${label === 'SM / WF' ? 'text-[#facc15]' : 'text-[#F4F7FB]'}`}>
+                      {value}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {(selectedCard.playstylePlus?.length > 0 || selectedCard.playstyles?.length > 0) && (
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#8E9AAF] mb-1.5">Card PlayStyles</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(selectedCard.playstylePlus ?? []).map((ps: string) => (
-                      <span
-                        key={ps}
-                        className="px-2 py-0.5 rounded-md bg-[#facc15]/15 border border-[#facc15]/50 text-[#facc15] text-[10px] font-bold"
-                      >
-                        {ps}+
-                      </span>
-                    ))}
-                    {(selectedCard.playstyles ?? []).map((ps: string) => (
-                      <span
-                        key={ps}
-                        className="px-2 py-0.5 rounded-md bg-[#192235] border border-[#26334A] text-[#F4F7FB] text-[10px] font-medium"
-                      >
-                        {ps}
-                      </span>
-                    ))}
-                  </div>
+                <div className="flex flex-wrap gap-1">
+                  {(selectedCard.playstylePlus ?? []).map((ps: string) => (
+                    <span
+                      key={ps}
+                      className="px-1.5 py-0.5 rounded bg-[#facc15]/15 border border-[#facc15]/50 text-[#facc15] text-[9px] font-bold"
+                    >
+                      {ps}+
+                    </span>
+                  ))}
+                  {(selectedCard.playstyles ?? []).map((ps: string) => (
+                    <span
+                      key={ps}
+                      className="px-1.5 py-0.5 rounded bg-[#192235] border border-[#26334A] text-[#F4F7FB] text-[9px] font-medium"
+                    >
+                      {ps}
+                    </span>
+                  ))}
                 </div>
               )}
+
+              {/* Match options as compact selects */}
+              <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-3 space-y-2.5">
+                <div className="text-[10px] font-black uppercase tracking-wider text-[#4D8DFF]">Create a similar pro</div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#8E9AAF] mb-0.5">Pro level</label>
+                    <select
+                      value={targetLevel}
+                      onChange={(e) => setTargetLevel(Number(e.target.value))}
+                      className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-2 py-1.5 text-[11px] font-bold text-[#F4F7FB] outline-none"
+                    >
+                      {Array.from({ length: 55 }, (_, i) => i + 1).map((lvl) => (
+                        <option key={lvl} value={lvl}>
+                          Level {lvl}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-0.5">
+                      <label className="text-[10px] font-bold text-[#8E9AAF]">Archetype</label>
+                      {!canSelectArchetype && (
+                        <button onClick={onUpgrade} className="text-[9px] font-bold text-[#facc15] hover:underline">
+                          Upgrade
+                        </button>
+                      )}
+                    </div>
+                    <select
+                      value={archetypeLock}
+                      onChange={(e) => setArchetypeLock(e.target.value)}
+                      disabled={!canSelectArchetype}
+                      className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-2 py-1.5 text-[11px] font-bold text-[#F4F7FB] outline-none disabled:opacity-60"
+                    >
+                      <option value="AUTO">✨ Automatic</option>
+                      {archetypeNames.map((arch) => (
+                        <option key={arch} value={arch}>
+                          {arch}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#8E9AAF] mb-0.5">Masteries</label>
+                    <select
+                      value={masteryMode}
+                      onChange={(e) => setMasteryMode(e.target.value as any)}
+                      className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-2 py-1.5 text-[11px] font-bold text-[#F4F7FB] outline-none"
+                    >
+                      <option value="current">Current masteries</option>
+                      <option value="all55">All at level 55</option>
+                      <option value="none">No masteries</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-[#8E9AAF] mb-0.5">
+                      Facilities (Club Lvl {clubLevel})
+                    </label>
+                    <select
+                      value={facilityMode}
+                      onChange={(e) => setFacilityMode(e.target.value as any)}
+                      className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-2 py-1.5 text-[11px] font-bold text-[#F4F7FB] outline-none"
+                    >
+                      <option value="ai">AI optimised</option>
+                      <option value="keep">Current facilities</option>
+                      <option value="none">No facilities</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-[#0D1220] border border-[#26334A] rounded-xl p-4 space-y-3.5">
-              <div className="text-xs font-black uppercase tracking-wider text-[#4D8DFF]">Match Configuration</div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Pro Level (1–55)</label>
-                <select
-                  value={targetLevel}
-                  onChange={(e) => setTargetLevel(Number(e.target.value))}
-                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-3 py-2 text-xs font-bold text-[#F4F7FB] outline-none"
-                >
-                  {Array.from({ length: 55 }, (_, i) => i + 1).map((lvl) => (
-                    <option key={lvl} value={lvl}>
-                      Level {lvl}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1">
-                  <label className="text-[11px] font-bold text-[#8E9AAF]">Archetype</label>
-                  {!canSelectArchetype && (
-                    <button onClick={onUpgrade} className="text-[10px] font-bold text-[#facc15] hover:underline">
-                      Paid feature — Upgrade
+            {/* Always-visible action bar */}
+            <div className="p-3 border-t border-[#26334A] bg-[#0D1220] space-y-2">
+              {matchError && (
+                <div className="p-2 rounded-lg bg-red-500/10 border border-red-500/40 text-[11px] text-red-300 flex items-center justify-between gap-2">
+                  <span>{matchError}</span>
+                  {matchError.includes('Upgrade') && (
+                    <button
+                      onClick={onUpgrade}
+                      className="px-2 py-1 rounded-md bg-[#facc15] text-[#080B14] font-black text-[10px] shrink-0"
+                    >
+                      Upgrade
                     </button>
                   )}
                 </div>
-                <select
-                  value={archetypeLock}
-                  onChange={(e) => setArchetypeLock(e.target.value)}
-                  disabled={!canSelectArchetype}
-                  className="w-full bg-[#131A2A] border border-[#26334A] rounded-lg px-3 py-2 text-xs font-bold text-[#F4F7FB] outline-none disabled:opacity-60"
-                >
-                  <option value="AUTO">✨ Automatic (Best Archetype Match)</option>
-                  {archetypeNames.map((arch) => (
-                    <option key={arch} value={arch}>
-                      {arch}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">Masteries</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[
-                    { id: 'current', label: 'Current' },
-                    { id: 'all55', label: 'All Lvl 55' },
-                    { id: 'none', label: 'None' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setMasteryMode(opt.id as any)}
-                      className={`py-2 rounded-lg text-[11px] font-bold border transition-all ${
-                        masteryMode === opt.id
-                          ? 'bg-[#192235] border-[#21E6A4] text-[#21E6A4]'
-                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-bold text-[#8E9AAF] mb-1">
-                  Club Facilities (Club Lvl {clubLevel})
-                </label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {[
-                    { id: 'ai', label: 'AI Optimised' },
-                    { id: 'keep', label: 'Current' },
-                    { id: 'none', label: 'None' },
-                  ].map((opt) => (
-                    <button
-                      key={opt.id}
-                      type="button"
-                      onClick={() => setFacilityMode(opt.id as any)}
-                      className={`py-2 rounded-lg text-[11px] font-bold border transition-all ${
-                        facilityMode === opt.id
-                          ? 'bg-[#192235] border-[#4D8DFF] text-[#4D8DFF]'
-                          : 'bg-[#131A2A] border-[#26334A] text-[#8E9AAF]'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              )}
+              <button
+                onClick={handleRunMatch}
+                disabled={isMatching}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#21E6A4] text-[#080B14] font-black text-xs uppercase tracking-widest shadow-lg hover:opacity-95 disabled:opacity-50"
+              >
+                {isMatching ? 'Matching Card Stats...' : `Create build • ${selectedCard.name} (1 match)`}
+              </button>
             </div>
-
-            {matchError && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-xs text-red-300 flex items-center justify-between gap-2">
-                <span>{matchError}</span>
-                {matchError.includes('Upgrade') && (
-                  <button
-                    onClick={onUpgrade}
-                    className="px-2.5 py-1 rounded-lg bg-[#facc15] text-[#080B14] font-black text-[10px] shrink-0"
-                  >
-                    Upgrade
-                  </button>
-                )}
-              </div>
-            )}
-
-            <button
-              onClick={handleRunMatch}
-              disabled={isMatching}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#4D8DFF] to-[#21E6A4] text-[#080B14] font-black text-xs uppercase tracking-widest shadow-lg hover:opacity-95 disabled:opacity-50"
-            >
-              {isMatching ? 'Matching Card Stats...' : `Match ${selectedCard.name} (1 Match)`}
-            </button>
           </div>
         ) : (
           /* STEP 1: CARD BROWSER & SEARCH */
