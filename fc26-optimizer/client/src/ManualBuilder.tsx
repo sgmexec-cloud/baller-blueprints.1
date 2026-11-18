@@ -19,6 +19,7 @@ import { AttributesTab } from '@/components/builder/AttributesTab';
 import { PlaystylesTab } from '@/components/builder/PlaystylesTab';
 import { AiGeneratorModal } from '@/components/builder/AiGeneratorModal';
 import { CardMatcherModal } from '@/components/builder/CardMatcherModal';
+import { PlayerCardEditor, resolveWorkingImage, cardImageCandidates } from '@/components/builder/PlayerCardEditor';
 import { PhysicalsModal } from '@/components/builder/PhysicalsModal';
 import { SkillsModal } from '@/components/builder/SkillsModal';
 import { FacilitiesModal } from '@/components/builder/FacilitiesModal';
@@ -94,6 +95,38 @@ export default function ManualBuilder() {
 
   const [activePosition, setActivePosition] = useState<string>('');
   const [showCardDiff, setShowCardDiff] = useState<boolean>(false);
+
+  // Editable player card (name + picture). Filled automatically from a matched FUT card, editable by hand.
+  const [playerName, setPlayerName] = useState<string>('');
+  const [playerImage, setPlayerImage] = useState<string | null>(null);
+  const [isCardEditorOpen, setIsCardEditorOpen] = useState<boolean>(false);
+
+  const matchedCardId = cardMatchReport?.card?.id;
+  useEffect(() => {
+    const card = cardMatchReport?.card;
+    if (!card) return;
+    setPlayerName(card.name || '');
+    let cancelled = false;
+    resolveWorkingImage(cardImageCandidates(card)).then((url) => {
+      if (!cancelled) setPlayerImage(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchedCardId]);
+
+  // Saved builds keep the card's name and picture too
+  const getSnapshotWithCard = (...args: any[]) => ({
+    ...(getSnapshot as any)(...args),
+    playerName,
+    playerImage,
+  });
+  const applySnapshotWithCard = (data: any, ...rest: any[]) => {
+    (applySnapshot as any)(data, ...rest);
+    setPlayerName(data?.playerName ?? '');
+    setPlayerImage(data?.playerImage ?? null);
+  };
 
   const recommendedPositions = useMemo<string[]>(() => {
     if (!archetype) return ['ST'];
@@ -258,12 +291,17 @@ export default function ManualBuilder() {
                  
                  <div className="absolute z-10 flex justify-center" style={{ left: '11.8px', top: '14.7px', width: '77.1px', height: '77.1px' }}>
                     <img 
-                      src={equippedSpecialization 
-                        ? `/icons/specializations/${equippedSpecialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png` 
-                        : "/default-avatar.png"
+                      src={playerImage
+                        ? playerImage
+                        : equippedSpecialization 
+                          ? `/icons/specializations/${equippedSpecialization.toLowerCase().replace('+', '_plus').replace(/[^a-z0-9_]+/g, '-')}.png` 
+                          : "/default-avatar.png"
                       }
-                      alt={equippedSpecialization || "Pro"} 
-                      className={`w-full h-full drop-shadow-md transition-all duration-300 ${equippedSpecialization ? 'object-contain' : 'object-cover object-bottom'}`} 
+                      alt={playerName || equippedSpecialization || "Pro"} 
+                      referrerPolicy="no-referrer"
+                      className={`w-full h-full drop-shadow-md transition-all duration-300 ${
+                        playerImage ? 'object-cover object-top' : equippedSpecialization ? 'object-contain' : 'object-cover object-bottom'
+                      }`} 
                       onError={(e) => { 
                          e.currentTarget.onerror = null; 
                          e.currentTarget.src = '/default-avatar.png'; 
@@ -281,8 +319,22 @@ export default function ManualBuilder() {
                  </div>
               </div>
 
-              <div className="flex-1 flex flex-col justify-center py-1">
-                 <div className="text-xl font-bold text-[#F4F7FB] mb-2">{archetype || "Your Pro"}</div>
+              <div className="flex-1 flex flex-col justify-center py-1 min-w-0">
+                 <div className="flex items-start justify-between gap-2 mb-2">
+                   <div className="min-w-0">
+                     <div className="text-xl font-bold text-[#F4F7FB] truncate">{playerName || archetype || "Your Pro"}</div>
+                     {playerName && archetype && (
+                       <div className="text-[11px] font-bold uppercase tracking-wider text-[#8E9AAF] truncate">{archetype}</div>
+                     )}
+                   </div>
+                   <button
+                     onClick={() => setIsCardEditorOpen(true)}
+                     aria-label="Edit player card"
+                     className="shrink-0 px-2 py-1 rounded-md border border-[#4D8DFF]/40 bg-[#131A2A] text-[#4D8DFF] text-[10px] font-bold hover:bg-[#4D8DFF] hover:text-[#080B14] transition-colors"
+                   >
+                     ✎ Edit
+                   </button>
+                 </div>
                  
                  <div className="grid grid-cols-6 gap-1 w-full max-w-[220px]">
                     <div className="flex flex-col"><span className="text-[#F4F7FB] text-[10px] opacity-70">PAC</span><span className="text-[#F4F7FB] font-bold text-[15px] transform translate-y-[2px]">{faceStats.pac}</span></div>
@@ -566,6 +618,19 @@ export default function ManualBuilder() {
         onApplyCardBuild={handleApplyCardMatch}
       />
 
+      <PlayerCardEditor
+        isOpen={isCardEditorOpen}
+        onClose={() => setIsCardEditorOpen(false)}
+        playerName={playerName}
+        setPlayerName={setPlayerName}
+        playerImage={playerImage}
+        setPlayerImage={setPlayerImage}
+        position={activePosition}
+        setPosition={setActivePosition}
+        positions={recommendedPositions}
+        matchedCard={cardMatchReport?.card ?? null}
+      />
+
       <AuthPromptModal isOpen={isAuthPromptOpen} onClose={() => setIsAuthPromptOpen(false)} />
 
       <PreviewBanner />
@@ -584,8 +649,8 @@ export default function ManualBuilder() {
         setArchetypeLevel={setArchetypeLevel}
         archetype={archetype}
         level={level}
-        getSnapshot={getSnapshot}
-        applySnapshot={applySnapshot}
+        getSnapshot={getSnapshotWithCard}
+        applySnapshot={applySnapshotWithCard}
         getProfileSnapshot={getProfileSnapshot}
       />
 
