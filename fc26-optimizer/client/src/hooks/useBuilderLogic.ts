@@ -422,8 +422,23 @@ export function useBuilderLogic() {
       if (standardList[arrayIdx]) newEquipped[slotIdx] = standardList[arrayIdx];
     });
     setEquippedPlaystyles(newEquipped);
-    setEquippedSpecialization(null);
-    setSpecSwap(null);
+
+    if (matchOutput.playstyles?.specialisation) {
+      const specUpper = String(matchOutput.playstyles.specialisation).toUpperCase();
+      const archSpecs = SPECIALIZATIONS_DATA[targetArch] || [];
+      const matchedSpec = archSpecs.find(s => s.name.toUpperCase() === specUpper);
+      setEquippedSpecialization(matchedSpec ? matchedSpec.name : null);
+      const cardSwap = matchOutput.playstyles?.specSwapIndex;
+      setSpecSwap(
+        matchedSpec && typeof cardSwap === 'number' && cardSwap >= 0
+          ? { spec: matchedSpec.name, index: cardSwap }
+          : null
+      );
+    } else {
+      setEquippedSpecialization(null);
+      setSpecSwap(null);
+    }
+
     setCardMatchReport(matchOutput);
   };
 
