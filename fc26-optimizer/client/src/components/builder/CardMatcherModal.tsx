@@ -260,9 +260,6 @@ export function CardMatcherModal({
         if (status.l55 && m.l55) Object.entries(m.l55).forEach(([s, v]) => (masteryBoosts[s] = (masteryBoosts[s] || 0) + v));
       });
 
-      // Which archetype will the match really use? Locked = the chosen one.
-      // Automatic = ask the server (free, same scoring the match uses), so height/weight
-      // boosts and the facility plan are worked out for the RIGHT archetype.
       const progRow = progressionData?.[targetLevel];
       const apBudget = progRow?.apAvailable ?? Math.floor(targetLevel * 1.5) + 10;
       const signatureSlots = progRow?.signatureUpgrades ?? (targetLevel >= 55 ? 2 : targetLevel >= 20 ? 1 : 0);
@@ -317,16 +314,20 @@ export function CardMatcherModal({
           currentInGame[stat] = Number(baseVal) + (baseBoosts[stat] || 0);
         }
         const cardStyles = [...(selectedCard.playstylePlus ?? []), ...(selectedCard.playstyles ?? [])];
+        const cardPos = String(selectedCard.position || '').toUpperCase();
         const plan = optimiseFacilities({
           facilities: FACILITIES,
           budget: CLUB_BUDGETS[clubLevel] || 0,
           currentStats: currentInGame,
           pointValue: (stat, lvl) => {
+            if (stat === 'Attack Positioning' || stat === 'Penalties') return 0;
+            if ((cardPos === 'ST' || cardPos === 'CF') && ['Interceptions', 'Def Awareness', 'Standing Tackle', 'Sliding Tackle'].includes(stat)) return 0;
+            if (cardPos === 'CB' && ['Finishing', 'Shot Power', 'Long Shots', 'Volleys'].includes(stat)) return 0;
             const cardTarget = selectedCard.attributes?.[stat] ?? 75;
+            if (lvl > cardTarget) return -1.5;
             const weight = cardTarget >= 85 ? 1.2 : cardTarget >= 78 ? 0.9 : 0.4;
             return getApCost(guessArch, stat, lvl) * weight;
           },
-          // A PlayStyle the archetype already has as a Signature is worth nothing from a facility
           playstyleBonus: (ps) => {
             if (isSignature(ps)) return 0;
             return cardStyles.some((cs) => samePlaystyle(cs, ps)) ? 90 : 0;
@@ -347,7 +348,6 @@ export function CardMatcherModal({
         }
       });
 
-      // PlayStyles the tier-3 facilities already grant (they use no standard slot)
       let facilityPlaystyles: string[] = [];
       if (facilityMode === 'ai') {
         facilityPlaystyles = aiFacilityPlaystyles;
