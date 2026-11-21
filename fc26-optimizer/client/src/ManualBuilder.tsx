@@ -36,6 +36,15 @@ import { CLUB_BUDGETS } from '@/constants/builderData';
 // PHASE 4 CUSTOM HOOK
 import { useBuilderLogic } from '@/hooks/useBuilderLogic';
 
+// BOTTOM NAV TABS (icon + single-word label, equal-width columns)
+const TABS = [
+  { id: 'info', label: 'Info', icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></> },
+  { id: 'archetype', label: 'Archetype', icon: <><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></> },
+  { id: 'foundation', label: 'Foundation', icon: <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></> },
+  { id: 'attributes', label: 'Attributes', icon: <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></> },
+  { id: 'playstyles', label: 'PlayStyles', icon: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/> },
+] as const;
+
 export default function ManualBuilder() {
   const {
     level, setLevel,
@@ -216,7 +225,7 @@ export default function ManualBuilder() {
   }
 
   return (
-    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 pb-16 px-4">
+    <div className="min-h-screen bg-[#080B14] text-[#F4F7FB] relative overflow-x-clip pt-2 px-4 pb-[calc(8rem+env(safe-area-inset-bottom))]">
       <div className="max-w-lg mx-auto relative">
         
         {/* MAIN APP LOGO */}
@@ -374,24 +383,6 @@ export default function ManualBuilder() {
                 fac2={fac2}
                 setActiveModal={setActiveModal}
               />
-           </div>
-
-           <div className="flex gap-2.5 mt-5 overflow-x-auto hide-scrollbar pb-1 px-1">
-              {[
-                { id: 'info', label: 'Info' }, 
-                { id: 'archetype', label: 'Archetype' }, 
-                { id: 'foundation', label: 'Foundation' }, 
-                { id: 'attributes', label: 'Attributes' }, 
-                { id: 'playstyles', label: 'PlayStyles' }
-              ].map(tab => (
-                 <button 
-                   key={tab.id}
-                   onClick={() => setActiveTab(tab.id as any)}
-                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border whitespace-nowrap ${activeTab === tab.id ? 'bg-[#192235] text-[#21E6A4] border-[#21E6A4]/50 shadow-[0_0_10px_rgba(33,230,164,0.1)]' : 'bg-[#131A2A] text-[#8E9AAF] border-transparent hover:bg-[#192235]'}`}
-                 >
-                   {tab.label}
-                 </button>
-              ))}
            </div>
         </div>
 
@@ -570,6 +561,35 @@ export default function ManualBuilder() {
         )}
 
       </div>
+
+      {/* FIXED BOTTOM TAB BAR (outside the sticky header so position:fixed pins to the viewport) */}
+      <nav
+        aria-label="Build sections"
+        className="fixed inset-x-0 bottom-0 z-50 bg-[#0D1220]/95 backdrop-blur-md border-t border-[#26334A]"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      >
+        <div className="max-w-lg mx-auto grid grid-cols-5">
+          {TABS.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                aria-current={isActive ? 'page' : undefined}
+                className={`relative h-14 min-w-0 flex flex-col items-center justify-center gap-1 px-0.5 transition-colors ${
+                  isActive ? 'text-[#facc15]' : 'text-[#8E9AAF] active:text-[#F4F7FB]'
+                }`}
+              >
+                <span className={`absolute top-0 inset-x-3 h-0.5 rounded-b bg-[#facc15] transition-opacity ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  {tab.icon}
+                </svg>
+                <span className="text-[10px] font-semibold leading-none whitespace-nowrap">{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
 
       <AiGeneratorModal 
         isOpen={isAiModalOpen}
