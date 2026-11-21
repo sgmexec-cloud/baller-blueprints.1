@@ -1,9 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { STAT_GROUPS, CSV_STAT_MAP } from '@/constants/builderData';
 import { getStatCaps, getCostForPoints } from '@/utils/builderUtils';
-import type { AttributesTabProps } from '@/types/builder';
 
-// 👉 NEW: Dynamic color utility based on your requested thresholds
+/* ------------------------------------------------------------------
+   Compact attribute allocator
+   - sticky points bar + selected-attribute inspector (stepper + numeric input)
+   - 2-column grid, all categories visible
+   - OTHER section with star ratings (Skill Moves / Weak Foot)
+
+   Conventions kept from the previous tab:
+   - handleSliderChange(stat, value) receives the value AS DISPLAYED
+     (raw in Raw mode, boosted in Boosted mode)
+   - per-step AP cost comes from getCostForPoints
+------------------------------------------------------------------- */
+
+// Rename categories to the wording you want (keys = names used in STAT_GROUPS).
+const CATEGORY_LABELS: Record<string, string> = {
+  Pace: 'PACE',
+  Shooting: 'SCORING',
+  Passing: 'PASSING',
+  Dribbling: 'BALL CONTROL',
+  Defending: 'DEFENDING',
+  Physical: 'PHYSICAL',
+};
+
+// Column order (left column first, then right).
+const LEFT_LABELS = ['BALL CONTROL', 'PASSING', 'PACE'];
+const RIGHT_LABELS = ['SCORING', 'DEFENDING', 'PHYSICAL'];
+
 const getStatColor = (value: number): string => {
   if (value <= 50) return '#b00303';
   if (value <= 60) return '#e87c22';
@@ -12,168 +36,251 @@ const getStatColor = (value: number): string => {
   return '#439346';
 };
 
-// 👉 NEW: Convert hex to an rgba string for drop-shadows
-const getShadowColor = (hex: string, opacity: number = 0.3): string => {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r},${g},${b},${opacity})`;
-};
+const SM = '__sm';
+const WF = '__wf';
 
-export const AttributesTab: React.FC<AttributesTabProps> = ({
-  archetype,
-  serverArchetypes,
-  currentStats,
-  addedPoints,
-  viewMode,
-  setViewMode,
-  smLevel,
-  wfLevel,
-  setActiveModal,
-  physicalModifiers,
-  facilityModifiers,
-  masteryModifiers,
-  handleSliderChange,
-  availableAp,
+interface Props {
+  archetype: string;
+  serverArchetypes: any;
+  currentStats: Record<string, number>;
+  addedPoints: Record<string, number>;
+  viewMode: string;
+  setViewMode: (m: any) => void;
+  smLevel: number;
+  wfLevel: number;
+  starMax?: { sm: number; wf: number };
+  availableAp: number;
+  maxAp: number;
+  physicalModifiers: Record<string, number>;
+  facilityModifiers: Record<string, number>;
+  masteryModifiers: Record<string, number>;
+  handleSliderChange: (stat: string, value: number) => void;
+  onChangeStar: (which: 'sm' | 'wf', value: number) => void;
+  onReset: () => void;
+}
+
+const Star = ({ filled }: { filled: boolean }) => (
+  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" aria-hidden="true"
+    fill={filled ? '#facc15' : 'none'} stroke={filled ? '#facc15' : '#59657A'}
+    strokeWidth="1.75" strokeLinejoin="round">
+    <polygon points="12 2 15.1 8.6 22 9.3 16.8 14 18.2 21 12 17.5 5.8 21 7.2 14 2 9.3 8.9 8.6 12 2" />
+  </svg>
+);
+
+export const AttributesTab: React.FC<Props> = ({
+  archetype, serverArchetypes, currentStats, addedPoints,
+  viewMode, setViewMode, smLevel, wfLevel, starMax = { sm: 5, wf: 5 },
+  availableAp, maxAp, physicalModifiers, facilityModifiers, masteryModifiers,
+  handleSliderChange, onChangeStar, onReset,
 }) => {
-  return (
-    <section className="animate-fade-up">
-      <div className="flex items-center justify-between mb-4 px-1">
-        <div className="flex items-center gap-2">
-          {/* We'll leave the title pip generic green, or change to neutral blue */}
-          <div className="w-1 h-3 rounded-full bg-[#4D8DFF]" />
-          <span className="text-[11px] font-bold tracking-widest uppercase text-[#8E9AAF]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>
-            Player Attributes
+  const groups = Object.entries(STAT_GROUPS as Record<string, readonly string[]>).map(([cat, stats]) => ({
+    cat,
+    label: CATEGORY_LABELS[cat] ?? cat.toUpperCase(),
+    stats: [...stats],
+  }));
+
+  const rank = (label: string, order: string[]) => {
+    const i = order.indexOf(label);
+    return i === -1 ? 99 : i;
+  };
+  let left = groups.filter((g) => LEFT_LABELS.includes(g.label)).sort((a, b) => rank(a.label, LEFT_LABELS) - rank(b.label, LEFT_LABELS));
+  let right = groups.filter((g) => !LEFT_LABELS.includes(g.label)).sort((a, b) => rank(a.label, RIGHT_LABELS) - rank(b.label, RIGHT_LABELS));
+  if (!left.length || !right.length) {
+    const half = Math.ceil(groups.length / 2);
+    left = groups.slice(0, half);
+    right = groups.slice(half);
+  }
+
+  const [selected, setSelected] = useState<string>(() => groups[0]?.stats[0] ?? '');
+  const [compare, setCompare] = useState(false);
+  const [draft, setDraft] = useState<string | null>(null);
+
+  const showBoosts = viewMode !== 'raw';
+  const used = Math.max(0, maxAp - availableAp);
+
+  const info = (stat: string) => {
+    const caps = getStatCaps(archetype, stat);
+    const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
+    const max = caps.max || 99;
+    const invested = addedPoints[stat] || 0;
+    const rawVal = rawBase + invested;
+    const displayVal = showBoosts ? (currentStats?.[stat] || 70) : rawVal;
+    const mods = (physicalModifiers?.[stat] || 0) + (facilityModifiers?.[stat] || 0) + (masteryModifiers?.[stat] || 0);
+    return { rawBase, max, invested, displayVal, min: displayVal - invested, mods };
+  };
+
+  const stepCost = (stat: string): number | null => {
+    const i = info(stat);
+    const next = getCostForPoints(archetype, stat, i.rawBase, i.invested + 1) - getCostForPoints(archetype, stat, i.rawBase, i.invested);
+    return Number.isFinite(next) && next > 0 ? next : null;
+  };
+
+  // ---- selected item (stat or star) -> one inspector model
+  const isStar = selected === SM || selected === WF;
+  const starKey: 'sm' | 'wf' = selected === SM ? 'sm' : 'wf';
+  let sel: { name: string; min: number; max: number; value: number; mods: number };
+  if (isStar) {
+    sel = { name: starKey === 'sm' ? 'Skill Moves' : 'Weak Foot', min: 1, max: starMax[starKey], value: starKey === 'sm' ? smLevel : wfLevel, mods: 0 };
+  } else {
+    const i = info(selected);
+    sel = { name: CSV_STAT_MAP[selected] || selected, min: i.min, max: i.max, value: i.displayVal, mods: i.mods };
+  }
+
+  const atMax = sel.value >= sel.max;
+  const cost = !isStar && !atMax ? stepCost(selected) : null;
+  const minusDisabled = sel.value <= sel.min || (!isStar && (addedPoints[selected] || 0) <= 0);
+  const plusDisabled = atMax || (!isStar && (availableAp < 1 || (cost != null && availableAp < cost)));
+
+  const commit = (v: number) => {
+    if (Number.isNaN(v)) return;
+    const next = Math.round(Math.min(sel.max, Math.max(sel.min, v)));
+    if (next === sel.value) return;
+    if (isStar) onChangeStar(starKey, next);
+    else handleSliderChange(selected, next);
+  };
+
+  const select = (id: string) => { setDraft(null); setSelected(id); };
+
+  const StatRow = ({ stat }: { stat: string }) => {
+    const i = info(stat);
+    const isSel = selected === stat;
+    return (
+      <button
+        onClick={() => select(stat)}
+        aria-pressed={isSel}
+        className={`w-full text-left rounded-md px-1.5 py-1 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+      >
+        <div className="flex items-baseline justify-between gap-1 leading-none">
+          <span className={`truncate text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{CSV_STAT_MAP[stat] || stat}</span>
+          <span className="flex items-baseline gap-1 shrink-0">
+            {compare && i.invested > 0 && <span className="text-[9px] font-bold text-[#21E6A4]">+{i.invested}</span>}
+            <span className="text-[12px] font-black" style={{ color: getStatColor(i.displayVal) }}>{i.displayVal}</span>
           </span>
         </div>
-        
-        <div className="flex bg-[#131A2A] border border-[#26334A] rounded-lg p-0.5">
-          <button 
-            onClick={() => setViewMode('raw')}
-            className={`px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-md transition-colors ${viewMode === 'raw' ? 'bg-[#192235] text-[#21E6A4]' : 'text-[#59657A] hover:text-[#8E9AAF]'}`}
-          >
-            Raw Stats
-          </button>
-          <button 
-            onClick={() => setViewMode('boosted')}
-            className={`px-3 py-1 text-[9px] font-bold uppercase tracking-widest rounded-md transition-colors ${viewMode === 'boosted' ? 'bg-[#192235] text-[#4D8DFF]' : 'text-[#59657A] hover:text-[#8E9AAF]'}`}
-          >
-            Boosted
-          </button>
+        <div className="mt-1 h-[3px] w-full rounded-full bg-[#26334A]">
+          <div className="h-full rounded-full transition-all duration-200"
+            style={{ width: `${Math.min(100, i.displayVal)}%`, backgroundColor: getStatColor(i.displayVal) }} />
+        </div>
+      </button>
+    );
+  };
+
+  const GroupBlock = ({ g }: { g: { label: string; stats: string[] } }) => {
+    const total = g.stats.reduce((sum, s) => sum + info(s).displayVal, 0);
+    const avg = Math.round(total / g.stats.length);
+    return (
+      <div className="mb-2.5">
+        <div className="flex items-center justify-between px-1.5 pb-1">
+          <span className="text-[9px] font-black uppercase tracking-widest text-[#4D8DFF]">{g.label}</span>
+          <span className="text-[11px] font-black" style={{ color: getStatColor(avg) }}>{avg}</span>
+        </div>
+        <div className="space-y-0.5">{g.stats.map((s) => <StatRow key={s} stat={s} />)}</div>
+      </div>
+    );
+  };
+
+  const StarRow = ({ id, label, value }: { id: string; label: string; value: number }) => {
+    const isSel = selected === id;
+    return (
+      <button
+        onClick={() => select(id)}
+        aria-pressed={isSel}
+        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-1.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+      >
+        <span className={`text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{label}</span>
+        <span className="flex gap-px">{[1, 2, 3, 4, 5].map((n) => <Star key={n} filled={n <= value} />)}</span>
+      </button>
+    );
+  };
+
+  const btn = 'px-2 py-1.5 rounded-md border text-[10px] font-bold leading-none whitespace-nowrap transition-colors';
+
+  return (
+    <section className="animate-fade-up">
+      {/* STICKY: points bar + inspector */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2 bg-[#080B14]/95 backdrop-blur-md border-b border-[#26334A]/60">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-3xl font-black leading-none text-[#facc15]">{availableAp.toLocaleString()}</span>
+            <div className="leading-tight">
+              <div className="text-[11px] font-semibold text-[#F4F7FB]">Skill points left</div>
+              <div className="text-[10px] text-[#8E9AAF]">{used.toLocaleString()} used</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={() => setViewMode(showBoosts ? 'raw' : 'boosted')}
+              aria-pressed={showBoosts}
+              className={`${btn} ${showBoosts ? 'border-[#facc15]/60 bg-[#facc15]/10 text-[#facc15]' : 'border-[#26334A] bg-[#131A2A] text-[#8E9AAF]'}`}
+            >Show boosts</button>
+            <button
+              onClick={() => setCompare((c) => !c)}
+              aria-pressed={compare}
+              className={`${btn} ${compare ? 'border-[#21E6A4]/60 bg-[#21E6A4]/10 text-[#21E6A4]' : 'border-[#26334A] bg-[#131A2A] text-[#8E9AAF]'}`}
+            >Compare</button>
+            <button
+              onClick={() => { setDraft(null); onReset(); }}
+              className={`${btn} flex items-center gap-1 border-[#26334A] bg-[#131A2A] text-[#8E9AAF] active:text-[#F4F7FB]`}
+            >
+              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <polyline points="23 4 23 10 17 10" /><path d="M20.5 15a9 9 0 1 1-2.1-9.4L23 10" />
+              </svg>
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-[#26334A] bg-[#0D1220] px-3 py-2">
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-bold text-[#F4F7FB]">{sel.name}</div>
+            <div className={`text-[10px] font-semibold ${atMax ? 'text-[#facc15]' : 'text-[#8E9AAF]'}`}>
+              {atMax ? 'Max purchased' : cost != null ? `${cost} AP per step` : 'Use − / + or type a value'}
+              {showBoosts && sel.mods !== 0 && (
+                <span className={`ml-1.5 ${sel.mods > 0 ? 'text-[#21E6A4]' : 'text-[#ff4d4d]'}`}>{sel.mods > 0 ? '+' : ''}{sel.mods} boost</span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => commit(sel.value - 1)}
+              disabled={minusDisabled}
+              aria-label={`Decrease ${sel.name}`}
+              className="w-9 h-9 rounded-lg border border-[#26334A] bg-[#131A2A] text-lg font-bold text-[#F4F7FB] disabled:opacity-30 active:bg-[#192235]"
+            >−</button>
+            <input
+              inputMode="numeric"
+              pattern="[0-9]*"
+              aria-label={`${sel.name} value`}
+              value={draft ?? String(sel.value)}
+              onFocus={(e) => { setDraft(String(sel.value)); e.currentTarget.select(); }}
+              onChange={(e) => setDraft(e.target.value.replace(/\D/g, '').slice(0, 2))}
+              onBlur={() => { if (draft !== null && draft !== '') commit(Number(draft)); setDraft(null); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
+              className="w-12 h-9 rounded-lg border border-[#4D8DFF]/40 bg-[#080B14] text-center text-base font-black text-[#F4F7FB] outline-none focus:border-[#4D8DFF]"
+            />
+            <button
+              onClick={() => commit(sel.value + 1)}
+              disabled={plusDisabled}
+              aria-label={`Increase ${sel.name}`}
+              className="w-9 h-9 rounded-lg border border-[#facc15]/40 bg-[#192235] text-lg font-bold text-[#facc15] disabled:opacity-30 active:bg-[#facc15] active:text-[#080B14]"
+            >+</button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-4 shadow-sm animate-fade-in">
-         <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
-            <span className="text-[14px] font-bold text-[#F4F7FB]">Skills & W.Foot</span>
-            <span className="text-[10px] text-[#facc15] font-bold tracking-widest uppercase">Budget Priority</span>
-         </div>
-         <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0 p-4 flex justify-between items-center">
-            <div className="flex flex-col gap-2">
-               <span className="text-[12px] text-[#F4F7FB]">Skill Moves</span>
-               <span className="text-[12px] text-[#F4F7FB]">Weak Foot</span>
-            </div>
-            <div className="flex flex-col gap-2 items-end">
-               <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{smLevel} ★</button>
-               <button onClick={() => setActiveModal('skills_wf')} className="text-[13px] font-black text-[#facc15] hover:text-white transition-colors">{wfLevel} ★</button>
-            </div>
-         </div>
+      {/* 2-COLUMN GRID */}
+      <div className="mt-3 grid grid-cols-2 gap-x-3">
+        <div>{left.map((g) => <GroupBlock key={g.cat} g={g} />)}</div>
+        <div>{right.map((g) => <GroupBlock key={g.cat} g={g} />)}</div>
       </div>
-      
-      <div className="space-y-4 pb-20">
-        {Object.entries(STAT_GROUPS).map(([category, stats]) => {
-          const catTotal = stats.reduce((sum, stat) => {
-            const caps = getStatCaps(archetype, stat);
-            const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
-            const invested = addedPoints[stat] || 0;
-            const rawVal = rawBase + invested;
-            return sum + (viewMode === 'raw' ? rawVal : (currentStats?.[stat] || 70));
-          }, 0);
-          const catAvg = Math.round(catTotal / stats.length);
-          
-          // 👉 NEW: Get the dynamic color for the category average
-          const avgColor = getStatColor(catAvg);
-          const avgShadow = getShadowColor(avgColor, 0.3);
-          
-          return (
-            <div key={category} className="mb-4 shadow-sm animate-fade-in">
-               <div className="bg-[#192235] rounded-t-lg px-4 py-2.5 flex justify-between items-center border-b border-[#26334A]/80">
-                  <span className="text-[14px] font-bold text-[#F4F7FB]">{category}</span>
-                  <span 
-                    className="text-[14px] font-black transition-colors duration-300" 
-                    style={{ color: avgColor, filter: `drop-shadow(0 0 5px ${avgShadow})` }}
-                  >
-                    {catAvg}
-                  </span>
-               </div>
-               <div className="bg-[#0D1220] rounded-b-lg overflow-hidden border border-[#26334A] border-t-0">
-                  {stats.map(stat => {
-                    const val = currentStats?.[stat] || 70;
-                    const displayName = CSV_STAT_MAP[stat] || stat;
-                    
-                    const caps = getStatCaps(archetype, stat);
-                    const rawBase = caps.min || serverArchetypes?.[archetype]?.base?.[stat] || 70;
-                    
-                    const physMod = physicalModifiers[stat] || 0;
-                    const facMod = facilityModifiers[stat] || 0;
-                    const mastMod = masteryModifiers[stat] || 0;
-                    
-                    const invested = addedPoints[stat] || 0;
-                    const rawVal = rawBase + invested;
-                    const apSpent = getCostForPoints(archetype, stat, rawBase, invested);
-                    
-                    const displayVal = viewMode === 'raw' ? rawVal : val;
-                    const showModifiers = viewMode === 'boosted';
-                    
-                    // 👉 NEW: Get the dynamic color for this specific slider
-                    const statColor = getStatColor(displayVal);
-                    
-                    return (
-                      <div key={stat} className="px-4 py-2.5 border-b border-[#26334A]/40 last:border-0 hover:bg-[#131A2A] transition-colors flex flex-col">
-                         <div className="flex justify-between items-center mb-1.5">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[12px] text-[#F4F7FB]">{displayName}</span>
-                              <div className="flex items-center gap-1">
-                                 {showModifiers && physMod !== 0 && (
-                                   <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${physMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                                     <span className="text-[8.5px] font-black">{physMod > 0 ? '+' : ''}{physMod}</span>
-                                   </div>
-                                 )}
-                                 {showModifiers && facMod !== 0 && (
-                                   <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${facMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                                     <span className="text-[8.5px] font-black">{facMod > 0 ? '+' : ''}{facMod}</span>
-                                   </div>
-                                 )}
-                                 {showModifiers && mastMod !== 0 && (
-                                   <div className={`flex items-center gap-0.5 px-1 py-[1px] rounded border ${mastMod > 0 ? 'bg-[#4caf50]/15 text-[#4caf50] border-[#4caf50]/30' : 'bg-[#ff4d4d]/15 text-[#ff4d4d] border-[#ff4d4d]/30'}`}>
-                                     <span className="text-[8.5px] font-black">{mastMod > 0 ? '+' : ''}{mastMod}</span>
-                                   </div>
-                                 )}
-                                 {apSpent > 0 && (
-                                   <div className="flex items-center gap-0.5 px-1.5 py-[1px] rounded bg-[#facc15]/15 border border-[#facc15]/30 text-[#facc15]">
-                                     <span className="text-[8.5px] font-black">{apSpent} AP</span>
-                                   </div>
-                                 )}
-                              </div>
-                            </div>
-                            <span className="text-[13px] font-bold" style={{ color: statColor }}>{displayVal}</span>
-                         </div>
-                         <div className="flex items-center gap-3 w-full group">
-                            <button onClick={() => handleSliderChange(stat, displayVal - 1)} disabled={invested <= 0} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">-</button>
-                            <div className="flex-1 h-2 bg-[#192235] rounded-full relative overflow-hidden group-hover:ring-1 ring-[#4D8DFF]/30 transition-all cursor-pointer">
-                               {/* 👉 NEW: Applying the dynamic color to the slider fill width */}
-                               <div className="absolute top-0 left-0 h-full rounded-full transition-all duration-300" style={{ width: `${displayVal}%`, backgroundColor: statColor }} />
-                               <input type="range" min={rawBase} max={caps.max || 99} value={displayVal} onChange={(e) => handleSliderChange(stat, parseInt(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                            </div>
-                            <button onClick={() => handleSliderChange(stat, displayVal + 1)} disabled={displayVal >= (caps.max || 99) || availableAp < 1} className="w-5 h-5 flex items-center justify-center text-[#8E9AAF] bg-[#192235] rounded border border-[#26334A] hover:bg-[#26334A] hover:text-[#F4F7FB] disabled:opacity-30 transition-all text-xs font-black shrink-0">+</button>
-                         </div>
-                      </div>
-                    );
-                  })}
-               </div>
-            </div>
-          );
-        })}
+
+      {/* OTHER */}
+      <div className="mt-1 border-t border-[#26334A]/60 pt-2">
+        <div className="px-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[#4D8DFF]">OTHER</div>
+        <div className="grid grid-cols-2 gap-x-3">
+          <StarRow id={SM} label="Skill Moves" value={smLevel} />
+          <StarRow id={WF} label="Weak Foot" value={wfLevel} />
+        </div>
       </div>
     </section>
   );
