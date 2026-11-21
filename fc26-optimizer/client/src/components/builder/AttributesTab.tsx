@@ -148,7 +148,7 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(stat)}
         aria-pressed={isSel}
-        className={`w-full text-left rounded-md px-1.5 py-1 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`w-full text-left rounded-md px-1.5 py-[3px] transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
       >
         <div className="flex items-baseline justify-between gap-1 leading-none">
           <span className={`truncate text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{CSV_STAT_MAP[stat] || stat}</span>
@@ -157,7 +157,7 @@ export const AttributesTab: React.FC<Props> = ({
             <span className="text-[12px] font-black" style={{ color: getStatColor(i.displayVal) }}>{i.displayVal}</span>
           </span>
         </div>
-        <div className="mt-1 h-[3px] w-full rounded-full bg-[#26334A]">
+        <div className="mt-[3px] h-[2px] w-full rounded-full bg-[#26334A]">
           <div className="h-full rounded-full transition-all duration-200"
             style={{ width: `${Math.min(100, i.displayVal)}%`, backgroundColor: getStatColor(i.displayVal) }} />
         </div>
@@ -169,12 +169,12 @@ export const AttributesTab: React.FC<Props> = ({
     const total = g.stats.reduce((sum, s) => sum + info(s).displayVal, 0);
     const avg = Math.round(total / g.stats.length);
     return (
-      <div className="mb-2.5">
-        <div className="flex items-center justify-between px-1.5 pb-1">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#4D8DFF]">{g.label}</span>
-          <span className="text-[11px] font-black" style={{ color: getStatColor(avg) }}>{avg}</span>
+      <div className="mb-1.5">
+        <div className="flex items-center justify-between px-1.5 pb-0.5 mb-0.5 border-b-2 border-[#4D8DFF]/60">
+          <span className="text-[13px] font-black uppercase tracking-wider text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{g.label}</span>
+          <span className="text-[13px] font-black" style={{ color: getStatColor(avg), fontFamily: "'Rajdhani', sans-serif" }}>{avg}</span>
         </div>
-        <div className="space-y-0.5">{g.stats.map((s) => <StatRow key={s} stat={s} />)}</div>
+        <div className="space-y-px">{g.stats.map((s) => <StatRow key={s} stat={s} />)}</div>
       </div>
     );
   };
@@ -185,7 +185,7 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(id)}
         aria-pressed={isSel}
-        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-1.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-1 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
       >
         <span className={`text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{label}</span>
         <span className="flex gap-px">{[1, 2, 3, 4, 5].map((n) => <Star key={n} filled={n <= value} />)}</span>
@@ -198,7 +198,7 @@ export const AttributesTab: React.FC<Props> = ({
   return (
     <section className="animate-fade-up">
       {/* STICKY: points bar + inspector */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2 bg-[#080B14]/95 backdrop-blur-md border-b border-[#26334A]/60">
+      <div className="sticky top-0 z-30 -mx-4 px-4 pt-1.5 pb-1.5 bg-[#080B14]/95 backdrop-blur-md border-b border-[#26334A]/60">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <span className="text-3xl font-black leading-none text-[#facc15]">{availableAp.toLocaleString()}</span>
@@ -230,7 +230,7 @@ export const AttributesTab: React.FC<Props> = ({
           </div>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-3 rounded-xl border border-[#26334A] bg-[#0D1220] px-3 py-2">
+        <div className="mt-1.5 flex items-center justify-between gap-3 rounded-xl border border-[#26334A] bg-[#0D1220] px-3 py-1.5">
           <div className="min-w-0">
             <div className="truncate text-[14px] font-bold text-[#F4F7FB]">{sel.name}</div>
             <div className={`text-[10px] font-semibold ${atMax ? 'text-[#facc15]' : 'text-[#8E9AAF]'}`}>
@@ -245,7 +245,7 @@ export const AttributesTab: React.FC<Props> = ({
               onClick={() => commit(sel.value - 1)}
               disabled={minusDisabled}
               aria-label={`Decrease ${sel.name}`}
-              className="w-9 h-9 rounded-lg border border-[#26334A] bg-[#131A2A] text-lg font-bold text-[#F4F7FB] disabled:opacity-30 active:bg-[#192235]"
+              className="w-8 h-8 rounded-lg border border-[#26334A] bg-[#131A2A] text-lg font-bold text-[#F4F7FB] disabled:opacity-30 active:bg-[#192235]"
             >−</button>
             <input
               inputMode="numeric"
@@ -256,27 +256,27 @@ export const AttributesTab: React.FC<Props> = ({
               onChange={(e) => setDraft(e.target.value.replace(/\D/g, '').slice(0, 2))}
               onBlur={() => { if (draft !== null && draft !== '') commit(Number(draft)); setDraft(null); }}
               onKeyDown={(e) => { if (e.key === 'Enter') (e.currentTarget as HTMLInputElement).blur(); }}
-              className="w-12 h-9 rounded-lg border border-[#4D8DFF]/40 bg-[#080B14] text-center text-base font-black text-[#F4F7FB] outline-none focus:border-[#4D8DFF]"
+              className="w-12 h-8 rounded-lg border border-[#4D8DFF]/40 bg-[#080B14] text-center text-base font-black text-[#F4F7FB] outline-none focus:border-[#4D8DFF]"
             />
             <button
               onClick={() => commit(sel.value + 1)}
               disabled={plusDisabled}
               aria-label={`Increase ${sel.name}`}
-              className="w-9 h-9 rounded-lg border border-[#facc15]/40 bg-[#192235] text-lg font-bold text-[#facc15] disabled:opacity-30 active:bg-[#facc15] active:text-[#080B14]"
+              className="w-8 h-8 rounded-lg border border-[#facc15]/40 bg-[#192235] text-lg font-bold text-[#facc15] disabled:opacity-30 active:bg-[#facc15] active:text-[#080B14]"
             >+</button>
           </div>
         </div>
       </div>
 
       {/* 2-COLUMN GRID */}
-      <div className="mt-3 grid grid-cols-2 gap-x-3">
+      <div className="mt-2 grid grid-cols-2 gap-x-3">
         <div>{left.map((g) => <GroupBlock key={g.cat} g={g} />)}</div>
         <div>{right.map((g) => <GroupBlock key={g.cat} g={g} />)}</div>
       </div>
 
       {/* OTHER */}
-      <div className="mt-1 border-t border-[#26334A]/60 pt-2">
-        <div className="px-1.5 pb-1 text-[9px] font-black uppercase tracking-widest text-[#4D8DFF]">OTHER</div>
+      <div className="mt-0.5">
+        <div className="px-1.5 pb-0.5 mb-0.5 border-b-2 border-[#4D8DFF]/60 text-[13px] font-black uppercase tracking-wider text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>OTHER</div>
         <div className="grid grid-cols-2 gap-x-3">
           <StarRow id={SM} label="Skill Moves" value={smLevel} />
           <StarRow id={WF} label="Weak Foot" value={wfLevel} />
