@@ -282,6 +282,55 @@ export default function ManualBuilder() {
               </div>
            </div>
 
+           {/* BUILD MODE BAR (icon + label, equal columns, sits under the account / My Profile row) */}
+           <div className="grid grid-cols-3 mb-4 rounded-xl border border-[#26334A] bg-[#0D1220] overflow-hidden">
+              <button
+                aria-current="true"
+                className="relative h-12 min-w-0 flex flex-col items-center justify-center gap-1 px-0.5 text-[#facc15]"
+              >
+                <span className="absolute bottom-0 inset-x-4 h-0.5 rounded-t bg-[#facc15]" />
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+                <span className="text-[10px] font-semibold leading-none whitespace-nowrap">Manual</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setIsAuthPromptOpen(true);
+                    return;
+                  }
+                  setAiTargetLevel(level);
+                  setAiArchetypeLock("AUTO");
+                  setFacilityMode(Object.keys(equippedFacilities).length > 0 ? 'keep' : 'ai');
+                  setIsAiModalOpen(true);
+                }}
+                className="relative h-12 min-w-0 flex flex-col items-center justify-center gap-1 px-0.5 text-[#8E9AAF] active:text-[#F4F7FB] transition-colors border-x border-[#26334A]"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 17v4"/><path d="M17 19h4"/>
+                </svg>
+                <span className="text-[10px] font-semibold leading-none whitespace-nowrap">AI Scout</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  if (!isAuthenticated) {
+                    setIsAuthPromptOpen(true);
+                    return;
+                  }
+                  setIsCardModalOpen(true);
+                }}
+                className="relative h-12 min-w-0 flex flex-col items-center justify-center gap-1 px-0.5 text-[#8E9AAF] active:text-[#F4F7FB] transition-colors"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="2.5"/><line x1="9" y1="16" x2="15" y2="16"/>
+                </svg>
+                <span className="text-[10px] font-semibold leading-none whitespace-nowrap">Card Match</span>
+              </button>
+           </div>
+
            {/* PLAYER CARD VIEW */}
            <div className="bg-[#192235] rounded-xl p-4 flex gap-5 shadow-sm items-center">
               <div 
@@ -384,41 +433,6 @@ export default function ManualBuilder() {
                 setActiveModal={setActiveModal}
               />
            </div>
-        </div>
-
-        {/* BUILD MODE OPTIONS */}
-        <div className="grid grid-cols-3 gap-1 bg-[#0D1220] border border-[#26334A] p-1 rounded-xl mb-6 shadow-sm">
-          <button
-            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all bg-[#192235] text-[#F4F7FB] border border-[#4D8DFF]/40 shadow-[0_0_10px_rgba(77,141,255,0.15)]"
-            style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >MANUAL</button>
-          
-          <button
-            onClick={() => {
-              if (!isAuthenticated) {
-                setIsAuthPromptOpen(true);
-                return;
-              }
-              setAiTargetLevel(level);
-              setAiArchetypeLock("AUTO");
-              setFacilityMode(Object.keys(equippedFacilities).length > 0 ? 'keep' : 'ai');
-              setIsAiModalOpen(true);
-            }}
-            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all text-[#8E9AAF] hover:text-[#F4F7FB] hover:bg-[#131A2A]"
-            style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >✨ AI SCOUT</button>
-
-          <button
-            onClick={() => {
-              if (!isAuthenticated) {
-                setIsAuthPromptOpen(true);
-                return;
-              }
-              setIsCardModalOpen(true);
-            }}
-            className="py-2 rounded-lg text-[11px] font-bold tracking-wider transition-all text-[#21E6A4] hover:bg-[#131A2A]"
-            style={{ fontFamily: "'Rajdhani', sans-serif" }}
-          >🃏 CARD MATCH</button>
         </div>
 
         {/* CARD MATCH SIMILARITY REPORT */}
