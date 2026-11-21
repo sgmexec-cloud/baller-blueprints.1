@@ -395,11 +395,13 @@ export async function renderBuildImage(d: ShareBuildData): Promise<Blob> {
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = C.text;
   if (d.playerName) {
-    // Batch builds: the player's name leads, the archetype and position sit under it
+    // Batch builds: the player's name leads, the archetype sits under it.
+    // The position label is intentionally omitted: the position chips below
+    // already show the OVR for every playable position.
     fitFont(ctx, d.playerName, 700, HEAD, 64, 26, rw);
     ctx.fillText(ellipsize(ctx, d.playerName, rw), rx, cy + 52);
     cy += 64;
-    const sub = `${d.archetype || 'Your Pro'}${d.position ? `  •  ${d.position}` : ''}`;
+    const sub = d.archetype || 'Your Pro';
     fitFont(ctx, sub, 700, HEAD, 32, 22, rw);
     ctx.fillStyle = C.green;
     ctx.fillText(sub, rx, cy + 24);
