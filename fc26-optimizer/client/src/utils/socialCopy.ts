@@ -56,7 +56,7 @@ export function trimToSentence(text: string, max: number): string {
 }
 
 /** The facts for one finished player, or null if the build record is incomplete */
-export function factsFromItem(item: { playerName: string; note?: string | null; blueprint?: any; build?: any }): BuildFacts | null {
+export function factsFromItem(item: { playerName: string; note?: string | null; position?: string | null; blueprint?: any; build?: any }): BuildFacts | null {
   const b = item.build;
   const v = b?.view;
   const snap = b?.snapshot;
@@ -64,12 +64,22 @@ export function factsFromItem(item: { playerName: string; note?: string | null; 
   if (!b || !v || !snap || !f || !b.archetype || !isNum(v.ovr) || !isNum(snap.height) || !isNum(snap.weight)) return null;
   if (![f.pac, f.sho, f.pas, f.dri, f.def, f.phy].every(isNum)) return null;
 
+  const positions: string[] = Array.isArray(v.positionRatings) ? v.positionRatings.map((p: any) => String(p.pos)) : [];
+  const rawPos = [
+    item.blueprint?.position,
+    item.blueprint?.primaryPosition,
+    item.position,
+    b.position,
+    v.primaryPosition,
+  ].find((p): p is string => typeof p === 'string' && p.trim().length > 0);
+  const resolvedPosition = rawPos ? rawPos.trim().toUpperCase() : (positions[0] ?? '');
+
   return {
     playerName: String(item.playerName).trim(),
     note: item.note ? String(item.note).trim() : null,
     archetype: String(b.archetype),
-    position: String(v.primaryPosition ?? ''),
-    positions: Array.isArray(v.positionRatings) ? v.positionRatings.map((p: any) => String(p.pos)) : [],
+    position: resolvedPosition,
+    positions,
     ovr: v.ovr,
     height: snap.height,
     weight: snap.weight,
