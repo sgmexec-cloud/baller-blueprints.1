@@ -234,7 +234,7 @@ export default function ManualBuilder() {
         </div>
 
         {/* STICKY HEADER CARD */}
-        <div className="sticky top-0 z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3">
+        <div className={`${activeTab === 'attributes' ? '' : 'sticky top-0 '}z-40 bg-[#080B14]/95 backdrop-blur-md pb-4 -mx-4 px-4 sm:mx-0 sm:px-0 mb-6 border-b border-[#26334A]/60 shadow-[0_10px_30px_rgba(0,0,0,0.5)] pt-3`}>
            
            {/* STICKY CONTROLS ROW */}
            <div className="flex justify-between items-center mb-4">
@@ -543,7 +543,7 @@ export default function ManualBuilder() {
         )}
 
         {activeTab === 'attributes' && currentStats && serverArchetypes && (
-          <AttributesTab 
+          <AttributesTab
             archetype={archetype}
             serverArchetypes={serverArchetypes}
             currentStats={currentStats}
@@ -552,12 +552,15 @@ export default function ManualBuilder() {
             setViewMode={setViewMode}
             smLevel={smLevel}
             wfLevel={wfLevel}
-            setActiveModal={setActiveModal}
+            starMax={{ sm: (activeStarCaps as any)?.sm ?? 5, wf: (activeStarCaps as any)?.wf ?? 5 }}
+            availableAp={availableAp}
+            maxAp={maxAp}
             physicalModifiers={physicalModifiers}
             facilityModifiers={facilityModifiers}
             masteryModifiers={masteryModifiers}
             handleSliderChange={handleSliderChange}
-            availableAp={availableAp}
+            onChangeStar={(which, value) => (handleStarChange as any)(which, value)}
+            onReset={() => setAddedPoints({})}
           />
         )}
 
