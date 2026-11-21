@@ -148,16 +148,16 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(stat)}
         aria-pressed={isSel}
-        className={`w-full text-left rounded-md px-1.5 py-[3px] transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`w-full h-[22px] flex flex-col justify-center text-left rounded-md px-1.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
       >
-        <div className="flex items-baseline justify-between gap-1 leading-none">
+        <div className="flex items-baseline justify-between gap-1 leading-[14px]">
           <span className={`truncate text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{CSV_STAT_MAP[stat] || stat}</span>
           <span className="flex items-baseline gap-1 shrink-0">
             {compare && i.invested > 0 && <span className="text-[9px] font-bold text-[#21E6A4]">+{i.invested}</span>}
             <span className="text-[12px] font-black" style={{ color: getStatColor(i.displayVal) }}>{i.displayVal}</span>
           </span>
         </div>
-        <div className="mt-[3px] h-[2px] w-full rounded-full bg-[#26334A]">
+        <div className="mt-[2px] h-[2px] w-full rounded-full bg-[#26334A]">
           <div className="h-full rounded-full transition-all duration-200"
             style={{ width: `${Math.min(100, i.displayVal)}%`, backgroundColor: getStatColor(i.displayVal) }} />
         </div>
@@ -169,12 +169,12 @@ export const AttributesTab: React.FC<Props> = ({
     const total = g.stats.reduce((sum, s) => sum + info(s).displayVal, 0);
     const avg = Math.round(total / g.stats.length);
     return (
-      <div className="mb-1.5">
-        <div className="flex items-center justify-between px-1.5 pb-0.5 mb-0.5 border-b-2 border-[#4D8DFF]/60">
+      <div className="mb-1">
+        <div className="flex items-center justify-between px-1.5 pb-0 mb-0.5 leading-tight border-b-2 border-[#4D8DFF]/60">
           <span className="text-[13px] font-black uppercase tracking-wider text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>{g.label}</span>
           <span className="text-[13px] font-black" style={{ color: getStatColor(avg), fontFamily: "'Rajdhani', sans-serif" }}>{avg}</span>
         </div>
-        <div className="space-y-px">{g.stats.map((s) => <StatRow key={s} stat={s} />)}</div>
+        <div>{g.stats.map((s) => <StatRow key={s} stat={s} />)}</div>
       </div>
     );
   };
@@ -185,7 +185,7 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(id)}
         aria-pressed={isSel}
-        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-1 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
       >
         <span className={`text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{label}</span>
         <span className="flex gap-px">{[1, 2, 3, 4, 5].map((n) => <Star key={n} filled={n <= value} />)}</span>
@@ -201,7 +201,7 @@ export const AttributesTab: React.FC<Props> = ({
       <div className="sticky top-0 z-30 -mx-4 px-4 pt-1.5 pb-1.5 bg-[#080B14]/95 backdrop-blur-md border-b border-[#26334A]/60">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-3xl font-black leading-none text-[#facc15]">{availableAp.toLocaleString()}</span>
+            <span className="text-2xl font-black leading-none text-[#facc15]">{availableAp.toLocaleString()}</span>
             <div className="leading-tight">
               <div className="text-[11px] font-semibold text-[#F4F7FB]">Skill points left</div>
               <div className="text-[10px] text-[#8E9AAF]">{used.toLocaleString()} used</div>
@@ -276,7 +276,7 @@ export const AttributesTab: React.FC<Props> = ({
 
       {/* OTHER */}
       <div className="mt-0.5">
-        <div className="px-1.5 pb-0.5 mb-0.5 border-b-2 border-[#4D8DFF]/60 text-[13px] font-black uppercase tracking-wider text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>OTHER</div>
+        <div className="px-1.5 pb-0 mb-0.5 leading-tight border-b-2 border-[#4D8DFF]/60 text-[13px] font-black uppercase tracking-wider text-[#F4F7FB]" style={{ fontFamily: "'Rajdhani', sans-serif" }}>OTHER</div>
         <div className="grid grid-cols-2 gap-x-3">
           <StarRow id={SM} label="Skill Moves" value={smLevel} />
           <StarRow id={WF} label="Weak Foot" value={wfLevel} />
