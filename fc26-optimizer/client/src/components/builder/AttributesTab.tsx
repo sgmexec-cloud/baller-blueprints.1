@@ -36,6 +36,20 @@ const getStatColor = (value: number): string => {
   return '#439346';
 };
 
+// Progress-bar fill: same tier as getStatColor (thresholds untouched), just a
+// slightly softer tone so it sits better on the navy UI. Numbers keep full FC colours.
+const BAR_TONES: Record<string, string> = {
+  '#b00303': '#b23d3d', // low
+  '#e87c22': '#d4853f', // average
+  '#fdca41': '#e3b94d', // good
+  '#9cbe33': '#8fb04c', // high
+  '#439346': '#4d8a53', // top
+};
+const getBarColor = (value: number): string => {
+  const c = getStatColor(value);
+  return BAR_TONES[c] ?? c;
+};
+
 const SM = '__sm';
 const WF = '__wf';
 
@@ -148,18 +162,18 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(stat)}
         aria-pressed={isSel}
-        className={`w-full h-[22px] flex flex-col justify-center text-left rounded-md px-1.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`w-full h-[22px] flex flex-col justify-center text-left rounded-md px-1.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/10 ring-1 ring-[#4D8DFF]/60 shadow-[inset_2px_0_0_#facc15]' : 'active:bg-[#131A2A]'}`}
       >
         <div className="flex items-baseline justify-between gap-1 leading-[14px]">
           <span className={`truncate text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{CSV_STAT_MAP[stat] || stat}</span>
           <span className="flex items-baseline gap-1 shrink-0">
-            {compare && i.invested > 0 && <span className="text-[9px] font-bold text-[#21E6A4]">+{i.invested}</span>}
+            {compare && i.invested > 0 && <span className="text-[9px] font-bold text-[#facc15]">+{i.invested}</span>}
             <span className="text-[12px] font-black" style={{ color: getStatColor(i.displayVal) }}>{i.displayVal}</span>
           </span>
         </div>
-        <div className="mt-[2px] h-[2px] w-full rounded-full bg-[#26334A]">
+        <div className="mt-[2px] h-[3px] w-full rounded-full bg-[#26334A]">
           <div className="h-full rounded-full transition-all duration-200"
-            style={{ width: `${Math.min(100, i.displayVal)}%`, backgroundColor: getStatColor(i.displayVal) }} />
+            style={{ width: `${Math.min(100, i.displayVal)}%`, backgroundColor: getBarColor(i.displayVal) }} />
         </div>
       </button>
     );
@@ -185,7 +199,7 @@ export const AttributesTab: React.FC<Props> = ({
       <button
         onClick={() => select(id)}
         aria-pressed={isSel}
-        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/15 ring-1 ring-[#4D8DFF]/40' : 'active:bg-[#131A2A]'}`}
+        className={`flex items-center justify-between gap-1 rounded-md px-1.5 py-0.5 transition-colors ${isSel ? 'bg-[#4D8DFF]/10 ring-1 ring-[#4D8DFF]/60 shadow-[inset_2px_0_0_#facc15]' : 'active:bg-[#131A2A]'}`}
       >
         <span className={`text-[11px] ${isSel ? 'text-[#F4F7FB] font-semibold' : 'text-[#8E9AAF]'}`}>{label}</span>
         <span className="flex gap-px">{[1, 2, 3, 4, 5].map((n) => <Star key={n} filled={n <= value} />)}</span>
@@ -216,7 +230,7 @@ export const AttributesTab: React.FC<Props> = ({
             <button
               onClick={() => setCompare((c) => !c)}
               aria-pressed={compare}
-              className={`${btn} ${compare ? 'border-[#21E6A4]/60 bg-[#21E6A4]/10 text-[#21E6A4]' : 'border-[#26334A] bg-[#131A2A] text-[#8E9AAF]'}`}
+              className={`${btn} ${compare ? 'border-[#facc15]/60 bg-[#facc15]/10 text-[#facc15]' : 'border-[#26334A] bg-[#131A2A] text-[#8E9AAF]'}`}
             >Compare</button>
             <button
               onClick={() => { setDraft(null); onReset(); }}
@@ -236,7 +250,7 @@ export const AttributesTab: React.FC<Props> = ({
             <div className={`text-[10px] font-semibold ${atMax ? 'text-[#facc15]' : 'text-[#8E9AAF]'}`}>
               {atMax ? 'Max purchased' : cost != null ? `${cost} AP per step` : 'Use − / + or type a value'}
               {showBoosts && sel.mods !== 0 && (
-                <span className={`ml-1.5 ${sel.mods > 0 ? 'text-[#21E6A4]' : 'text-[#ff4d4d]'}`}>{sel.mods > 0 ? '+' : ''}{sel.mods} boost</span>
+                <span className={`ml-1.5 ${sel.mods > 0 ? 'text-[#439346]' : 'text-[#c94444]'}`}>{sel.mods > 0 ? '+' : ''}{sel.mods} boost</span>
               )}
             </div>
           </div>
